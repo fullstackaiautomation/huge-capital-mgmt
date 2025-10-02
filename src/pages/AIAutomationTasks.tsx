@@ -59,7 +59,7 @@ export const AIAutomationTasks = () => {
       tasks.forEach((task: any) => {
         saveTask(task);
       });
-    }, 2500);
+    }, 3000);
     return () => clearTimeout(timeoutId);
   }, [tasks]);
 
@@ -568,21 +568,15 @@ export const AIAutomationTasks = () => {
                 <input type="text" className="w-full bg-transparent text-white font-bold text-2xl mb-2 px-0 focus:outline-none" placeholder="Task Title" value={task.task_name} onChange={(e) => updateTask(task.id, 'task_name', e.target.value)} />
 
                 <textarea
-                  className="w-full bg-transparent text-white text-sm mb-1 px-0 focus:outline-none resize-none overflow-hidden min-h-[24px]"
+                  className="w-full bg-transparent text-white text-sm mb-1 px-0 focus:outline-none resize-none"
                   placeholder="Add description..."
                   value={task.summary}
-                  onChange={(e) => updateTask(task.id, 'summary', e.target.value)}
-                  rows={1}
-                  onInput={(e) => {
+                  onChange={(e) => {
+                    updateTask(task.id, 'summary', e.target.value);
                     e.currentTarget.style.height = 'auto';
                     e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
                   }}
-                  ref={(el) => {
-                    if (el) {
-                      el.style.height = 'auto';
-                      el.style.height = el.scrollHeight + 'px';
-                    }
-                  }}
+                  style={{ minHeight: '24px' }}
                 />
 
                 <div className="border-t border-green-400/20 mt-1 mb-2"></div>

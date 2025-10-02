@@ -112,7 +112,7 @@ export const useOpportunityTasks = () => {
 
       if (error) throw error;
 
-      await fetchTasks();
+      // Don't refetch after save to prevent overwriting local state during typing
     } catch (error) {
       console.error('Error saving task:', error);
     }
