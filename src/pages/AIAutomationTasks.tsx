@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { Plus, Search, Lightbulb, ClipboardList, TestTube, Eye, CheckCircle, X, Trash2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, Lightbulb, ClipboardList, TestTube, Eye, CheckCircle, X, Trash2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { useOpportunityTasks } from '../hooks/useOpportunityTasks';
+import { migrateLocalStorageToSupabase } from '../utils/migrateLocalStorageToSupabase';
 
 type TaskStage = 'Ideas' | 'Planning' | 'Testing' | 'Review' | 'Completed';
 type OpportunityLevel = 'Quick Wins' | 'Big Wins' | 'Mid Opportunities' | 'Ungraded';
@@ -14,7 +15,7 @@ type ChecklistItem = {
 // Initial tasks removed - now using Supabase
 
 export const AIAutomationTasks = () => {
-  const { tasks, customTools, setTasks, saveTask, deleteTask: deleteTaskFromDb, addCustomTool } = useOpportunityTasks();
+  const { tasks, customTools, setTasks, saveTask, deleteTask: deleteTaskFromDb, addCustomTool, refetch } = useOpportunityTasks();
   const [searchTerm, setSearchTerm] = useState('');
   const [showToolDropdown, setShowToolDropdown] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -23,6 +24,34 @@ export const AIAutomationTasks = () => {
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const [selectedOpportunityFilter, setSelectedOpportunityFilter] = useState<OpportunityLevel>('Quick Wins');
   const [newToolInput, setNewToolInput] = useState<string>('');
+  const [migrating, setMigrating] = useState(false);
+  const [migrationMessage, setMigrationMessage] = useState<string | null>(null);
+  const [hasLocalStorageData, setHasLocalStorageData] = useState(false);
+
+  useEffect(() => {
+    // Check if localStorage has data
+    const localData = localStorage.getItem('opportunityTasks');
+    if (localData) {
+      try {
+        const parsed = JSON.parse(localData);
+        setHasLocalStorageData(parsed && parsed.length > 0);
+      } catch (e) {
+        setHasLocalStorageData(false);
+      }
+    }
+  }, []);
+
+  const handleMigration = async () => {
+    setMigrating(true);
+    setMigrationMessage(null);
+    const result = await migrateLocalStorageToSupabase();
+    setMigrating(false);
+    setMigrationMessage(result.message);
+    if (result.success) {
+      await refetch();
+      setHasLocalStorageData(false);
+    }
+  };
 
   // Auto-save when tasks change (debounced)
   useEffect(() => {
@@ -354,7 +383,23 @@ export const AIAutomationTasks = () => {
         <h1 className="text-3xl font-bold text-gray-100">
           AI Automation Roadmap
         </h1>
+        {hasLocalStorageData && (
+          <button
+            onClick={handleMigration}
+            disabled={migrating}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+          >
+            <Download className="w-4 h-4" />
+            {migrating ? 'Migrating...' : 'Restore LocalStorage Data'}
+          </button>
+        )}
       </div>
+
+      {migrationMessage && (
+        <div className={`p-4 rounded-lg ${migrationMessage.includes('Success') ? 'bg-green-500/20 border border-green-500/40 text-green-300' : 'bg-red-500/20 border border-red-500/40 text-red-300'}`}>
+          {migrationMessage}
+        </div>
+      )}
 
       {/* 12 Month Goals and Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
