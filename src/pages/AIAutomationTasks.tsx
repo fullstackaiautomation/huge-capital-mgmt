@@ -614,18 +614,20 @@ export const AIAutomationTasks = () => {
                         onClick={() => setShowToolDropdown(null)}
                       />
                       <div
-                        className="absolute top-full mt-1 bg-gray-800 border border-green-400/40 rounded-lg shadow-lg z-20 p-2 min-w-[200px] max-h-[300px] overflow-y-auto"
+                        className="absolute top-full mt-1 bg-gray-800 border border-green-400/40 rounded-lg shadow-lg z-20 p-2 min-w-[420px] max-h-[350px] overflow-y-auto"
                         onWheel={(e) => e.stopPropagation()}
                       >
-                        {availableTools.filter((t: any) => !task.tools.includes(t)).map((tool: any) => (
-                          <div
-                            key={tool}
-                            className={`px-3 py-1.5 text-sm rounded cursor-pointer ${getToolColor(tool)} hover:opacity-80 mb-1`}
-                            onClick={() => addTool(task.id, tool)}
-                          >
-                            {tool}
-                          </div>
-                        ))}
+                        <div className="grid grid-cols-2 gap-1">
+                          {availableTools.filter((t: any) => !task.tools.includes(t)).map((tool: any) => (
+                            <div
+                              key={tool}
+                              className={`px-3 py-1.5 text-sm rounded cursor-pointer ${getToolColor(tool)} hover:opacity-80`}
+                              onClick={() => addTool(task.id, tool)}
+                            >
+                              {tool}
+                            </div>
+                          ))}
+                        </div>
                         <div className="mt-2 pt-2 border-t border-green-400/20">
                           <input
                             type="text"
