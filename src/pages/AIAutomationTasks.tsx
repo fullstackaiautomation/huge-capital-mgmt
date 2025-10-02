@@ -1,0 +1,1040 @@
+import { useState, useEffect, useRef } from 'react';
+import { Plus, Search, Lightbulb, ClipboardList, TestTube, Eye, CheckCircle, X, Trash2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
+
+type TaskStage = 'Ideas' | 'Planning' | 'Testing' | 'Review' | 'Completed';
+type OpportunityLevel = 'Quick Wins' | 'Big Wins' | 'Mid Opportunities' | 'Ungraded';
+
+type ChecklistItem = {
+  id: string;
+  text: string;
+  completed: boolean;
+};
+
+const initialOpportunityTasks = [
+  {
+    id: '1',
+    task_name: 'Calendly Integration',
+    impact_score: 8,
+    effort_score: 3,
+    input_score: 7,
+    zac_score: undefined as any,
+    luke_score: undefined as any,
+    opportunity_level: 'Quick Wins' as OpportunityLevel,
+    tools: ['GHL', 'Phone Calls'],
+    summary: 'Implement Calendly to reduce back-and-forth scheduling with customers',
+    goal: '',
+    start_date: '2024-02-01',
+    finish_date: '2024-02-15',
+    impact_on: ['Zac', 'Luke'],
+    tg_projection: '',
+    stepsChecklist: Array.from({ length: 6 }, (_, i) => ({ id: `step-${i}`, text: '', completed: false })),
+    integrationChecklist: Array.from({ length: 3 }, (_, i) => ({ id: `int-${i}`, text: '', completed: false })),
+    notes: '',
+  },
+  {
+    id: '2',
+    task_name: 'Debt Schedule Automation',
+    impact_score: 9,
+    effort_score: 7,
+    input_score: 8,
+    zac_score: undefined as any,
+    luke_score: undefined as any,
+    opportunity_level: 'Big Wins' as OpportunityLevel,
+    tools: ['Sheets', 'n8n', 'Claude'],
+    summary: 'Automate debt schedule creation using AI and spreadsheet integration',
+    goal: '',
+    start_date: '2024-02-15',
+    finish_date: '2024-03-30',
+    impact_on: ['Zac', 'Team'],
+    tg_projection: '',
+    stepsChecklist: Array.from({ length: 6 }, (_, i) => ({ id: `step-${i}`, text: '', completed: false })),
+    integrationChecklist: Array.from({ length: 3 }, (_, i) => ({ id: `int-${i}`, text: '', completed: false })),
+    notes: '',
+  },
+  {
+    id: '3',
+    task_name: 'Client Portal Dashboard',
+    impact_score: 7,
+    effort_score: 6,
+    input_score: 6,
+    zac_score: undefined as any,
+    luke_score: undefined as any,
+    opportunity_level: 'Mid Opportunities' as OpportunityLevel,
+    tools: ['GHL', 'Drive'],
+    summary: 'Create client-facing dashboard to show offers and deal status',
+    goal: '',
+    start_date: '2024-03-01',
+    finish_date: '2024-04-15',
+    impact_on: ['Clients', 'Team'],
+    tg_projection: '',
+    stepsChecklist: Array.from({ length: 6 }, (_, i) => ({ id: `step-${i}`, text: '', completed: false })),
+    integrationChecklist: Array.from({ length: 3 }, (_, i) => ({ id: `int-${i}`, text: '', completed: false })),
+    notes: '',
+  },
+  {
+    id: '4',
+    task_name: 'CPA Data Collection',
+    impact_score: 5,
+    effort_score: 4,
+    input_score: 3,
+    zac_score: undefined as any,
+    luke_score: undefined as any,
+    opportunity_level: 'Ungraded' as OpportunityLevel,
+    tools: ['Gmail', 'Slack'],
+    summary: 'Streamline process for getting information from CPAs',
+    goal: '',
+    start_date: '',
+    finish_date: '',
+    impact_on: ['Zac'],
+    tg_projection: '',
+    stepsChecklist: Array.from({ length: 6 }, (_, i) => ({ id: `step-${i}`, text: '', completed: false })),
+    integrationChecklist: Array.from({ length: 3 }, (_, i) => ({ id: `int-${i}`, text: '', completed: false })),
+    notes: '',
+  },
+];
+
+export const AIAutomationTasks = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showToolDropdown, setShowToolDropdown] = useState<string | null>(null);
+  const [tasks, setTasks] = useState(() => {
+    const savedTasks = localStorage.getItem('opportunityTasks');
+    if (savedTasks) {
+      const parsed = JSON.parse(savedTasks);
+      // Ensure all tasks have the checklist fields and score fields
+      return parsed.map((task: any) => ({
+        ...task,
+        zac_score: task.zac_score !== undefined ? task.zac_score : undefined,
+        luke_score: task.luke_score !== undefined ? task.luke_score : undefined,
+        goal: task.goal || '',
+        tg_projection: task.tg_projection || '',
+        stepsChecklist: task.stepsChecklist || Array.from({ length: 6 }, (_, i) => ({ id: `step-${task.id}-${i}`, text: '', completed: false })),
+        integrationChecklist: task.integrationChecklist || Array.from({ length: 3 }, (_, i) => ({ id: `int-${task.id}-${i}`, text: '', completed: false })),
+        notes: task.notes || '',
+      }));
+    }
+    return initialOpportunityTasks;
+  });
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [expandedStepsChecklists, setExpandedStepsChecklists] = useState<Set<string>>(new Set());
+  const [expandedIntegrationChecklists, setExpandedIntegrationChecklists] = useState<Set<string>>(new Set());
+  const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
+  const [selectedOpportunityFilter, setSelectedOpportunityFilter] = useState<OpportunityLevel>('Quick Wins');
+  const [customTools, setCustomTools] = useState<string[]>(() => {
+    const saved = localStorage.getItem('customTools');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [newToolInput, setNewToolInput] = useState<string>('');
+
+  useEffect(() => {
+    localStorage.setItem('opportunityTasks', JSON.stringify(tasks));
+  }, [tasks]);
+
+  useEffect(() => {
+    localStorage.setItem('customTools', JSON.stringify(customTools));
+  }, [customTools]);
+
+  const availableTools = ['Claude', 'Drive', 'GHL', 'Gmail', 'n8n', 'Phone Calls', 'Sheets', 'Slack', ...customTools];
+
+  const getToolColor = (tool: string): string => {
+    const toolColors: { [key: string]: string } = {
+      'GHL': 'bg-blue-900 text-blue-100',
+      'Phone Calls': 'bg-blue-600 text-white',
+      'Sheets': 'bg-green-600 text-white',
+      'Gmail': 'bg-red-600 text-white',
+      'Drive': 'bg-red-600 text-white',
+      'Calendar': 'bg-red-600 text-white',
+      'n8n': 'bg-purple-600 text-white',
+      'Claude': 'bg-orange-600 text-white',
+      'Slack': 'bg-purple-600 text-white',
+      'Huge Dashboard': 'bg-blue-600 text-white',
+      'Social Media': 'bg-yellow-600 text-white'
+    };
+    return toolColors[tool] || 'bg-gray-600 text-white';
+  };
+
+  const addCustomTool = (toolName: string) => {
+    const trimmed = toolName.trim();
+    if (trimmed && !availableTools.includes(trimmed)) {
+      setCustomTools([...customTools, trimmed]);
+      setNewToolInput('');
+    }
+  };
+
+  const addTool = (taskId: string, tool: string) => {
+    const task = tasks.find((t: any) => t.id === taskId);
+    if (task) {
+      updateTaskTools(taskId, [...task.tools, tool]);
+    }
+    setShowToolDropdown(null);
+  };
+
+  const removeTool = (taskId: string, tool: string) => {
+    const task = tasks.find((t: any) => t.id === taskId);
+    if (task) {
+      updateTaskTools(taskId, task.tools.filter((t: any) => t !== tool));
+    }
+  };
+
+  const addNewTask = (level: OpportunityLevel) => {
+    const newTask = {
+      id: `new-${Date.now()}`,
+      task_name: '',
+      impact_score: undefined as any,
+      effort_score: undefined as any,
+      input_score: undefined as any,
+      zac_score: undefined as any,
+      luke_score: undefined as any,
+      opportunity_level: level,
+      tools: [] as string[],
+      summary: '',
+      goal: '',
+      start_date: '',
+      finish_date: '',
+      impact_on: [] as string[],
+      tg_projection: '',
+      stepsChecklist: Array.from({ length: 6 }, (_, i) => ({ id: `step-${Date.now()}-${i}`, text: '', completed: false })),
+      integrationChecklist: Array.from({ length: 3 }, (_, i) => ({ id: `int-${Date.now()}-${i}`, text: '', completed: false })),
+    };
+    setTasks([...tasks, newTask]);
+  };
+
+  const updateTask = (taskId: string, field: string, value: any) => {
+    setTasks(tasks.map((task: any) =>
+      task.id === taskId ? { ...task, [field]: value } : task
+    ));
+  };
+
+  const updateTaskTools = (taskId: string, newTools: string[]) => {
+    setTasks(tasks.map((task: any) =>
+      task.id === taskId ? { ...task, tools: newTools } : task
+    ));
+  };
+
+  const deleteTask = (taskId: string) => {
+    setTasks(tasks.filter((task: any) => task.id !== taskId));
+    setDeleteConfirm(null);
+  };
+
+  const toggleStepsChecklist = (taskId: string) => {
+    setExpandedStepsChecklists(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId);
+      } else {
+        newSet.add(taskId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleIntegrationChecklist = (taskId: string) => {
+    setExpandedIntegrationChecklists(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId);
+      } else {
+        newSet.add(taskId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleNotes = (taskId: string) => {
+    setExpandedNotes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId);
+      } else {
+        newSet.add(taskId);
+      }
+      return newSet;
+    });
+  };
+
+  const updateChecklistItem = (taskId: string, checklistType: 'stepsChecklist' | 'integrationChecklist', itemId: string, field: 'text' | 'completed', value: string | boolean) => {
+    setTasks(tasks.map((task: any) => {
+      if (task.id === taskId) {
+        const checklist = task[checklistType].map((item: ChecklistItem) =>
+          item.id === itemId ? { ...item, [field]: value } : item
+        );
+        return { ...task, [checklistType]: checklist };
+      }
+      return task;
+    }));
+  };
+
+  const addChecklistItem = (taskId: string, checklistType: 'stepsChecklist' | 'integrationChecklist') => {
+    setTasks(tasks.map((task: any) => {
+      if (task.id === taskId) {
+        const newItem = { id: `${checklistType}-${Date.now()}`, text: '', completed: false };
+        return { ...task, [checklistType]: [...task[checklistType], newItem] };
+      }
+      return task;
+    }));
+  };
+
+  const deleteChecklistItem = (taskId: string, checklistType: 'stepsChecklist' | 'integrationChecklist', itemId: string) => {
+    setTasks(tasks.map((task: any) => {
+      if (task.id === taskId) {
+        return { ...task, [checklistType]: task[checklistType].filter((item: ChecklistItem) => item.id !== itemId) };
+      }
+      return task;
+    }));
+  };
+
+  const getScoreColor = (score: number | undefined) => {
+    if (!score) return 'text-white';
+    if (score >= 7) return 'text-green-400';
+    if (score >= 4) return 'text-orange-400';
+    return 'text-red-400';
+  };
+
+  const getEffortInputColor = (score: number | undefined) => {
+    if (!score) return 'text-white';
+    if (score >= 8) return 'text-red-400';
+    if (score >= 4) return 'text-orange-400';
+    return 'text-green-400';
+  };
+
+  const getOpportunityColor = (level: OpportunityLevel) => {
+    switch (level) {
+      case 'Quick Wins':
+        return 'text-green-300';
+      case 'Big Wins':
+        return 'text-blue-300';
+      case 'Mid Opportunities':
+        return 'text-orange-300';
+      case 'Ungraded':
+        return 'text-gray-400';
+      default:
+        return 'text-white';
+    }
+  };
+
+  // Scroll ref for opportunities
+  const opportunitiesScrollRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (ref: React.RefObject<HTMLDivElement | null>, direction: 'left' | 'right') => {
+    if (ref.current) {
+      const scrollAmount = 400;
+      ref.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  const opportunityColors = {
+    High: 'bg-green-500/20 text-green-400 border-green-500/30',
+    Medium: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+    Low: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+  };
+
+  const mockTasks = [
+    {
+      id: '1',
+      task_name: 'Automate Email Follow-ups',
+      description: 'Create automated email sequences for lead nurturing',
+      connectors: ['Gmail', 'Zapier', 'HubSpot'],
+      task_area: 'Sales & Marketing',
+      task_type: 'Automation',
+      opportunity_level: 'High' as const,
+      stage: 'Testing' as TaskStage,
+      start_date: '2024-01-15',
+      estimated_completion_date: '2024-02-01',
+    },
+    {
+      id: '2',
+      task_name: 'Invoice Processing Bot',
+      description: 'AI-powered invoice data extraction and entry',
+      connectors: ['QuickBooks', 'Make.com', 'OCR'],
+      task_area: 'Finance',
+      task_type: 'AI Integration',
+      opportunity_level: 'High' as const,
+      stage: 'Planning' as TaskStage,
+      start_date: '2024-01-20',
+      estimated_completion_date: '2024-02-15',
+    },
+    {
+      id: '3',
+      task_name: 'CRM Data Sync',
+      description: 'Sync deal data between systems automatically',
+      connectors: ['Salesforce', 'HubSpot'],
+      task_area: 'Sales',
+      task_type: 'Integration',
+      opportunity_level: 'Medium' as const,
+      stage: 'Ideas' as TaskStage,
+      start_date: '2024-02-01',
+      estimated_completion_date: '2024-03-01',
+    },
+    {
+      id: '4',
+      task_name: 'Lead Scoring Model',
+      description: 'AI-powered lead qualification and scoring',
+      connectors: ['Python', 'OpenAI', 'HubSpot'],
+      task_area: 'Sales & Marketing',
+      task_type: 'AI Integration',
+      opportunity_level: 'High' as const,
+      stage: 'Review' as TaskStage,
+      start_date: '2024-01-10',
+      estimated_completion_date: '2024-01-28',
+    },
+    {
+      id: '5',
+      task_name: 'Document Classification',
+      description: 'Auto-categorize and file incoming documents',
+      connectors: ['Google Drive', 'Claude AI'],
+      task_area: 'Operations',
+      task_type: 'AI Integration',
+      opportunity_level: 'Medium' as const,
+      stage: 'Completed' as TaskStage,
+      start_date: '2023-12-15',
+      estimated_completion_date: '2024-01-05',
+    },
+  ];
+
+  const stages: { name: TaskStage; icon: any; color: string; bgColor: string; borderColor: string; badgeColor: string; connectorColor: string; connectorTextColor: string }[] = [
+    {
+      name: 'Ideas',
+      icon: Lightbulb,
+      color: 'text-pink-300',
+      bgColor: 'bg-pink-400/10',
+      borderColor: 'border-pink-300/30',
+      badgeColor: 'bg-pink-500/30',
+      connectorColor: 'bg-pink-500/30',
+      connectorTextColor: 'text-pink-200'
+    },
+    {
+      name: 'Planning',
+      icon: ClipboardList,
+      color: 'text-orange-300',
+      bgColor: 'bg-orange-400/10',
+      borderColor: 'border-orange-300/30',
+      badgeColor: 'bg-orange-500/30',
+      connectorColor: 'bg-orange-500/30',
+      connectorTextColor: 'text-orange-200'
+    },
+    {
+      name: 'Testing',
+      icon: TestTube,
+      color: 'text-yellow-300',
+      bgColor: 'bg-yellow-400/10',
+      borderColor: 'border-yellow-300/30',
+      badgeColor: 'bg-yellow-500/30',
+      connectorColor: 'bg-yellow-500/30',
+      connectorTextColor: 'text-yellow-200'
+    },
+    {
+      name: 'Review',
+      icon: Eye,
+      color: 'text-blue-300',
+      bgColor: 'bg-blue-400/10',
+      borderColor: 'border-blue-300/30',
+      badgeColor: 'bg-blue-500/30',
+      connectorColor: 'bg-blue-500/30',
+      connectorTextColor: 'text-blue-200'
+    },
+    {
+      name: 'Completed',
+      icon: CheckCircle,
+      color: 'text-green-300',
+      bgColor: 'bg-green-400/10',
+      borderColor: 'border-green-300/30',
+      badgeColor: 'bg-green-500/30',
+      connectorColor: 'bg-green-500/30',
+      connectorTextColor: 'text-green-200'
+    },
+  ];
+
+  return (
+    <div className="space-y-6 p-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-gray-100">
+          AI Automation Roadmap
+        </h1>
+      </div>
+
+      {/* 12 Month Goals and Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* 12 Month Goals */}
+        <div className="lg:col-span-1 bg-yellow-400/10 border border-yellow-300/30 rounded-lg p-6">
+          <h2 className="text-xl font-bold text-yellow-200 mb-4">
+            Huge Capital 12 Month Goals
+          </h2>
+          <div className="space-y-4">
+            <ul className="space-y-2 text-sm text-gray-300">
+              <li>- 1M+ Monthly Funding / 80-100K Monthly Commissions</li>
+              <li>- 2 Bank Turn Downs Per Week (free qualified leads)</li>
+              <li>- 50 Affiliates Generating 1-2 Monthly Deals</li>
+              <li>- Private Capital Community Launched</li>
+            </ul>
+            <ul className="space-y-2 text-sm text-gray-300">
+              <li>- 3K Active Facebook Group Members</li>
+              <li>- Luke - Learn SBA Deals</li>
+              <li>- Zac - Speak to Investment Real Estate</li>
+              <li>- Dillion Full Time Broker (confident)</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Card 1 */}
+        <div className="bg-red-400/10 border border-red-300/30 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-red-200 mb-3">Huge - Bottlenecks</h3>
+          <ul className="space-y-2 text-sm text-gray-300">
+            <li>- Customers not available when he wants to call</li>
+            <li>- They're calling when we're busy (Calendly)
+              <ul className="ml-6 mt-1 space-y-1">
+                <li>- Text Links</li>
+              </ul>
+            </li>
+            <li>- Non stop grinding between meetings & customer calls (meetings eating up time)</li>
+            <li>- Objective for Calls Automation</li>
+            <li>- Needs Assistant</li>
+          </ul>
+        </div>
+
+        {/* Card 2 */}
+        <div className="bg-red-400/10 border border-red-300/30 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-red-200 mb-3">HUGE - Time Drains - Zac</h3>
+          <ul className="space-y-2 text-sm text-gray-300">
+            <li>- Creating Debt Schedules</li>
+            <li>- Getting information from CPA</li>
+            <li>- Manually submitting to Lenders (slack to GHL / Gmail)
+              <ul className="ml-6 mt-1 space-y-1">
+                <li>- Bank Statements (break down)</li>
+                <li>- Email (to lender)</li>
+                <li>- Application</li>
+              </ul>
+            </li>
+            <li>- Luke asking Zac for deals</li>
+            <li>- Keep Offers for Clients in Dashboard or easy to find place for them</li>
+          </ul>
+        </div>
+
+        {/* Card 3 */}
+        <div className="bg-red-400/10 border border-red-300/30 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-red-200 mb-3">HUGE - Time Drains - Luke</h3>
+          <ul className="space-y-2 text-sm text-gray-300">
+            <li>- Affiliates / Referral Partners - Phone Calls</li>
+            <li>- LUKE / ZAC scheming this whole process out</li>
+            <li>- FAQ Loom Videos</li>
+            <li>- Gameplan the Affiliate Process</li>
+            <li>- Google Drive &gt; One Pager PDF's &gt; Client Facing</li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Opportunity Heatmap */}
+      <div className="space-y-4 border-2 border-gray-400/30 rounded-lg p-6 bg-gray-700/30">
+        <div className="flex items-center gap-4">
+          <h2 className="text-2xl font-bold text-gray-100">Opportunity Heatmap</h2>
+
+          {/* Filter Buttons */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSelectedOpportunityFilter('Quick Wins')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                selectedOpportunityFilter === 'Quick Wins'
+                  ? 'bg-green-500/20 border-2 border-green-400/40 text-green-300'
+                  : 'bg-gray-500/20 border-2 border-gray-400/40 text-gray-400 hover:border-green-400/40 hover:text-green-300'
+              }`}
+            >
+              Quick Wins
+            </button>
+            <button
+              onClick={() => setSelectedOpportunityFilter('Big Wins')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                selectedOpportunityFilter === 'Big Wins'
+                  ? 'bg-blue-500/20 border-2 border-blue-400/40 text-blue-300'
+                  : 'bg-gray-500/20 border-2 border-gray-400/40 text-gray-400 hover:border-blue-400/40 hover:text-blue-300'
+              }`}
+            >
+              Big Wins
+            </button>
+            <button
+              onClick={() => setSelectedOpportunityFilter('Mid Opportunities')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                selectedOpportunityFilter === 'Mid Opportunities'
+                  ? 'bg-orange-500/20 border-2 border-orange-400/40 text-orange-300'
+                  : 'bg-gray-500/20 border-2 border-gray-400/40 text-gray-400 hover:border-orange-400/40 hover:text-orange-300'
+              }`}
+            >
+              Mid Opportunities
+            </button>
+            <button
+              onClick={() => setSelectedOpportunityFilter('Ungraded')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                selectedOpportunityFilter === 'Ungraded'
+                  ? 'bg-gray-500/20 border-2 border-gray-400/40 text-gray-400'
+                  : 'bg-gray-500/20 border-2 border-gray-400/40 text-gray-400 hover:border-gray-400'
+              }`}
+            >
+              Ungraded
+            </button>
+          </div>
+        </div>
+
+        {/* Filtered Tasks */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className={`text-sm font-semibold ${
+              selectedOpportunityFilter === 'Quick Wins' ? 'text-green-300' :
+              selectedOpportunityFilter === 'Big Wins' ? 'text-blue-300' :
+              selectedOpportunityFilter === 'Mid Opportunities' ? 'text-orange-300' :
+              'text-gray-400'
+            }`}>{selectedOpportunityFilter}</h3>
+            <div className="flex gap-2">
+              <button onClick={() => scroll(opportunitiesScrollRef, 'left')} className={`p-1 rounded transition-colors ${
+                selectedOpportunityFilter === 'Quick Wins' ? 'bg-green-500/20 border border-green-400/40 text-green-300 hover:bg-green-500/30' :
+                selectedOpportunityFilter === 'Big Wins' ? 'bg-blue-500/20 border border-blue-400/40 text-blue-300 hover:bg-blue-500/30' :
+                selectedOpportunityFilter === 'Mid Opportunities' ? 'bg-orange-500/20 border border-orange-400/40 text-orange-300 hover:bg-orange-500/30' :
+                'bg-gray-500/20 border border-gray-400/40 text-gray-400 hover:bg-gray-500/30'
+              }`}>
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button onClick={() => scroll(opportunitiesScrollRef, 'right')} className={`p-1 rounded transition-colors ${
+                selectedOpportunityFilter === 'Quick Wins' ? 'bg-green-500/20 border border-green-400/40 text-green-300 hover:bg-green-500/30' :
+                selectedOpportunityFilter === 'Big Wins' ? 'bg-blue-500/20 border border-blue-400/40 text-blue-300 hover:bg-blue-500/30' :
+                selectedOpportunityFilter === 'Mid Opportunities' ? 'bg-orange-500/20 border border-orange-400/40 text-orange-300 hover:bg-orange-500/30' :
+                'bg-gray-500/20 border border-gray-400/40 text-gray-400 hover:bg-gray-500/30'
+              }`}>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <div ref={opportunitiesScrollRef} className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {tasks.filter((t: any) => t.opportunity_level === selectedOpportunityFilter).map((task: any) => (
+              <div key={task.id} className={`border-2 rounded-xl p-4 relative min-w-[480px] max-w-[480px] flex-shrink-0 ${
+                selectedOpportunityFilter === 'Quick Wins' ? 'bg-green-500/20 border-green-400/40' :
+                selectedOpportunityFilter === 'Big Wins' ? 'bg-blue-500/20 border-blue-400/40' :
+                selectedOpportunityFilter === 'Mid Opportunities' ? 'bg-orange-500/20 border-orange-400/40' :
+                'bg-gray-500/20 border-gray-400/40'
+              }`}>
+                <button
+                  onClick={() => deleteConfirm === task.id ? deleteTask(task.id) : setDeleteConfirm(task.id)}
+                  className={`absolute top-2 right-2 p-1 rounded transition-colors ${deleteConfirm === task.id ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-red-400'}`}
+                  title={deleteConfirm === task.id ? 'Click again to confirm' : 'Delete task'}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+                <input type="text" className="w-full bg-transparent text-white font-bold text-2xl mb-2 px-0 focus:outline-none" placeholder="Task Title" value={task.task_name} onChange={(e) => updateTask(task.id, 'task_name', e.target.value)} />
+
+                <textarea
+                  className="w-full bg-transparent text-white text-sm mb-1 px-0 focus:outline-none resize-none overflow-hidden min-h-[24px]"
+                  placeholder="Add description..."
+                  value={task.summary}
+                  onChange={(e) => updateTask(task.id, 'summary', e.target.value)}
+                  rows={1}
+                  onInput={(e) => {
+                    e.currentTarget.style.height = 'auto';
+                    e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
+                  }}
+                />
+
+                <div className="border-t border-green-400/20 mt-1 mb-2"></div>
+
+                <div className="bg-green-500/10 border border-green-400/30 rounded-lg p-3 mb-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-green-300 font-bold">Goal:</span>
+                    <input type="text" className="flex-1 bg-transparent text-white px-2 focus:outline-none" placeholder="Enter goal..." value={task.goal} onChange={(e) => updateTask(task.id, 'goal', e.target.value)} />
+                  </div>
+                </div>
+
+                <div className="border-t border-green-400/20 mt-2 mb-3"></div>
+
+                <div className="flex flex-wrap items-center gap-1 mb-3 relative">
+                  <span className="text-white text-xs font-bold mr-1 flex-shrink-0">Integrations:</span>
+                  {task.tools.map((tool: any) => (
+                    <span key={tool} className={`${getToolColor(tool)} text-xs px-2 py-0.5 rounded inline-flex items-center gap-1 flex-shrink-0`}>
+                      {tool}
+                      <X className="w-3 h-3 cursor-pointer" onClick={() => removeTool(task.id, tool)} />
+                    </span>
+                  ))}
+                  <button
+                    className="bg-green-600/30 text-green-300 text-xs px-2 py-0.5 rounded hover:bg-green-600/50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowToolDropdown(showToolDropdown === task.id ? null : task.id);
+                    }}
+                  >
+                    +
+                  </button>
+                  {showToolDropdown === task.id && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setShowToolDropdown(null)}
+                      />
+                      <div className="absolute top-full mt-1 bg-gray-800 border border-green-400/40 rounded-lg shadow-lg z-20 p-2 min-w-[200px] max-h-[300px] overflow-y-auto">
+                        {availableTools.filter((t: any) => !task.tools.includes(t)).map((tool: any) => (
+                          <div
+                            key={tool}
+                            className={`px-3 py-1.5 text-sm rounded cursor-pointer ${getToolColor(tool)} hover:opacity-80 mb-1`}
+                            onClick={() => addTool(task.id, tool)}
+                          >
+                            {tool}
+                          </div>
+                        ))}
+                        <div className="mt-2 pt-2 border-t border-green-400/20">
+                          <input
+                            type="text"
+                            value={newToolInput}
+                            onChange={(e) => setNewToolInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                addCustomTool(newToolInput);
+                              }
+                            }}
+                            placeholder="Add new integration..."
+                            className="w-full bg-gray-700 text-white text-xs px-2 py-1.5 rounded focus:outline-none focus:ring-1 focus:ring-green-400"
+                          />
+                          <button
+                            onClick={() => addCustomTool(newToolInput)}
+                            className="w-full mt-1 bg-green-600/30 text-green-300 text-xs px-2 py-1 rounded hover:bg-green-600/50"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="border-t border-green-400/20 mb-3"></div>
+
+                <div className="flex items-start gap-3 text-xs mb-3">
+                  <div className="flex flex-col items-center">
+                    <div className="text-white mb-1 text-center font-bold">Start Date</div>
+                    <input type="date" className="bg-transparent text-white text-xs w-[95px] px-0.5" value={task.start_date} onChange={(e) => updateTask(task.id, 'start_date', e.target.value)} />
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <div className="text-white mb-1 text-center font-bold whitespace-nowrap">Estimated Completion</div>
+                    <input type="date" className="bg-transparent text-white text-xs w-[95px] px-0.5" value={task.finish_date} onChange={(e) => updateTask(task.id, 'finish_date', e.target.value)} />
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <div className="text-white mb-1 text-center font-bold whitespace-nowrap">Estimated Timeline</div>
+                    <div className="text-white text-xs h-[20px] flex items-center">
+                      {task.start_date && task.finish_date ?
+                        `${Math.ceil((new Date(task.finish_date).getTime() - new Date(task.start_date).getTime()) / (1000 * 60 * 60 * 24))} days`
+                        : '-'}
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <div className="text-white mb-1 text-center font-bold">TG Projection</div>
+                    <input type="text" className={`bg-transparent text-white text-xs w-[95px] px-0.5 text-center ${!task.tg_projection ? 'border border-green-400/40' : ''}`} value={task.tg_projection} onChange={(e) => updateTask(task.id, 'tg_projection', e.target.value)} />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 text-xs text-white pt-2 border-t border-green-400/20">
+                  <span className={`${getScoreColor(task.impact_score)} flex items-center gap-1 whitespace-nowrap`}><span className="font-bold">Impact:</span> <input type="number" min="1" max="10" className={`bg-transparent w-6 rounded px-1 font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${!task.impact_score ? 'border border-green-400/40' : ''} ${getScoreColor(task.impact_score)}`} placeholder="" value={task.impact_score || ''} onChange={(e) => updateTask(task.id, 'impact_score', e.target.value ? parseInt(e.target.value) : undefined)} /></span>
+                  <span className={`${getEffortInputColor(task.effort_score)} flex items-center gap-1 whitespace-nowrap`}><span className="font-bold">Effort:</span> <input type="number" min="1" max="10" className={`bg-transparent w-6 rounded px-1 font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${!task.effort_score ? 'border border-green-400/40' : ''} ${getEffortInputColor(task.effort_score)}`} placeholder="" value={task.effort_score || ''} onChange={(e) => updateTask(task.id, 'effort_score', e.target.value ? parseInt(e.target.value) : undefined)} /></span>
+                  <span className={`${getEffortInputColor(task.input_score)} flex items-center gap-1 whitespace-nowrap`}><span className="font-bold">User Input:</span> <input type="number" min="1" max="10" className={`bg-transparent w-6 rounded px-1 font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${!task.input_score ? 'border border-green-400/40' : ''} ${getEffortInputColor(task.input_score)}`} placeholder="" value={task.input_score || ''} onChange={(e) => updateTask(task.id, 'input_score', e.target.value ? parseInt(e.target.value) : undefined)} /></span>
+                  <span className={`${getScoreColor(task.zac_score)} flex items-center gap-1 whitespace-nowrap`}><span className="font-bold">Zac Score:</span> <input type="number" min="1" max="10" className={`bg-transparent w-6 rounded px-1 font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${!task.zac_score ? 'border border-green-400/40' : ''} ${getScoreColor(task.zac_score)}`} placeholder="" value={task.zac_score || ''} onChange={(e) => updateTask(task.id, 'zac_score', e.target.value ? parseInt(e.target.value) : undefined)} /></span>
+                  <span className={`${getScoreColor(task.luke_score)} flex items-center gap-1 whitespace-nowrap`}><span className="font-bold">Luke Score:</span> <input type="number" min="1" max="10" className={`bg-transparent w-6 rounded px-1 font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${!task.luke_score ? 'border border-green-400/40' : ''} ${getScoreColor(task.luke_score)}`} placeholder="" value={task.luke_score || ''} onChange={(e) => updateTask(task.id, 'luke_score', e.target.value ? parseInt(e.target.value) : undefined)} /></span>
+                </div>
+
+                <div className="flex items-center gap-2 mt-3 text-sm">
+                  <span className="text-white font-bold">Opportunity:</span>
+                  <select className={`bg-transparent border-0 rounded px-2 py-1 text-xs font-bold focus:outline-none ${getOpportunityColor(task.opportunity_level)}`} value={task.opportunity_level} onChange={(e) => updateTask(task.id, 'opportunity_level', e.target.value)}>
+                    <option value="Quick Wins" className="bg-gray-800 text-green-300">Quick Win</option>
+                    <option value="Big Wins" className="bg-gray-800 text-blue-300">Big Win</option>
+                    <option value="Mid Opportunities" className="bg-gray-800 text-orange-300">Mid Opportunity</option>
+                    <option value="Ungraded" className="bg-gray-800 text-gray-400">Ungraded</option>
+                  </select>
+                </div>
+
+                <div className="mt-3 flex items-center gap-4">
+                  <button
+                    onClick={() => toggleStepsChecklist(task.id)}
+                    className="py-2 flex items-center gap-2 text-white text-xs hover:bg-green-400/10 rounded transition-colors"
+                  >
+                    {expandedStepsChecklists.has(task.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    <span>{expandedStepsChecklists.has(task.id) ? 'Hide' : ''} Step by Step Checklist</span>
+                  </button>
+
+                  <button
+                    onClick={() => toggleIntegrationChecklist(task.id)}
+                    className="py-2 flex items-center gap-2 text-white text-xs hover:bg-green-400/10 rounded transition-colors"
+                  >
+                    {expandedIntegrationChecklists.has(task.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    <span>{expandedIntegrationChecklists.has(task.id) ? 'Hide' : ''} Integration Checklist</span>
+                  </button>
+
+                  <button
+                    onClick={() => toggleNotes(task.id)}
+                    className="py-2 flex items-center gap-2 text-white text-xs hover:bg-green-400/10 rounded transition-colors"
+                  >
+                    {expandedNotes.has(task.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    <span>{expandedNotes.has(task.id) ? 'Hide' : ''} Notes</span>
+                  </button>
+                </div>
+
+                {(expandedStepsChecklists.has(task.id) || expandedIntegrationChecklists.has(task.id) || expandedNotes.has(task.id)) && (
+                  <div className="mt-3 pt-3 border-t border-green-400/20">
+                    <div className="flex gap-3">
+                      {/* Steps Checklist - 50% */}
+                      {expandedStepsChecklists.has(task.id) && (
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-white text-sm font-bold">Step by Step Checklist</h4>
+                        </div>
+                        <div className="space-y-2">
+                          {task.stepsChecklist?.map((item: ChecklistItem, index: number) => (
+                            <div key={item.id} className="flex items-start gap-1">
+                              <button
+                                onClick={() => updateChecklistItem(task.id, 'stepsChecklist', item.id, 'completed', !item.completed)}
+                                className={`w-4 h-4 mt-1 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 ${
+                                  item.completed
+                                    ? 'bg-green-500 border-green-500'
+                                    : 'border-green-400/40 hover:border-green-400'
+                                }`}
+                              >
+                                {item.completed && <CheckCircle className="w-3 h-3 text-white" />}
+                              </button>
+                              <span className="text-white text-xs font-medium w-4 text-center mt-1 flex-shrink-0">{index + 1}.</span>
+                              <textarea
+                                value={item.text}
+                                onChange={(e) => updateChecklistItem(task.id, 'stepsChecklist', item.id, 'text', e.target.value)}
+                                placeholder="Enter step..."
+                                className="flex-1 bg-transparent text-white text-xs px-2 py-1 border border-green-400/20 rounded focus:outline-none focus:border-green-400/40 resize-none overflow-hidden min-h-[28px]"
+                                rows={1}
+                                onInput={(e) => {
+                                  e.currentTarget.style.height = 'auto';
+                                  e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
+                                }}
+                              />
+                              <button
+                                onClick={() => deleteChecklistItem(task.id, 'stepsChecklist', item.id)}
+                                className="text-gray-400 hover:text-red-400 mt-1 flex-shrink-0"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <button
+                          onClick={() => addChecklistItem(task.id, 'stepsChecklist')}
+                          className="mt-2 w-full py-1 text-green-300 hover:text-green-200 text-xs flex items-center justify-center gap-1 border border-green-400/20 rounded hover:border-green-400/40 transition-colors"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>Add Step</span>
+                        </button>
+                      </div>
+                      )}
+
+                      {/* Integration Checklist - 50% */}
+                      {expandedIntegrationChecklists.has(task.id) && (
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-white text-sm font-bold">Integration Checklist</h4>
+                        </div>
+                        <div className="space-y-2">
+                          {task.integrationChecklist?.map((item: ChecklistItem, index: number) => (
+                            <div key={item.id} className="flex items-start gap-1">
+                              <button
+                                onClick={() => updateChecklistItem(task.id, 'integrationChecklist', item.id, 'completed', !item.completed)}
+                                className={`w-4 h-4 mt-1 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 ${
+                                  item.completed
+                                    ? 'bg-green-500 border-green-500'
+                                    : 'border-green-400/40 hover:border-green-400'
+                                }`}
+                              >
+                                {item.completed && <CheckCircle className="w-3 h-3 text-white" />}
+                              </button>
+                              <span className="text-white text-xs font-medium w-4 text-center mt-1 flex-shrink-0">{index + 1}.</span>
+                              <textarea
+                                value={item.text}
+                                onChange={(e) => updateChecklistItem(task.id, 'integrationChecklist', item.id, 'text', e.target.value)}
+                                placeholder="Enter integration..."
+                                className="flex-1 bg-transparent text-white text-xs px-2 py-1 border border-green-400/20 rounded focus:outline-none focus:border-green-400/40 resize-none overflow-hidden min-h-[28px]"
+                                rows={1}
+                                onInput={(e) => {
+                                  e.currentTarget.style.height = 'auto';
+                                  e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
+                                }}
+                              />
+                              <button
+                                onClick={() => deleteChecklistItem(task.id, 'integrationChecklist', item.id)}
+                                className="text-gray-400 hover:text-red-400 mt-1 flex-shrink-0"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <button
+                          onClick={() => addChecklistItem(task.id, 'integrationChecklist')}
+                          className="mt-2 w-full py-1 text-green-300 hover:text-green-200 text-xs flex items-center justify-center gap-1 border border-green-400/20 rounded hover:border-green-400/40 transition-colors"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>Add Integration</span>
+                        </button>
+                      </div>
+                      )}
+
+                      {/* Notes */}
+                      {expandedNotes.has(task.id) && (
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-white text-sm font-bold">Notes</h4>
+                        </div>
+                        <textarea
+                          value={task.notes}
+                          onChange={(e) => updateTask(task.id, 'notes', e.target.value)}
+                          placeholder="Enter notes..."
+                          className="w-full bg-transparent text-white text-xs px-2 py-2 border border-green-400/20 rounded focus:outline-none focus:border-green-400/40 resize-none min-h-[200px]"
+                          rows={8}
+                        />
+                      </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+            <button
+              onClick={() => addNewTask(selectedOpportunityFilter)}
+              className={`border-2 border-dashed rounded-xl p-2 transition-colors flex flex-col items-center justify-center w-20 gap-1 flex-shrink-0 ${
+                selectedOpportunityFilter === 'Quick Wins' ? 'bg-green-500/20 border-green-400/40 hover:bg-green-500/30' :
+                selectedOpportunityFilter === 'Big Wins' ? 'bg-blue-500/20 border-blue-400/40 hover:bg-blue-500/30' :
+                selectedOpportunityFilter === 'Mid Opportunities' ? 'bg-orange-500/20 border-orange-400/40 hover:bg-orange-500/30' :
+                'bg-gray-500/20 border-gray-400/40 hover:bg-gray-500/30'
+              }`}
+            >
+              <span className={`text-[13.5px] font-semibold ${
+                selectedOpportunityFilter === 'Quick Wins' ? 'text-green-300' :
+                selectedOpportunityFilter === 'Big Wins' ? 'text-blue-300' :
+                selectedOpportunityFilter === 'Mid Opportunities' ? 'text-orange-300' :
+                'text-gray-300'
+              }`}>Add</span>
+              <span className={`text-[13.5px] font-semibold ${
+                selectedOpportunityFilter === 'Quick Wins' ? 'text-green-300' :
+                selectedOpportunityFilter === 'Big Wins' ? 'text-blue-300' :
+                selectedOpportunityFilter === 'Mid Opportunities' ? 'text-orange-300' :
+                'text-gray-300'
+              }`}>New</span>
+              <span className={`text-[13.5px] font-semibold ${
+                selectedOpportunityFilter === 'Quick Wins' ? 'text-green-300' :
+                selectedOpportunityFilter === 'Big Wins' ? 'text-blue-300' :
+                selectedOpportunityFilter === 'Mid Opportunities' ? 'text-orange-300' :
+                'text-gray-300'
+              }`}>Task</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+        <input
+          type="text"
+          placeholder="Search tasks..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-10 pr-4 py-2 bg-purple-400/10 border border-purple-300/30 rounded-lg text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-purple-300 focus:border-transparent"
+        />
+      </div>
+
+      {/* Kanban Board */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        {stages.map((stage) => {
+          const Icon = stage.icon;
+          const tasksInStage = mockTasks.filter((task) => task.stage === stage.name);
+
+          return (
+            <div key={stage.name} className={`${stage.bgColor} rounded-lg p-4`}>
+              {/* Stage Header */}
+              <div className={`flex items-center gap-2 mb-4 pb-3 border-b ${stage.borderColor}`}>
+                <Icon className={`w-5 h-5 ${stage.color}`} />
+                <h2 className={`font-bold text-sm uppercase tracking-wide ${stage.color}`}>
+                  {stage.name}
+                </h2>
+                <span className={`ml-auto ${stage.badgeColor} text-gray-300 text-xs font-semibold px-2 py-1 rounded-full`}>
+                  {tasksInStage.length}
+                </span>
+              </div>
+
+              {/* Task Cards */}
+              <div className="space-y-3">
+                {tasksInStage.map((task) => (
+                  <div
+                    key={task.id}
+                    className={`${stage.bgColor} border ${stage.borderColor} rounded-lg p-4 hover:border-opacity-50 transition-all cursor-pointer`}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-gray-100 leading-tight">
+                        {task.task_name}
+                      </h3>
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-medium border ${
+                          opportunityColors[task.opportunity_level]
+                        }`}
+                      >
+                        {task.opportunity_level}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-gray-400 mb-3 line-clamp-2">{task.description}</p>
+
+                    <div className="space-y-2">
+                      <div>
+                        <span className="text-xs font-medium text-gray-500">Connectors:</span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {task.connectors.map((connector) => (
+                            <span
+                              key={connector}
+                              className={`px-2 py-0.5 ${stage.connectorColor} ${stage.connectorTextColor} rounded text-xs`}
+                            >
+                              {connector}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className={`pt-2 border-t ${stage.borderColor.replace('/30', '/20')}`}>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-500">{task.task_area}</span>
+                          <span className="text-gray-500">
+                            {new Date(task.estimated_completion_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* AI Tools Research Section */}
+      <div className="bg-purple-400/10 border border-purple-300/30 rounded-lg p-6">
+        <h2 className="text-xl font-bold text-gray-100 mb-4">
+          AI Tools Research
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {['Zapier', 'Make.com', 'n8n'].map((tool) => (
+            <div
+              key={tool}
+              className="bg-purple-400/10 border border-purple-300/30 rounded-lg p-4 hover:border-purple-300/50 transition-colors cursor-pointer"
+            >
+              <h3 className="font-semibold text-gray-100 mb-2">{tool}</h3>
+              <p className="text-sm text-gray-400 mb-3">
+                Automation platform for connecting apps and workflows
+              </p>
+              <a
+                href="#"
+                className="text-sm text-purple-300 hover:text-purple-200 font-medium"
+              >
+                Learn more →
+              </a>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
