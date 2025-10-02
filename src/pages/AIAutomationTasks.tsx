@@ -619,7 +619,10 @@ export const AIAutomationTasks = () => {
                         className="fixed inset-0 z-10"
                         onClick={() => setShowToolDropdown(null)}
                       />
-                      <div className="absolute top-full mt-1 bg-gray-800 border border-green-400/40 rounded-lg shadow-lg z-20 p-2 min-w-[200px] max-h-[300px] overflow-y-auto">
+                      <div
+                        className="absolute top-full mt-1 bg-gray-800 border border-green-400/40 rounded-lg shadow-lg z-20 p-2 min-w-[200px] max-h-[300px] overflow-y-auto"
+                        onWheel={(e) => e.stopPropagation()}
+                      >
                         {availableTools.filter((t: any) => !task.tools.includes(t)).map((tool: any) => (
                           <div
                             key={tool}
