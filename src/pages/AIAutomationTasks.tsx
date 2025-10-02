@@ -59,7 +59,7 @@ export const AIAutomationTasks = () => {
       tasks.forEach((task: any) => {
         saveTask(task);
       });
-    }, 1000);
+    }, 2500);
     return () => clearTimeout(timeoutId);
   }, [tasks]);
 
