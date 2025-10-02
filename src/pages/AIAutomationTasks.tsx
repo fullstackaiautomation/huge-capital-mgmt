@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Plus, Search, Lightbulb, ClipboardList, TestTube, Eye, CheckCircle, X, Trash2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useOpportunityTasks } from '../hooks/useOpportunityTasks';
 
 type TaskStage = 'Ideas' | 'Planning' | 'Testing' | 'Review' | 'Completed';
 type OpportunityLevel = 'Quick Wins' | 'Big Wins' | 'Mid Opportunities' | 'Ungraded';
@@ -94,44 +95,25 @@ const initialOpportunityTasks = [
 ];
 
 export const AIAutomationTasks = () => {
+  const { tasks, loading, customTools, setTasks, saveTask, deleteTask: deleteTaskFromDb, addCustomTool } = useOpportunityTasks();
   const [searchTerm, setSearchTerm] = useState('');
   const [showToolDropdown, setShowToolDropdown] = useState<string | null>(null);
-  const [tasks, setTasks] = useState(() => {
-    const savedTasks = localStorage.getItem('opportunityTasks');
-    if (savedTasks) {
-      const parsed = JSON.parse(savedTasks);
-      // Ensure all tasks have the checklist fields and score fields
-      return parsed.map((task: any) => ({
-        ...task,
-        zac_score: task.zac_score !== undefined ? task.zac_score : undefined,
-        luke_score: task.luke_score !== undefined ? task.luke_score : undefined,
-        goal: task.goal || '',
-        tg_projection: task.tg_projection || '',
-        stepsChecklist: task.stepsChecklist || Array.from({ length: 6 }, (_, i) => ({ id: `step-${task.id}-${i}`, text: '', completed: false })),
-        integrationChecklist: task.integrationChecklist || Array.from({ length: 3 }, (_, i) => ({ id: `int-${task.id}-${i}`, text: '', completed: false })),
-        notes: task.notes || '',
-      }));
-    }
-    return initialOpportunityTasks;
-  });
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [expandedStepsChecklists, setExpandedStepsChecklists] = useState<Set<string>>(new Set());
   const [expandedIntegrationChecklists, setExpandedIntegrationChecklists] = useState<Set<string>>(new Set());
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const [selectedOpportunityFilter, setSelectedOpportunityFilter] = useState<OpportunityLevel>('Quick Wins');
-  const [customTools, setCustomTools] = useState<string[]>(() => {
-    const saved = localStorage.getItem('customTools');
-    return saved ? JSON.parse(saved) : [];
-  });
   const [newToolInput, setNewToolInput] = useState<string>('');
 
+  // Auto-save when tasks change (debounced)
   useEffect(() => {
-    localStorage.setItem('opportunityTasks', JSON.stringify(tasks));
+    const timeoutId = setTimeout(() => {
+      tasks.forEach((task: any) => {
+        saveTask(task);
+      });
+    }, 1000);
+    return () => clearTimeout(timeoutId);
   }, [tasks]);
-
-  useEffect(() => {
-    localStorage.setItem('customTools', JSON.stringify(customTools));
-  }, [customTools]);
 
   const availableTools = ['Claude', 'Drive', 'GHL', 'Gmail', 'n8n', 'Phone Calls', 'Sheets', 'Slack', ...customTools];
 
@@ -152,10 +134,10 @@ export const AIAutomationTasks = () => {
     return toolColors[tool] || 'bg-gray-600 text-white';
   };
 
-  const addCustomTool = (toolName: string) => {
+  const handleAddCustomTool = async (toolName: string) => {
     const trimmed = toolName.trim();
     if (trimmed && !availableTools.includes(trimmed)) {
-      setCustomTools([...customTools, trimmed]);
+      await addCustomTool(trimmed);
       setNewToolInput('');
     }
   };
@@ -210,8 +192,8 @@ export const AIAutomationTasks = () => {
     ));
   };
 
-  const deleteTask = (taskId: string) => {
-    setTasks(tasks.filter((task: any) => task.id !== taskId));
+  const handleDeleteTask = async (taskId: string) => {
+    await deleteTaskFromDb(taskId);
     setDeleteConfirm(null);
   };
 
@@ -612,7 +594,7 @@ export const AIAutomationTasks = () => {
                 'bg-gray-500/20 border-gray-400/40'
               }`}>
                 <button
-                  onClick={() => deleteConfirm === task.id ? deleteTask(task.id) : setDeleteConfirm(task.id)}
+                  onClick={() => deleteConfirm === task.id ? handleDeleteTask(task.id) : setDeleteConfirm(task.id)}
                   className={`absolute top-2 right-2 p-1 rounded transition-colors ${deleteConfirm === task.id ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-red-400'}`}
                   title={deleteConfirm === task.id ? 'Click again to confirm' : 'Delete task'}
                 >
@@ -683,14 +665,14 @@ export const AIAutomationTasks = () => {
                             onChange={(e) => setNewToolInput(e.target.value)}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
-                                addCustomTool(newToolInput);
+                                handleAddCustomTool(newToolInput);
                               }
                             }}
                             placeholder="Add new integration..."
                             className="w-full bg-gray-700 text-white text-xs px-2 py-1.5 rounded focus:outline-none focus:ring-1 focus:ring-green-400"
                           />
                           <button
-                            onClick={() => addCustomTool(newToolInput)}
+                            onClick={() => handleAddCustomTool(newToolInput)}
                             className="w-full mt-1 bg-green-600/30 text-green-300 text-xs px-2 py-1 rounded hover:bg-green-600/50"
                           >
                             Add
