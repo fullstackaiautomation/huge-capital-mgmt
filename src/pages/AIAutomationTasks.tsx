@@ -11,91 +11,10 @@ type ChecklistItem = {
   completed: boolean;
 };
 
-const initialOpportunityTasks = [
-  {
-    id: '1',
-    task_name: 'Calendly Integration',
-    impact_score: 8,
-    effort_score: 3,
-    input_score: 7,
-    zac_score: undefined as any,
-    luke_score: undefined as any,
-    opportunity_level: 'Quick Wins' as OpportunityLevel,
-    tools: ['GHL', 'Phone Calls'],
-    summary: 'Implement Calendly to reduce back-and-forth scheduling with customers',
-    goal: '',
-    start_date: '2024-02-01',
-    finish_date: '2024-02-15',
-    impact_on: ['Zac', 'Luke'],
-    tg_projection: '',
-    stepsChecklist: Array.from({ length: 6 }, (_, i) => ({ id: `step-${i}`, text: '', completed: false })),
-    integrationChecklist: Array.from({ length: 3 }, (_, i) => ({ id: `int-${i}`, text: '', completed: false })),
-    notes: '',
-  },
-  {
-    id: '2',
-    task_name: 'Debt Schedule Automation',
-    impact_score: 9,
-    effort_score: 7,
-    input_score: 8,
-    zac_score: undefined as any,
-    luke_score: undefined as any,
-    opportunity_level: 'Big Wins' as OpportunityLevel,
-    tools: ['Sheets', 'n8n', 'Claude'],
-    summary: 'Automate debt schedule creation using AI and spreadsheet integration',
-    goal: '',
-    start_date: '2024-02-15',
-    finish_date: '2024-03-30',
-    impact_on: ['Zac', 'Team'],
-    tg_projection: '',
-    stepsChecklist: Array.from({ length: 6 }, (_, i) => ({ id: `step-${i}`, text: '', completed: false })),
-    integrationChecklist: Array.from({ length: 3 }, (_, i) => ({ id: `int-${i}`, text: '', completed: false })),
-    notes: '',
-  },
-  {
-    id: '3',
-    task_name: 'Client Portal Dashboard',
-    impact_score: 7,
-    effort_score: 6,
-    input_score: 6,
-    zac_score: undefined as any,
-    luke_score: undefined as any,
-    opportunity_level: 'Mid Opportunities' as OpportunityLevel,
-    tools: ['GHL', 'Drive'],
-    summary: 'Create client-facing dashboard to show offers and deal status',
-    goal: '',
-    start_date: '2024-03-01',
-    finish_date: '2024-04-15',
-    impact_on: ['Clients', 'Team'],
-    tg_projection: '',
-    stepsChecklist: Array.from({ length: 6 }, (_, i) => ({ id: `step-${i}`, text: '', completed: false })),
-    integrationChecklist: Array.from({ length: 3 }, (_, i) => ({ id: `int-${i}`, text: '', completed: false })),
-    notes: '',
-  },
-  {
-    id: '4',
-    task_name: 'CPA Data Collection',
-    impact_score: 5,
-    effort_score: 4,
-    input_score: 3,
-    zac_score: undefined as any,
-    luke_score: undefined as any,
-    opportunity_level: 'Ungraded' as OpportunityLevel,
-    tools: ['Gmail', 'Slack'],
-    summary: 'Streamline process for getting information from CPAs',
-    goal: '',
-    start_date: '',
-    finish_date: '',
-    impact_on: ['Zac'],
-    tg_projection: '',
-    stepsChecklist: Array.from({ length: 6 }, (_, i) => ({ id: `step-${i}`, text: '', completed: false })),
-    integrationChecklist: Array.from({ length: 3 }, (_, i) => ({ id: `int-${i}`, text: '', completed: false })),
-    notes: '',
-  },
-];
+// Initial tasks removed - now using Supabase
 
 export const AIAutomationTasks = () => {
-  const { tasks, loading, customTools, setTasks, saveTask, deleteTask: deleteTaskFromDb, addCustomTool } = useOpportunityTasks();
+  const { tasks, customTools, setTasks, saveTask, deleteTask: deleteTaskFromDb, addCustomTool } = useOpportunityTasks();
   const [searchTerm, setSearchTerm] = useState('');
   const [showToolDropdown, setShowToolDropdown] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -176,6 +95,7 @@ export const AIAutomationTasks = () => {
       tg_projection: '',
       stepsChecklist: Array.from({ length: 6 }, (_, i) => ({ id: `step-${Date.now()}-${i}`, text: '', completed: false })),
       integrationChecklist: Array.from({ length: 3 }, (_, i) => ({ id: `int-${Date.now()}-${i}`, text: '', completed: false })),
+      notes: '',
     };
     setTasks([...tasks, newTask]);
   };
