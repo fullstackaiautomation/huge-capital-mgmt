@@ -590,7 +590,7 @@ export const AIAutomationTasks = () => {
 
                 <div className="border-t border-green-400/20 mt-2 mb-3"></div>
 
-                <div className="flex flex-wrap items-center gap-1 mb-3 relative">
+                <div className="flex flex-wrap items-center gap-1 mb-3">
                   <span className="text-white text-xs font-bold mr-1 flex-shrink-0">Integrations:</span>
                   {task.tools.map((tool: any) => (
                     <span key={tool} className={`${getToolColor(tool)} text-xs px-2 py-0.5 rounded inline-flex items-center gap-1 flex-shrink-0`}>
@@ -598,25 +598,26 @@ export const AIAutomationTasks = () => {
                       <X className="w-3 h-3 cursor-pointer" onClick={() => removeTool(task.id, tool)} />
                     </span>
                   ))}
-                  <button
-                    className="bg-green-600/30 text-green-300 text-xs px-2 py-0.5 rounded hover:bg-green-600/50"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowToolDropdown(showToolDropdown === task.id ? null : task.id);
-                    }}
-                  >
-                    +
-                  </button>
-                  {showToolDropdown === task.id && (
-                    <>
-                      <div
-                        className="fixed inset-0 z-10"
-                        onClick={() => setShowToolDropdown(null)}
-                      />
-                      <div
-                        className="absolute top-full mt-1 bg-gray-800 border border-green-400/40 rounded-lg shadow-lg z-20 p-2 min-w-[420px] max-h-[350px] overflow-y-auto"
-                        onWheel={(e) => e.stopPropagation()}
-                      >
+                  <div className="relative inline-block">
+                    <button
+                      className="bg-green-600/30 text-green-300 text-xs px-2 py-0.5 rounded hover:bg-green-600/50"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowToolDropdown(showToolDropdown === task.id ? null : task.id);
+                      }}
+                    >
+                      +
+                    </button>
+                    {showToolDropdown === task.id && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-10"
+                          onClick={() => setShowToolDropdown(null)}
+                        />
+                        <div
+                          className="absolute top-full left-0 mt-1 bg-gray-800 border border-green-400/40 rounded-lg shadow-lg z-20 p-2 min-w-[420px] max-h-[350px] overflow-y-auto"
+                          onWheel={(e) => e.stopPropagation()}
+                        >
                         <div className="grid grid-cols-2 gap-1">
                           {availableTools.filter((t: any) => !task.tools.includes(t)).map((tool: any) => (
                             <div
@@ -649,8 +650,9 @@ export const AIAutomationTasks = () => {
                           </button>
                         </div>
                       </div>
-                    </>
-                  )}
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 <div className="border-t border-green-400/20 mb-3"></div>
