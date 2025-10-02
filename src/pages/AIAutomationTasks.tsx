@@ -577,6 +577,12 @@ export const AIAutomationTasks = () => {
                     e.currentTarget.style.height = 'auto';
                     e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
                   }}
+                  ref={(el) => {
+                    if (el) {
+                      el.style.height = 'auto';
+                      el.style.height = el.scrollHeight + 'px';
+                    }
+                  }}
                 />
 
                 <div className="border-t border-green-400/20 mt-1 mb-2"></div>
