@@ -1292,32 +1292,6 @@ export const AIAutomationTasks = () => {
           );
         })}
       </div>
-
-      {/* AI Tools Research Section */}
-      <div className="bg-purple-400/10 border border-purple-300/30 rounded-lg p-6">
-        <h2 className="text-xl font-bold text-gray-100 mb-4">
-          AI Tools Research
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {['Zapier', 'Make.com', 'n8n'].map((tool) => (
-            <div
-              key={tool}
-              className="bg-purple-400/10 border border-purple-300/30 rounded-lg p-4 hover:border-purple-300/50 transition-colors cursor-pointer"
-            >
-              <h3 className="font-semibold text-gray-100 mb-2">{tool}</h3>
-              <p className="text-sm text-gray-400 mb-3">
-                Automation platform for connecting apps and workflows
-              </p>
-              <a
-                href="#"
-                className="text-sm text-purple-300 hover:text-purple-200 font-medium"
-              >
-                Learn more →
-              </a>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 };
