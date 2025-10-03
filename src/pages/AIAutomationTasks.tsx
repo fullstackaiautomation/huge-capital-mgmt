@@ -184,8 +184,6 @@ export const AIAutomationTasks = () => {
   const [migrating, setMigrating] = useState(false);
   const [migrationMessage, setMigrationMessage] = useState<string | null>(null);
   const [hasLocalStorageData, setHasLocalStorageData] = useState(false);
-  const [sortColumn, setSortColumn] = useState<string>('start_date');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const sensors = useSensors(
     useSensor(PointerSensor),
