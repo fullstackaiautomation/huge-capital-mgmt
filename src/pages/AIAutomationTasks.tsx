@@ -6,6 +6,7 @@ import { migrateLocalStorageToSupabase } from '../utils/migrateLocalStorageToSup
 type TaskStage = 'Ideas' | 'Planning' | 'Testing' | 'Review' | 'Completed';
 type OpportunityLevel = 'Quick Wins' | 'Big Wins' | 'Mid Opportunities' | 'Ungraded';
 type TaskStatus = 'Completed' | 'In Progress' | 'Testing' | 'Next Up' | 'Bench' | 'Huge Help';
+type TaskPriority = 'High' | 'Medium' | 'Low';
 
 type ChecklistItem = {
   id: string;
@@ -745,14 +746,20 @@ export const AIAutomationTasks = () => {
                   <span className={`${getScoreColor(task.luke_score)} flex items-center gap-1 whitespace-nowrap`}><span className="font-bold">Luke Score:</span> <input type="number" min="1" max="10" className={`bg-transparent w-6 rounded px-1 font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${!task.luke_score ? 'border border-green-400/40' : ''} ${getScoreColor(task.luke_score)}`} placeholder="" value={task.luke_score || ''} onChange={(e) => updateTask(task.id, 'luke_score', e.target.value ? parseInt(e.target.value) : undefined)} /></span>
                 </div>
 
-                <div className="flex items-center gap-2 mt-3 text-sm">
-                  <span className="text-white font-bold">Opportunity:</span>
-                  <select className={`bg-transparent border-0 rounded px-2 py-1 text-xs font-bold focus:outline-none ${getOpportunityColor(task.opportunity_level)}`} value={task.opportunity_level} onChange={(e) => updateTask(task.id, 'opportunity_level', e.target.value)}>
-                    <option value="Quick Wins" className="bg-gray-800 text-green-300">Quick Win</option>
-                    <option value="Big Wins" className="bg-gray-800 text-blue-300">Big Win</option>
-                    <option value="Mid Opportunities" className="bg-gray-800 text-orange-300">Mid Opportunity</option>
-                    <option value="Ungraded" className="bg-gray-800 text-gray-400">Ungraded</option>
-                  </select>
+                <div className="flex items-center gap-4 mt-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-white font-bold">Priority:</span>
+                    <input type="number" min="1" max="10" className={`bg-transparent w-8 rounded px-1 font-bold text-white border focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${!task.priority ? 'border-green-400/40' : 'border-white/20'}`} placeholder="" value={task.priority || ''} onChange={(e) => updateTask(task.id, 'priority', e.target.value ? parseInt(e.target.value) : undefined)} />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-white font-bold">Opportunity:</span>
+                    <select className={`bg-transparent border-0 rounded px-2 py-1 text-xs font-bold focus:outline-none ${getOpportunityColor(task.opportunity_level)}`} value={task.opportunity_level} onChange={(e) => updateTask(task.id, 'opportunity_level', e.target.value)}>
+                      <option value="Quick Wins" className="bg-gray-800 text-green-300">Quick Win</option>
+                      <option value="Big Wins" className="bg-gray-800 text-blue-300">Big Win</option>
+                      <option value="Mid Opportunities" className="bg-gray-800 text-orange-300">Mid Opportunity</option>
+                      <option value="Ungraded" className="bg-gray-800 text-gray-400">Ungraded</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2 mt-2 text-sm">
@@ -971,6 +978,12 @@ export const AIAutomationTasks = () => {
                     {sortColumn === 'opportunity_level' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
                   </div>
                 </th>
+                <th className="text-center py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('priority')}>
+                  <div className="flex items-center justify-center gap-1">
+                    Priority
+                    {sortColumn === 'priority' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
+                  </div>
+                </th>
                 <th className="text-center py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('status')}>
                   <div className="flex items-center justify-center gap-1">
                     Status
@@ -1054,6 +1067,17 @@ export const AIAutomationTasks = () => {
                           <option value="Mid Opportunities" className="bg-gray-800 text-orange-300">Mid Opportunities</option>
                           <option value="Ungraded" className="bg-gray-800 text-gray-400">Ungraded</option>
                         </select>
+                      </td>
+                      <td className="py-3 px-2 text-center">
+                        <input
+                          type="number"
+                          min="1"
+                          max="10"
+                          className="bg-transparent w-12 rounded px-1 font-bold text-white text-center focus:outline-none focus:bg-purple-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none mx-auto"
+                          placeholder="-"
+                          value={task.priority || ''}
+                          onChange={(e) => updateTask(task.id, 'priority', e.target.value ? parseInt(e.target.value) : undefined)}
+                        />
                       </td>
                       <td className="py-3 px-2 text-center">
                         <select

@@ -19,6 +19,7 @@ type OpportunityTask = {
   luke_score?: number;
   opportunity_level: OpportunityLevel;
   status?: string;
+  priority?: number;
   tools: string[];
   summary: string;
   goal: string;
@@ -95,6 +96,7 @@ export const useOpportunityTasks = () => {
         luke_score: task.luke_score,
         opportunity_level: task.opportunity_level,
         status: task.status,
+        priority: task.priority,
         tools: task.tools,
         summary: task.summary,
         goal: task.goal,
