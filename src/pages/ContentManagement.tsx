@@ -54,7 +54,7 @@ export const ContentManagement = () => {
           onClick={() => setSelectedPerson('Zac')}
           className={`px-6 py-3 rounded-lg text-lg font-semibold transition-colors ${
             selectedPerson === 'Zac'
-              ? 'bg-yellow-500 text-white border-2 border-yellow-600'
+              ? 'bg-blue-500 text-white border-2 border-blue-600'
               : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
           }`}
         >
@@ -64,7 +64,7 @@ export const ContentManagement = () => {
           onClick={() => setSelectedPerson('Luke')}
           className={`px-6 py-3 rounded-lg text-lg font-semibold transition-colors ${
             selectedPerson === 'Luke'
-              ? 'bg-yellow-500 text-white border-2 border-yellow-600'
+              ? 'bg-green-500 text-white border-2 border-green-600'
               : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
           }`}
         >
@@ -74,7 +74,7 @@ export const ContentManagement = () => {
           onClick={() => setSelectedPerson('Huge Capital')}
           className={`px-6 py-3 rounded-lg text-lg font-semibold transition-colors ${
             selectedPerson === 'Huge Capital'
-              ? 'bg-yellow-500 text-white border-2 border-yellow-600'
+              ? 'bg-purple-500 text-white border-2 border-purple-600'
               : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
           }`}
         >
@@ -83,7 +83,13 @@ export const ContentManagement = () => {
       </div>
 
       {/* Brand Voice Guidelines */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className={`rounded-lg shadow p-6 ${
+        selectedPerson === 'Zac'
+          ? 'bg-blue-50 border-2 border-blue-200'
+          : selectedPerson === 'Luke'
+          ? 'bg-green-50 border-2 border-green-200'
+          : 'bg-purple-50 border-2 border-purple-200'
+      }`}>
         <h2 className="text-xl font-bold text-gray-900 mb-4">
           Brand Voice Guidelines
         </h2>
