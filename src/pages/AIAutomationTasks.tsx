@@ -959,38 +959,38 @@ export const AIAutomationTasks = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-purple-300/30">
-                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10 w-[300px]" onClick={() => handleSort('task_name')}>
-                  <div className="flex items-center gap-1">
+                <th className="text-center py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10 w-[300px]" onClick={() => handleSort('task_name')}>
+                  <div className="flex items-center justify-center gap-1">
                     Task Name
                     {sortColumn === 'task_name' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
                   </div>
                 </th>
-                <th className="text-left py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('opportunity_level')}>
-                  <div className="flex items-center gap-1">
+                <th className="text-center py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('opportunity_level')}>
+                  <div className="flex items-center justify-center gap-1">
                     Opportunity
                     {sortColumn === 'opportunity_level' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
                   </div>
                 </th>
-                <th className="text-left py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('status')}>
-                  <div className="flex items-center gap-1">
+                <th className="text-center py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('status')}>
+                  <div className="flex items-center justify-center gap-1">
                     Status
                     {sortColumn === 'status' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
                   </div>
                 </th>
-                <th className="text-left py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('tg_projection')}>
-                  <div className="flex items-center gap-1">
+                <th className="text-center py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('tg_projection')}>
+                  <div className="flex items-center justify-center gap-1">
                     TG Projection
                     {sortColumn === 'tg_projection' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
                   </div>
                 </th>
-                <th className="text-left py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('start_date')}>
-                  <div className="flex items-center gap-1">
+                <th className="text-center py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('start_date')}>
+                  <div className="flex items-center justify-center gap-1">
                     Start Date
                     {sortColumn === 'start_date' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
                   </div>
                 </th>
-                <th className="text-left py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('finish_date')}>
-                  <div className="flex items-center gap-1">
+                <th className="text-center py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('finish_date')}>
+                  <div className="flex items-center justify-center gap-1">
                     Completion
                     {sortColumn === 'finish_date' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
                   </div>
@@ -1037,9 +1037,9 @@ export const AIAutomationTasks = () => {
                           value={task.task_name}
                           onChange={(e) => updateTask(task.id, 'task_name', e.target.value)}
                         />
-                        {task.goal && (
+                        {task.summary && (
                           <div className="text-xs text-gray-400 mt-1">
-                            {task.goal}
+                            {task.summary}
                           </div>
                         )}
                       </td>
