@@ -658,9 +658,13 @@ export const AIAutomationTasks = () => {
                 <div className="border-t border-green-400/20 mt-1 mb-2"></div>
 
                 <div className="bg-green-500/10 border border-green-400/30 rounded-lg p-3 mb-2">
-                  <div className="flex items-center gap-2 text-sm">
+                  <div className="flex flex-col gap-2 text-sm">
                     <span className="text-green-300 font-bold">Goal:</span>
-                    <input type="text" className="flex-1 bg-transparent text-white px-2 focus:outline-none" placeholder="Enter goal..." value={task.goal} onChange={(e) => updateTask(task.id, 'goal', e.target.value)} />
+                    <textarea className="w-full bg-transparent text-white px-2 py-1 focus:outline-none resize-none" placeholder="Enter goal..." value={task.goal} onChange={(e) => updateTask(task.id, 'goal', e.target.value)} rows={3} style={{minHeight: 'auto', height: 'auto'}} onInput={(e) => {
+                      const target = e.target as HTMLTextAreaElement;
+                      target.style.height = 'auto';
+                      target.style.height = target.scrollHeight + 'px';
+                    }} />
                   </div>
                 </div>
 
