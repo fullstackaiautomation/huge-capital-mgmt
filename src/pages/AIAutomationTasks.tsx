@@ -749,7 +749,7 @@ export const AIAutomationTasks = () => {
                 <div className="flex items-center gap-4 mt-3 text-sm">
                   <div className="flex items-center gap-2">
                     <span className="text-white font-bold">Priority:</span>
-                    <input type="number" min="1" max="10" className={`bg-transparent w-8 rounded px-1 font-bold text-white border focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${!task.priority ? 'border-green-400/40' : 'border-white/20'}`} placeholder="" value={task.priority || ''} onChange={(e) => updateTask(task.id, 'priority', e.target.value ? parseInt(e.target.value) : undefined)} />
+                    <input type="number" min="1" max="10" className={`bg-transparent w-8 rounded px-1 font-bold text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${!task.priority ? 'border border-green-400/40' : ''}`} placeholder="" value={task.priority || ''} onChange={(e) => updateTask(task.id, 'priority', e.target.value ? parseInt(e.target.value) : undefined)} />
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-white font-bold">Opportunity:</span>
