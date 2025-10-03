@@ -49,8 +49,6 @@ export const ContentManagement = () => {
         'Knows the Best Solution for Your Situation',
         'Creative Funder',
         'Consultative Approach',
-        'Your Success = Our Success',
-        'Not For Everyone',
       ],
     },
     'Luke': {
