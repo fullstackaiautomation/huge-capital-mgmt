@@ -126,12 +126,12 @@ export const ContentManagement = () => {
       {/* Content Profile */}
       <div className={`rounded-lg shadow p-6 ${
         selectedPerson === 'Zac'
-          ? 'bg-blue-50 border-2 border-blue-200'
+          ? 'bg-blue-500 border-2 border-blue-600'
           : selectedPerson === 'Luke'
-          ? 'bg-green-50 border-2 border-green-200'
-          : 'bg-purple-50 border-2 border-purple-200'
+          ? 'bg-green-500 border-2 border-green-600'
+          : 'bg-purple-500 border-2 border-purple-600'
       }`}>
-        <h2 className="text-xl font-bold text-gray-900 mb-4">
+        <h2 className="text-xl font-bold text-white mb-4">
           {selectedPerson} Content Profile
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
