@@ -1029,21 +1029,17 @@ export const AIAutomationTasks = () => {
 
                   return (
                     <tr key={task.id} className="border-b border-gray-700/50 hover:bg-purple-500/5 transition-colors">
-                      <td className="py-3 px-4 text-center">
+                      <td className="py-3 px-4">
                         <input
                           type="text"
-                          className="w-full bg-transparent text-white font-medium focus:outline-none focus:bg-purple-500/10 rounded px-1 text-center"
+                          className="w-full bg-transparent text-white font-medium focus:outline-none focus:bg-purple-500/10 rounded px-1"
                           placeholder="Task Title"
                           value={task.task_name}
                           onChange={(e) => updateTask(task.id, 'task_name', e.target.value)}
                         />
-                        {task.tools && task.tools.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1 justify-center">
-                            {task.tools.map((tool: string) => (
-                              <span key={tool} className={`${getToolColor(tool)} text-xs px-2 py-0.5 rounded`}>
-                                {tool}
-                              </span>
-                            ))}
+                        {task.goal && (
+                          <div className="text-xs text-gray-400 mt-1">
+                            {task.goal}
                           </div>
                         )}
                       </td>
