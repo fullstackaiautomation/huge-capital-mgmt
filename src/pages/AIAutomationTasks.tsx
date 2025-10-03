@@ -5,6 +5,7 @@ import { migrateLocalStorageToSupabase } from '../utils/migrateLocalStorageToSup
 
 type TaskStage = 'Ideas' | 'Planning' | 'Testing' | 'Review' | 'Completed';
 type OpportunityLevel = 'Quick Wins' | 'Big Wins' | 'Mid Opportunities' | 'Ungraded';
+type TaskStatus = 'Completed' | 'In Progress' | 'Testing' | 'Next Up' | 'Bench' | 'Huge Help';
 
 type ChecklistItem = {
   id: string;
@@ -84,6 +85,18 @@ export const AIAutomationTasks = () => {
     return toolColors[tool] || 'bg-gray-600 text-white';
   };
 
+  const getStatusColor = (status?: string): string => {
+    const statusColors: { [key: string]: string } = {
+      'Completed': 'bg-green-600/30 text-green-300 border-green-400/40',
+      'In Progress': 'bg-blue-600/30 text-blue-300 border-blue-400/40',
+      'Testing': 'bg-purple-600/30 text-purple-300 border-purple-400/40',
+      'Next Up': 'bg-yellow-600/30 text-yellow-300 border-yellow-400/40',
+      'Bench': 'bg-gray-600/30 text-gray-300 border-gray-400/40',
+      'Huge Help': 'bg-red-600/30 text-red-300 border-red-400/40'
+    };
+    return status ? statusColors[status] || 'bg-gray-600/30 text-gray-300 border-gray-400/40' : 'bg-gray-600/30 text-gray-300 border-gray-400/40';
+  };
+
   const handleAddCustomTool = async (toolName: string) => {
     const trimmed = toolName.trim();
     if (trimmed && !availableTools.includes(trimmed)) {
@@ -117,6 +130,7 @@ export const AIAutomationTasks = () => {
       zac_score: undefined as any,
       luke_score: undefined as any,
       opportunity_level: level,
+      status: 'Next Up' as TaskStatus,
       tools: [] as string[],
       summary: '',
       goal: '',
@@ -741,6 +755,18 @@ export const AIAutomationTasks = () => {
                   </select>
                 </div>
 
+                <div className="flex items-center gap-2 mt-2 text-sm">
+                  <span className="text-white font-bold">Status:</span>
+                  <select className={`border rounded px-2 py-1 text-xs font-bold focus:outline-none ${getStatusColor(task.status)}`} value={task.status || 'Next Up'} onChange={(e) => updateTask(task.id, 'status', e.target.value)}>
+                    <option value="Completed" className="bg-gray-800">Completed</option>
+                    <option value="In Progress" className="bg-gray-800">In Progress</option>
+                    <option value="Testing" className="bg-gray-800">Testing</option>
+                    <option value="Next Up" className="bg-gray-800">Next Up</option>
+                    <option value="Bench" className="bg-gray-800">Bench</option>
+                    <option value="Huge Help" className="bg-gray-800">Huge Help</option>
+                  </select>
+                </div>
+
                 <div className="mt-3 flex items-center gap-4">
                   <button
                     onClick={() => toggleStepsChecklist(task.id)}
@@ -945,6 +971,12 @@ export const AIAutomationTasks = () => {
                     {sortColumn === 'opportunity_level' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
                   </div>
                 </th>
+                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('status')}>
+                  <div className="flex items-center gap-1">
+                    Status
+                    {sortColumn === 'status' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
+                  </div>
+                </th>
                 <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('start_date')}>
                   <div className="flex items-center gap-1">
                     Start Date
@@ -1026,6 +1058,11 @@ export const AIAutomationTasks = () => {
                       <td className="py-3 px-4">
                         <span className={`${levelColor} text-sm font-semibold`}>
                           {task.opportunity_level}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`${getStatusColor(task.status)} text-sm font-semibold px-2 py-1 rounded border`}>
+                          {task.status || 'Next Up'}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-gray-300 text-sm">
