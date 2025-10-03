@@ -6,7 +6,6 @@ import { migrateLocalStorageToSupabase } from '../utils/migrateLocalStorageToSup
 type TaskStage = 'Ideas' | 'Planning' | 'Testing' | 'Review' | 'Completed';
 type OpportunityLevel = 'Quick Wins' | 'Big Wins' | 'Mid Opportunities' | 'Ungraded';
 type TaskStatus = 'Completed' | 'In Progress' | 'Testing' | 'Next Up' | 'Bench' | 'Huge Help';
-type TaskPriority = 'High' | 'Medium' | 'Low';
 
 type ChecklistItem = {
   id: string;
