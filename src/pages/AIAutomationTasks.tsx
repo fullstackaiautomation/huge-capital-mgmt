@@ -477,15 +477,6 @@ export const AIAutomationTasks = () => {
     }
   };
 
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortColumn(column);
-      setSortDirection('asc');
-    }
-  };
-
   const sortTasks = (tasksToSort: any[]) => {
     // Sort by priority only
     return [...tasksToSort].sort((a: any, b: any) => {
