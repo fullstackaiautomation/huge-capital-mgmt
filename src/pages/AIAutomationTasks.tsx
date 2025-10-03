@@ -636,23 +636,19 @@ export const AIAutomationTasks = () => {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* 12 Month Goals */}
         <div className="lg:col-span-1 bg-yellow-400/10 border border-yellow-300/30 rounded-lg p-6">
-          <h2 className="text-xl font-bold text-yellow-200 mb-4">
+          <h2 className="text-xl font-bold text-yellow-200 mb-6">
             Huge Capital 12 Month Goals
           </h2>
-          <div className="space-y-4">
-            <ul className="space-y-2 text-sm text-gray-300">
-              <li>- 1M+ Monthly Funding / 80-100K Monthly Commissions</li>
-              <li>- 2 Bank Turn Downs Per Week (free qualified leads)</li>
-              <li>- 50 Affiliates Generating 1-2 Monthly Deals</li>
-              <li>- Private Capital Community Launched</li>
-            </ul>
-            <ul className="space-y-2 text-sm text-gray-300">
-              <li>- 3K Active Facebook Group Members</li>
-              <li>- Luke - Learn SBA Deals</li>
-              <li>- Zac - Speak to Investment Real Estate</li>
-              <li>- Dillion Full Time Broker (confident)</li>
-            </ul>
-          </div>
+          <ul className="space-y-3 text-base text-gray-200 font-semibold list-disc list-inside">
+            <li>1M+ Monthly Funding / 80-100K Monthly Commissions</li>
+            <li>2 Bank Turn Downs Per Week (free qualified leads)</li>
+            <li>50 Affiliates Generating 1-2 Monthly Deals</li>
+            <li>Private Capital Community Launched</li>
+            <li>3K Active Facebook Group Members</li>
+            <li>Luke - Learn SBA Deals</li>
+            <li>Zac - Speak to Investment Real Estate</li>
+            <li>Dillion Full Time Broker (confident)</li>
+          </ul>
         </div>
 
         {/* Monthly Roadmaps with Navigation */}
