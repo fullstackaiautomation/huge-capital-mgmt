@@ -710,18 +710,35 @@ export const AIAutomationTasks = () => {
                       {monthTasks.length === 0 ? (
                         <p className="text-sm text-gray-400 italic">No tasks scheduled</p>
                       ) : (
-                        monthTasks.map(task => (
-                          <div key={task.id} className="bg-blue-500/10 border border-blue-400/20 rounded-lg p-3">
-                            <h3 className="text-sm font-semibold text-blue-200 mb-1">
-                              {task.task_name}
-                            </h3>
-                            {task.description && (
-                              <p className="text-xs text-gray-400 line-clamp-2">
-                                {task.description}
-                              </p>
-                            )}
-                          </div>
-                        ))
+                        monthTasks.map(task => {
+                          const isCompleted = task.status === 'Completed';
+                          const isInProgress = task.status === 'In Progress';
+
+                          const cardColor = isCompleted
+                            ? 'bg-green-500/10 border-green-400/20'
+                            : isInProgress
+                            ? 'bg-yellow-500/10 border-yellow-400/20'
+                            : 'bg-blue-500/10 border-blue-400/20';
+
+                          const textColor = isCompleted
+                            ? 'text-green-200'
+                            : isInProgress
+                            ? 'text-yellow-200'
+                            : 'text-blue-200';
+
+                          return (
+                            <div key={task.id} className={`${cardColor} border rounded-lg p-3`}>
+                              <h3 className={`text-sm font-semibold ${textColor} mb-1`}>
+                                {task.task_name}
+                              </h3>
+                              {task.description && (
+                                <p className="text-xs text-gray-400 line-clamp-2">
+                                  {task.description}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })
                       )}
                     </div>
                   </div>
