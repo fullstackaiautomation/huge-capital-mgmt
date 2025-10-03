@@ -28,22 +28,58 @@ export const ContentManagement = () => {
     Blog: 10000,
   };
 
-  const brandVoiceGuidelines = {
-    'Zac': [
-      'Data-driven insights',
-      'Industry leadership',
-      'Strategic partnerships',
-    ],
-    'Luke': [
-      'Innovation & technology',
-      'Customer success stories',
-      'Operational excellence',
-    ],
-    'Huge Capital': [
-      'Business funding solutions',
-      'Capital expertise',
-      'Client success',
-    ],
+  const contentProfiles = {
+    'Zac': {
+      contentPillars: [
+        'Data-driven insights',
+        'Industry leadership',
+        'Strategic partnerships',
+      ],
+      brandVoice: [
+        'Professional and authoritative',
+        'Analytical and strategic',
+        'Results-focused',
+      ],
+      keyMessaging: [
+        'Expertise in business growth',
+        'Strategic funding solutions',
+        'Partnership-driven approach',
+      ],
+    },
+    'Luke': {
+      contentPillars: [
+        'Innovation & technology',
+        'Customer success stories',
+        'Operational excellence',
+      ],
+      brandVoice: [
+        'Innovative and forward-thinking',
+        'Customer-centric',
+        'Solution-oriented',
+      ],
+      keyMessaging: [
+        'Technology-driven solutions',
+        'Client success focus',
+        'Continuous improvement',
+      ],
+    },
+    'Huge Capital': {
+      contentPillars: [
+        'Business funding solutions',
+        'Capital expertise',
+        'Client success',
+      ],
+      brandVoice: [
+        'Trusted and reliable',
+        'Expert and knowledgeable',
+        'Client-focused',
+      ],
+      keyMessaging: [
+        'Comprehensive funding solutions',
+        'Industry expertise',
+        'Committed to client success',
+      ],
+    },
   };
 
   return (
@@ -99,28 +135,65 @@ export const ContentManagement = () => {
           {selectedPerson} Content Profile
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {Object.entries(brandVoiceGuidelines).map(([founder, pillars]) => {
-            const boxColor = founder === 'Zac'
+          {/* Content Pillars */}
+          <div className={`${
+            selectedPerson === 'Zac'
               ? 'bg-blue-100 border-blue-300'
-              : founder === 'Luke'
+              : selectedPerson === 'Luke'
               ? 'bg-green-100 border-green-300'
-              : 'bg-purple-100 border-purple-300';
+              : 'bg-purple-100 border-purple-300'
+          } border-2 rounded-lg p-4`}>
+            <h3 className="font-semibold text-gray-900 mb-2">
+              Content Pillars
+            </h3>
+            <ul className="space-y-1">
+              {contentProfiles[selectedPerson].contentPillars.map((pillar) => (
+                <li key={pillar} className="text-sm text-gray-700">
+                  • {pillar}
+                </li>
+              ))}
+            </ul>
+          </div>
 
-            return (
-              <div key={founder} className={`${boxColor} border-2 rounded-lg p-4`}>
-                <h3 className="font-semibold text-gray-900 mb-2">
-                  {founder}'s Content Pillars
-                </h3>
-                <ul className="space-y-1">
-                  {pillars.map((pillar) => (
-                    <li key={pillar} className="text-sm text-gray-700">
-                      • {pillar}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
+          {/* Brand Voice */}
+          <div className={`${
+            selectedPerson === 'Zac'
+              ? 'bg-blue-100 border-blue-300'
+              : selectedPerson === 'Luke'
+              ? 'bg-green-100 border-green-300'
+              : 'bg-purple-100 border-purple-300'
+          } border-2 rounded-lg p-4`}>
+            <h3 className="font-semibold text-gray-900 mb-2">
+              Brand Voice
+            </h3>
+            <ul className="space-y-1">
+              {contentProfiles[selectedPerson].brandVoice.map((voice) => (
+                <li key={voice} className="text-sm text-gray-700">
+                  • {voice}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Key Messaging */}
+          <div className={`${
+            selectedPerson === 'Zac'
+              ? 'bg-blue-100 border-blue-300'
+              : selectedPerson === 'Luke'
+              ? 'bg-green-100 border-green-300'
+              : 'bg-purple-100 border-purple-300'
+          } border-2 rounded-lg p-4`}>
+            <h3 className="font-semibold text-gray-900 mb-2">
+              Key Messaging
+            </h3>
+            <ul className="space-y-1">
+              {contentProfiles[selectedPerson].keyMessaging.map((message) => (
+                <li key={message} className="text-sm text-gray-700">
+                  • {message}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
 
