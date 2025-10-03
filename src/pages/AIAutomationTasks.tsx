@@ -653,52 +653,6 @@ export const AIAutomationTasks = () => {
             </ul>
           </div>
         </div>
-
-        {/* Card 1 */}
-        <div className="bg-red-400/10 border border-red-300/30 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-red-200 mb-3">Huge - Bottlenecks</h3>
-          <ul className="space-y-2 text-sm text-gray-300">
-            <li>- Customers not available when he wants to call</li>
-            <li>- They're calling when we're busy (Calendly)
-              <ul className="ml-6 mt-1 space-y-1">
-                <li>- Text Links</li>
-              </ul>
-            </li>
-            <li>- Non stop grinding between meetings & customer calls (meetings eating up time)</li>
-            <li>- Objective for Calls Automation</li>
-            <li>- Needs Assistant</li>
-          </ul>
-        </div>
-
-        {/* Card 2 */}
-        <div className="bg-red-400/10 border border-red-300/30 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-red-200 mb-3">HUGE - Time Drains - Zac</h3>
-          <ul className="space-y-2 text-sm text-gray-300">
-            <li>- Creating Debt Schedules</li>
-            <li>- Getting information from CPA</li>
-            <li>- Manually submitting to Lenders (slack to GHL / Gmail)
-              <ul className="ml-6 mt-1 space-y-1">
-                <li>- Bank Statements (break down)</li>
-                <li>- Email (to lender)</li>
-                <li>- Application</li>
-              </ul>
-            </li>
-            <li>- Luke asking Zac for deals</li>
-            <li>- Keep Offers for Clients in Dashboard or easy to find place for them</li>
-          </ul>
-        </div>
-
-        {/* Card 3 */}
-        <div className="bg-red-400/10 border border-red-300/30 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-red-200 mb-3">HUGE - Time Drains - Luke</h3>
-          <ul className="space-y-2 text-sm text-gray-300">
-            <li>- Affiliates / Referral Partners - Phone Calls</li>
-            <li>- LUKE / ZAC scheming this whole process out</li>
-            <li>- FAQ Loom Videos</li>
-            <li>- Gameplan the Affiliate Process</li>
-            <li>- Google Drive &gt; One Pager PDF's &gt; Client Facing</li>
-          </ul>
-        </div>
       </div>
 
       {/* Opportunity Heatmap */}
@@ -1205,6 +1159,55 @@ export const AIAutomationTasks = () => {
               No tasks yet. Add tasks in the Opportunity Heatmap above.
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Bottlenecks and Time Drains */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Card 1 */}
+        <div className="bg-red-400/10 border border-red-300/30 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-red-200 mb-3">Huge - Bottlenecks</h3>
+          <ul className="space-y-2 text-sm text-gray-300">
+            <li>- Customers not available when he wants to call</li>
+            <li>- They're calling when we're busy (Calendly)
+              <ul className="ml-6 mt-1 space-y-1">
+                <li>- Text Links</li>
+              </ul>
+            </li>
+            <li>- Non stop grinding between meetings & customer calls (meetings eating up time)</li>
+            <li>- Objective for Calls Automation</li>
+            <li>- Needs Assistant</li>
+          </ul>
+        </div>
+
+        {/* Card 2 */}
+        <div className="bg-red-400/10 border border-red-300/30 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-red-200 mb-3">HUGE - Time Drains - Zac</h3>
+          <ul className="space-y-2 text-sm text-gray-300">
+            <li>- Creating Debt Schedules</li>
+            <li>- Getting information from CPA</li>
+            <li>- Manually submitting to Lenders (slack to GHL / Gmail)
+              <ul className="ml-6 mt-1 space-y-1">
+                <li>- Bank Statements (break down)</li>
+                <li>- Email (to lender)</li>
+                <li>- Application</li>
+              </ul>
+            </li>
+            <li>- Luke asking Zac for deals</li>
+            <li>- Keep Offers for Clients in Dashboard or easy to find place for them</li>
+          </ul>
+        </div>
+
+        {/* Card 3 */}
+        <div className="bg-red-400/10 border border-red-300/30 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-red-200 mb-3">HUGE - Time Drains - Luke</h3>
+          <ul className="space-y-2 text-sm text-gray-300">
+            <li>- Affiliates / Referral Partners - Phone Calls</li>
+            <li>- LUKE / ZAC scheming this whole process out</li>
+            <li>- FAQ Loom Videos</li>
+            <li>- Gameplan the Affiliate Process</li>
+            <li>- Google Drive &gt; One Pager PDF's &gt; Client Facing</li>
+          </ul>
         </div>
       </div>
     </div>
