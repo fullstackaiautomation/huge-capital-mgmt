@@ -95,7 +95,7 @@ export const useOpportunityTasks = () => {
         zac_score: task.zac_score,
         luke_score: task.luke_score,
         opportunity_level: task.opportunity_level,
-        status: task.status,
+        status: task.status || null,
         priority: task.priority,
         tools: task.tools,
         summary: task.summary,
@@ -110,11 +110,18 @@ export const useOpportunityTasks = () => {
         created_by: user?.id,
       };
 
+      console.log('Saving task:', task.id, 'Status:', task.status, 'Priority:', task.priority);
+
       const { error } = await supabase
         .from('opportunity_tasks')
         .upsert(taskData);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase upsert error:', error);
+        throw error;
+      }
+
+      console.log('Task saved successfully');
 
       // Don't refetch after save to prevent overwriting local state during typing
     } catch (error) {
