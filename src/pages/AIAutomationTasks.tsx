@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Plus, Search, Lightbulb, ClipboardList, TestTube, Eye, CheckCircle, X, Trash2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { Plus, Search, Lightbulb, ClipboardList, TestTube, Eye, CheckCircle, X, Trash2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Download, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { useOpportunityTasks } from '../hooks/useOpportunityTasks';
 import { migrateLocalStorageToSupabase } from '../utils/migrateLocalStorageToSupabase';
 
@@ -27,6 +27,8 @@ export const AIAutomationTasks = () => {
   const [migrating, setMigrating] = useState(false);
   const [migrationMessage, setMigrationMessage] = useState<string | null>(null);
   const [hasLocalStorageData, setHasLocalStorageData] = useState(false);
+  const [sortColumn, setSortColumn] = useState<string>('start_date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
     // Check if localStorage has data
@@ -253,6 +255,47 @@ export const AIAutomationTasks = () => {
         behavior: 'smooth'
       });
     }
+  };
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const sortTasks = (tasksToSort: any[]) => {
+    return [...tasksToSort].sort((a: any, b: any) => {
+      let aVal = a[sortColumn];
+      let bVal = b[sortColumn];
+
+      // Handle null/undefined values
+      if (aVal === null || aVal === undefined) return 1;
+      if (bVal === null || bVal === undefined) return -1;
+
+      // Handle dates
+      if (sortColumn === 'start_date' || sortColumn === 'finish_date') {
+        aVal = aVal ? new Date(aVal).getTime() : 0;
+        bVal = bVal ? new Date(bVal).getTime() : 0;
+      }
+
+      // Handle numbers
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+      }
+
+      // Handle strings
+      const aStr = String(aVal).toLowerCase();
+      const bStr = String(bVal).toLowerCase();
+
+      if (sortDirection === 'asc') {
+        return aStr < bStr ? -1 : aStr > bStr ? 1 : 0;
+      } else {
+        return bStr < aStr ? -1 : bStr > aStr ? 1 : 0;
+      }
+    });
   };
 
   const opportunityColors = {
@@ -890,27 +933,70 @@ export const AIAutomationTasks = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-purple-300/30">
-                <th className="text-left py-3 px-4 text-purple-300 font-semibold">Task Name</th>
-                <th className="text-left py-3 px-4 text-purple-300 font-semibold">Opportunity</th>
-                <th className="text-left py-3 px-4 text-purple-300 font-semibold">Start Date</th>
-                <th className="text-left py-3 px-4 text-purple-300 font-semibold">Completion</th>
-                <th className="text-left py-3 px-4 text-purple-300 font-semibold">Timeline</th>
-                <th className="text-left py-3 px-4 text-purple-300 font-semibold">TG Projection</th>
-                <th className="text-left py-3 px-4 text-purple-300 font-semibold">Impact</th>
+                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('task_name')}>
+                  <div className="flex items-center gap-1">
+                    Task Name
+                    {sortColumn === 'task_name' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
+                  </div>
+                </th>
+                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('opportunity_level')}>
+                  <div className="flex items-center gap-1">
+                    Opportunity
+                    {sortColumn === 'opportunity_level' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
+                  </div>
+                </th>
+                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('start_date')}>
+                  <div className="flex items-center gap-1">
+                    Start Date
+                    {sortColumn === 'start_date' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
+                  </div>
+                </th>
+                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('finish_date')}>
+                  <div className="flex items-center gap-1">
+                    Completion
+                    {sortColumn === 'finish_date' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
+                  </div>
+                </th>
+                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('tg_projection')}>
+                  <div className="flex items-center gap-1">
+                    TG Projection
+                    {sortColumn === 'tg_projection' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
+                  </div>
+                </th>
+                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('impact_score')}>
+                  <div className="flex items-center gap-1">
+                    Impact
+                    {sortColumn === 'impact_score' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
+                  </div>
+                </th>
+                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('effort_score')}>
+                  <div className="flex items-center gap-1">
+                    Effort
+                    {sortColumn === 'effort_score' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
+                  </div>
+                </th>
+                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('input_score')}>
+                  <div className="flex items-center gap-1">
+                    User Input
+                    {sortColumn === 'input_score' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
+                  </div>
+                </th>
+                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('zac_score')}>
+                  <div className="flex items-center gap-1">
+                    Zac Score
+                    {sortColumn === 'zac_score' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
+                  </div>
+                </th>
+                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('luke_score')}>
+                  <div className="flex items-center gap-1">
+                    Luke Score
+                    {sortColumn === 'luke_score' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody>
-              {tasks
-                .sort((a: any, b: any) => {
-                  // Sort by start date, then by opportunity level
-                  if (a.start_date && b.start_date) {
-                    return new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
-                  }
-                  if (a.start_date) return -1;
-                  if (b.start_date) return 1;
-                  return 0;
-                })
-                .map((task: any) => {
+              {sortTasks(tasks).map((task: any) => {
                   const levelColor =
                     task.opportunity_level === 'Quick Wins' ? 'text-green-400' :
                     task.opportunity_level === 'Big Wins' ? 'text-blue-400' :
@@ -918,13 +1004,23 @@ export const AIAutomationTasks = () => {
                     'text-gray-400';
 
                   const impactColor = getScoreColor(task.impact_score);
+                  const effortColor = getEffortInputColor(task.effort_score);
+                  const inputColor = getEffortInputColor(task.input_score);
+                  const zacColor = getScoreColor(task.zac_score);
+                  const lukeColor = getScoreColor(task.luke_score);
 
                   return (
                     <tr key={task.id} className="border-b border-gray-700/50 hover:bg-purple-500/5 transition-colors">
                       <td className="py-3 px-4">
                         <div className="text-white font-medium">{task.task_name || 'Untitled Task'}</div>
-                        {task.summary && (
-                          <div className="text-gray-400 text-sm mt-1 line-clamp-1">{task.summary}</div>
+                        {task.tools && task.tools.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {task.tools.map((tool: string) => (
+                              <span key={tool} className={`${getToolColor(tool)} text-xs px-2 py-0.5 rounded`}>
+                                {tool}
+                              </span>
+                            ))}
+                          </div>
                         )}
                       </td>
                       <td className="py-3 px-4">
@@ -939,18 +1035,31 @@ export const AIAutomationTasks = () => {
                         {task.finish_date ? new Date(task.finish_date).toLocaleDateString() : '-'}
                       </td>
                       <td className="py-3 px-4 text-gray-300 text-sm">
-                        {task.start_date && task.finish_date ? (
-                          <span className="bg-purple-500/20 text-purple-300 px-2 py-1 rounded">
-                            {Math.ceil((new Date(task.finish_date).getTime() - new Date(task.start_date).getTime()) / (1000 * 60 * 60 * 24))} days
-                          </span>
-                        ) : '-'}
-                      </td>
-                      <td className="py-3 px-4 text-gray-300 text-sm">
                         {task.tg_projection || '-'}
                       </td>
                       <td className="py-3 px-4">
                         <span className={`${impactColor} font-bold`}>
                           {task.impact_score || '-'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`${effortColor} font-bold`}>
+                          {task.effort_score || '-'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`${inputColor} font-bold`}>
+                          {task.input_score || '-'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`${zacColor} font-bold`}>
+                          {task.zac_score || '-'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`${lukeColor} font-bold`}>
+                          {task.luke_score || '-'}
                         </span>
                       </td>
                     </tr>
