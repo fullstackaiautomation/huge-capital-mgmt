@@ -31,19 +31,26 @@ export const ContentManagement = () => {
   const contentProfiles = {
     'Zac': {
       contentPillars: [
-        'Data-driven insights',
-        'Industry leadership',
-        'Strategic partnerships',
+        'Client Success Stories (40%)',
+        'Educational / Legal Updates (30%)',
+        'Entrepreneur Spotlights (20%)',
+        'Personal Brand Building (10%)',
       ],
       brandVoice: [
-        'Professional and authoritative',
-        'Analytical and strategic',
-        'Results-focused',
+        'Trustworthy & Professional',
+        'Long Term Relationships > Quick Commissions',
+        'Creative Problem Solver',
+        'Authentic',
+        'Not Super Serious / Funny (Twitter)',
       ],
       keyMessaging: [
-        'Expertise in business growth',
-        'Strategic funding solutions',
-        'Partnership-driven approach',
+        '7+ Years Saving Businesses',
+        'SBA Specialist Expertise',
+        'Knows the Best Solution for Your Situation',
+        'Creative Funder',
+        'Consultative Approach',
+        'Your Success = Our Success',
+        'Not For Everyone',
       ],
     },
     'Luke': {
