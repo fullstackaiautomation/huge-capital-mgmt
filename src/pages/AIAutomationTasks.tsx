@@ -628,7 +628,7 @@ export const AIAutomationTasks = () => {
 
           <div ref={opportunitiesScrollRef} className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             {tasks.filter((t: any) => t.opportunity_level === selectedOpportunityFilter).map((task: any) => (
-              <div key={task.id} className={`border-2 rounded-xl p-4 relative min-w-[480px] max-w-[480px] flex-shrink-0 ${
+              <div key={task.id} className={`border-2 rounded-xl p-4 relative min-w-[480px] max-w-[480px] flex-shrink-0 overflow-hidden ${
                 selectedOpportunityFilter === 'Quick Wins' ? 'bg-green-500/20 border-green-400/40' :
                 selectedOpportunityFilter === 'Big Wins' ? 'bg-blue-500/20 border-blue-400/40' :
                 selectedOpportunityFilter === 'Mid Opportunities' ? 'bg-orange-500/20 border-orange-400/40' :
