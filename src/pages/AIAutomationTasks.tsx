@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Plus, Search, Lightbulb, ClipboardList, TestTube, Eye, CheckCircle, X, Trash2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Download, GripVertical, Bot, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Plus, X, Trash2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Download, GripVertical, Bot, ArrowLeft, ArrowRight, ClipboardList } from 'lucide-react';
 import { useOpportunityTasks } from '../hooks/useOpportunityTasks';
 import { migrateLocalStorageToSupabase } from '../utils/migrateLocalStorageToSupabase';
 import {
@@ -20,7 +20,6 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-type TaskStage = 'Ideas' | 'Planning' | 'Testing' | 'Review' | 'Completed';
 type OpportunityLevel = 'Quick Wins' | 'Big Wins' | 'Mid Opportunities' | 'Ungraded';
 type TaskStatus = 'Completed' | 'In Progress' | 'Testing' | 'Next Up' | 'Bench' | 'Huge Help' | 'Ungraded';
 
@@ -173,7 +172,6 @@ function SortableRow({ task, index, updateTask, getStatusColor, getEffortInputCo
 
 export const AIAutomationTasks = () => {
   const { tasks, customTools, setTasks, saveTask, deleteTask: deleteTaskFromDb, addCustomTool, refetch } = useOpportunityTasks();
-  const [searchTerm, setSearchTerm] = useState('');
   const [showToolDropdown, setShowToolDropdown] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [expandedStepsChecklists, setExpandedStepsChecklists] = useState<Set<string>>(new Set());
@@ -610,14 +608,9 @@ export const AIAutomationTasks = () => {
 
                           return (
                             <div key={task.id} className={`${cardColor} border rounded-lg p-3`}>
-                              <h3 className={`text-sm font-semibold ${textColor} mb-1`}>
+                              <h3 className={`text-sm font-semibold ${textColor}`}>
                                 {task.task_name}
                               </h3>
-                              {task.summary && (
-                                <p className="text-xs text-gray-400 line-clamp-2">
-                                  {task.summary}
-                                </p>
-                              )}
                             </div>
                           );
                         })
