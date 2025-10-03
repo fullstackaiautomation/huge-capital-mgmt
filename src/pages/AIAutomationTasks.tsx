@@ -485,128 +485,6 @@ export const AIAutomationTasks = () => {
     });
   };
 
-  const opportunityColors = {
-    High: 'bg-green-500/20 text-green-400 border-green-500/30',
-    Medium: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-    Low: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  };
-
-  const mockTasks = [
-    {
-      id: '1',
-      task_name: 'Automate Email Follow-ups',
-      description: 'Create automated email sequences for lead nurturing',
-      connectors: ['Gmail', 'Zapier', 'HubSpot'],
-      task_area: 'Sales & Marketing',
-      task_type: 'Automation',
-      opportunity_level: 'High' as const,
-      stage: 'Testing' as TaskStage,
-      start_date: '2024-01-15',
-      estimated_completion_date: '2024-02-01',
-    },
-    {
-      id: '2',
-      task_name: 'Invoice Processing Bot',
-      description: 'AI-powered invoice data extraction and entry',
-      connectors: ['QuickBooks', 'Make.com', 'OCR'],
-      task_area: 'Finance',
-      task_type: 'AI Integration',
-      opportunity_level: 'High' as const,
-      stage: 'Planning' as TaskStage,
-      start_date: '2024-01-20',
-      estimated_completion_date: '2024-02-15',
-    },
-    {
-      id: '3',
-      task_name: 'CRM Data Sync',
-      description: 'Sync deal data between systems automatically',
-      connectors: ['Salesforce', 'HubSpot'],
-      task_area: 'Sales',
-      task_type: 'Integration',
-      opportunity_level: 'Medium' as const,
-      stage: 'Ideas' as TaskStage,
-      start_date: '2024-02-01',
-      estimated_completion_date: '2024-03-01',
-    },
-    {
-      id: '4',
-      task_name: 'Lead Scoring Model',
-      description: 'AI-powered lead qualification and scoring',
-      connectors: ['Python', 'OpenAI', 'HubSpot'],
-      task_area: 'Sales & Marketing',
-      task_type: 'AI Integration',
-      opportunity_level: 'High' as const,
-      stage: 'Review' as TaskStage,
-      start_date: '2024-01-10',
-      estimated_completion_date: '2024-01-28',
-    },
-    {
-      id: '5',
-      task_name: 'Document Classification',
-      description: 'Auto-categorize and file incoming documents',
-      connectors: ['Google Drive', 'Claude AI'],
-      task_area: 'Operations',
-      task_type: 'AI Integration',
-      opportunity_level: 'Medium' as const,
-      stage: 'Completed' as TaskStage,
-      start_date: '2023-12-15',
-      estimated_completion_date: '2024-01-05',
-    },
-  ];
-
-  const stages: { name: TaskStage; icon: any; color: string; bgColor: string; borderColor: string; badgeColor: string; connectorColor: string; connectorTextColor: string }[] = [
-    {
-      name: 'Ideas',
-      icon: Lightbulb,
-      color: 'text-pink-300',
-      bgColor: 'bg-pink-400/10',
-      borderColor: 'border-pink-300/30',
-      badgeColor: 'bg-pink-500/30',
-      connectorColor: 'bg-pink-500/30',
-      connectorTextColor: 'text-pink-200'
-    },
-    {
-      name: 'Planning',
-      icon: ClipboardList,
-      color: 'text-orange-300',
-      bgColor: 'bg-orange-400/10',
-      borderColor: 'border-orange-300/30',
-      badgeColor: 'bg-orange-500/30',
-      connectorColor: 'bg-orange-500/30',
-      connectorTextColor: 'text-orange-200'
-    },
-    {
-      name: 'Testing',
-      icon: TestTube,
-      color: 'text-yellow-300',
-      bgColor: 'bg-yellow-400/10',
-      borderColor: 'border-yellow-300/30',
-      badgeColor: 'bg-yellow-500/30',
-      connectorColor: 'bg-yellow-500/30',
-      connectorTextColor: 'text-yellow-200'
-    },
-    {
-      name: 'Review',
-      icon: Eye,
-      color: 'text-blue-300',
-      bgColor: 'bg-blue-400/10',
-      borderColor: 'border-blue-300/30',
-      badgeColor: 'bg-blue-500/30',
-      connectorColor: 'bg-blue-500/30',
-      connectorTextColor: 'text-blue-200'
-    },
-    {
-      name: 'Completed',
-      icon: CheckCircle,
-      color: 'text-green-300',
-      bgColor: 'bg-green-400/10',
-      borderColor: 'border-green-300/30',
-      badgeColor: 'bg-green-500/30',
-      connectorColor: 'bg-green-500/30',
-      connectorTextColor: 'text-green-200'
-    },
-  ];
-
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
@@ -735,9 +613,9 @@ export const AIAutomationTasks = () => {
                               <h3 className={`text-sm font-semibold ${textColor} mb-1`}>
                                 {task.task_name}
                               </h3>
-                              {task.description && (
+                              {task.summary && (
                                 <p className="text-xs text-gray-400 line-clamp-2">
-                                  {task.description}
+                                  {task.summary}
                                 </p>
                               )}
                             </div>
