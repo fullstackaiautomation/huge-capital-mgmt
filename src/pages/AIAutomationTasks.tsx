@@ -91,7 +91,7 @@ export const AIAutomationTasks = () => {
       'In Progress': 'bg-blue-600/30 text-blue-300 border-blue-400/40',
       'Testing': 'bg-purple-600/30 text-purple-300 border-purple-400/40',
       'Next Up': 'bg-yellow-600/30 text-yellow-300 border-yellow-400/40',
-      'Bench': 'bg-gray-600/30 text-gray-300 border-gray-400/40',
+      'Bench': 'bg-orange-600/30 text-orange-300 border-orange-400/40',
       'Huge Help': 'bg-red-600/30 text-red-300 border-red-400/40'
     };
     return status ? statusColors[status] || 'bg-gray-600/30 text-gray-300 border-gray-400/40' : 'bg-gray-600/30 text-gray-300 border-gray-400/40';
@@ -977,6 +977,12 @@ export const AIAutomationTasks = () => {
                     {sortColumn === 'status' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
                   </div>
                 </th>
+                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('tg_projection')}>
+                  <div className="flex items-center gap-1">
+                    TG Projection
+                    {sortColumn === 'tg_projection' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
+                  </div>
+                </th>
                 <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('start_date')}>
                   <div className="flex items-center gap-1">
                     Start Date
@@ -987,12 +993,6 @@ export const AIAutomationTasks = () => {
                   <div className="flex items-center gap-1">
                     Completion
                     {sortColumn === 'finish_date' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
-                  </div>
-                </th>
-                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('tg_projection')}>
-                  <div className="flex items-center gap-1">
-                    TG Projection
-                    {sortColumn === 'tg_projection' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
                   </div>
                 </th>
                 <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('zac_score')}>
@@ -1052,13 +1052,13 @@ export const AIAutomationTasks = () => {
                         </span>
                       </td>
                       <td className="py-3 px-4 text-gray-300 text-sm">
+                        {task.tg_projection || '-'}
+                      </td>
+                      <td className="py-3 px-4 text-gray-300 text-sm">
                         {task.start_date ? new Date(task.start_date).toLocaleDateString() : '-'}
                       </td>
                       <td className="py-3 px-4 text-gray-300 text-sm">
                         {task.finish_date ? new Date(task.finish_date).toLocaleDateString() : '-'}
-                      </td>
-                      <td className="py-3 px-4 text-gray-300 text-sm">
-                        {task.tg_projection || '-'}
                       </td>
                       <td className="py-3 px-4">
                         <span className={`${zacColor} font-bold`}>
