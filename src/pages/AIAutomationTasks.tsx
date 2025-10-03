@@ -959,56 +959,56 @@ export const AIAutomationTasks = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-purple-300/30">
-                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('task_name')}>
+                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10 w-[300px]" onClick={() => handleSort('task_name')}>
                   <div className="flex items-center gap-1">
                     Task Name
                     {sortColumn === 'task_name' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
                   </div>
                 </th>
-                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('opportunity_level')}>
+                <th className="text-left py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('opportunity_level')}>
                   <div className="flex items-center gap-1">
                     Opportunity
                     {sortColumn === 'opportunity_level' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
                   </div>
                 </th>
-                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('status')}>
+                <th className="text-left py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('status')}>
                   <div className="flex items-center gap-1">
                     Status
                     {sortColumn === 'status' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
                   </div>
                 </th>
-                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('tg_projection')}>
+                <th className="text-left py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('tg_projection')}>
                   <div className="flex items-center gap-1">
                     TG Projection
                     {sortColumn === 'tg_projection' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
                   </div>
                 </th>
-                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('start_date')}>
+                <th className="text-left py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('start_date')}>
                   <div className="flex items-center gap-1">
                     Start Date
                     {sortColumn === 'start_date' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
                   </div>
                 </th>
-                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('finish_date')}>
+                <th className="text-left py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('finish_date')}>
                   <div className="flex items-center gap-1">
                     Completion
                     {sortColumn === 'finish_date' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
                   </div>
                 </th>
-                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('zac_score')}>
-                  <div className="flex items-center gap-1">
-                    Zac Score
+                <th className="text-center py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10 w-[80px]" onClick={() => handleSort('zac_score')}>
+                  <div className="flex items-center justify-center gap-1">
+                    Zac
                     {sortColumn === 'zac_score' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
                   </div>
                 </th>
-                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('luke_score')}>
-                  <div className="flex items-center gap-1">
-                    Luke Score
+                <th className="text-center py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10 w-[80px]" onClick={() => handleSort('luke_score')}>
+                  <div className="flex items-center justify-center gap-1">
+                    Luke
                     {sortColumn === 'luke_score' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
                   </div>
                 </th>
-                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('effort_score')}>
-                  <div className="flex items-center gap-1">
+                <th className="text-center py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10 w-[80px]" onClick={() => handleSort('effort_score')}>
+                  <div className="flex items-center justify-center gap-1">
                     Effort
                     {sortColumn === 'effort_score' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
                   </div>
@@ -1029,16 +1029,16 @@ export const AIAutomationTasks = () => {
 
                   return (
                     <tr key={task.id} className="border-b border-gray-700/50 hover:bg-purple-500/5 transition-colors">
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-4 text-center">
                         <input
                           type="text"
-                          className="w-full bg-transparent text-white font-medium focus:outline-none focus:bg-purple-500/10 rounded px-1"
+                          className="w-full bg-transparent text-white font-medium focus:outline-none focus:bg-purple-500/10 rounded px-1 text-center"
                           placeholder="Task Title"
                           value={task.task_name}
                           onChange={(e) => updateTask(task.id, 'task_name', e.target.value)}
                         />
                         {task.tools && task.tools.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
+                          <div className="flex flex-wrap gap-1 mt-1 justify-center">
                             {task.tools.map((tool: string) => (
                               <span key={tool} className={`${getToolColor(tool)} text-xs px-2 py-0.5 rounded`}>
                                 {tool}
@@ -1047,7 +1047,7 @@ export const AIAutomationTasks = () => {
                           </div>
                         )}
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-2 text-center">
                         <select
                           className={`bg-transparent border-0 rounded px-2 py-1 text-sm font-semibold focus:outline-none focus:bg-purple-500/10 ${levelColor}`}
                           value={task.opportunity_level}
@@ -1059,7 +1059,7 @@ export const AIAutomationTasks = () => {
                           <option value="Ungraded" className="bg-gray-800 text-gray-400">Ungraded</option>
                         </select>
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-2 text-center">
                         <select
                           className={`border rounded px-2 py-1 text-sm font-semibold focus:outline-none focus:bg-purple-500/10 ${getStatusColor(task.status)}`}
                           value={task.status || 'Next Up'}
@@ -1073,59 +1073,59 @@ export const AIAutomationTasks = () => {
                           <option value="Huge Help" className="bg-gray-800">Huge Help</option>
                         </select>
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-2 text-center">
                         <input
                           type="text"
-                          className="w-full bg-transparent text-gray-300 text-sm focus:outline-none focus:bg-purple-500/10 rounded px-1"
+                          className="w-full bg-transparent text-gray-300 text-sm focus:outline-none focus:bg-purple-500/10 rounded px-1 text-center"
                           placeholder="TG Projection"
                           value={task.tg_projection || ''}
                           onChange={(e) => updateTask(task.id, 'tg_projection', e.target.value)}
                         />
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-2 text-center">
                         <input
                           type="date"
-                          className="bg-transparent text-gray-300 text-sm focus:outline-none focus:bg-purple-500/10 rounded px-1"
+                          className="bg-transparent text-gray-300 text-sm focus:outline-none focus:bg-purple-500/10 rounded px-1 text-center"
                           value={task.start_date || ''}
                           onChange={(e) => updateTask(task.id, 'start_date', e.target.value)}
                         />
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-2 text-center">
                         <input
                           type="date"
-                          className="bg-transparent text-gray-300 text-sm focus:outline-none focus:bg-purple-500/10 rounded px-1"
+                          className="bg-transparent text-gray-300 text-sm focus:outline-none focus:bg-purple-500/10 rounded px-1 text-center"
                           value={task.finish_date || ''}
                           onChange={(e) => updateTask(task.id, 'finish_date', e.target.value)}
                         />
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-2 text-center">
                         <input
                           type="number"
                           min="1"
                           max="10"
-                          className={`bg-transparent w-12 rounded px-1 font-bold text-center focus:outline-none focus:bg-purple-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${zacColor}`}
+                          className={`bg-transparent w-12 rounded px-1 font-bold text-center focus:outline-none focus:bg-purple-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${zacColor} mx-auto`}
                           placeholder="-"
                           value={task.zac_score || ''}
                           onChange={(e) => updateTask(task.id, 'zac_score', e.target.value ? parseInt(e.target.value) : undefined)}
                         />
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-2 text-center">
                         <input
                           type="number"
                           min="1"
                           max="10"
-                          className={`bg-transparent w-12 rounded px-1 font-bold text-center focus:outline-none focus:bg-purple-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${lukeColor}`}
+                          className={`bg-transparent w-12 rounded px-1 font-bold text-center focus:outline-none focus:bg-purple-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${lukeColor} mx-auto`}
                           placeholder="-"
                           value={task.luke_score || ''}
                           onChange={(e) => updateTask(task.id, 'luke_score', e.target.value ? parseInt(e.target.value) : undefined)}
                         />
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-2 text-center">
                         <input
                           type="number"
                           min="1"
                           max="10"
-                          className={`bg-transparent w-12 rounded px-1 font-bold text-center focus:outline-none focus:bg-purple-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${effortColor}`}
+                          className={`bg-transparent w-12 rounded px-1 font-bold text-center focus:outline-none focus:bg-purple-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${effortColor} mx-auto`}
                           placeholder="-"
                           value={task.effort_score || ''}
                           onChange={(e) => updateTask(task.id, 'effort_score', e.target.value ? parseInt(e.target.value) : undefined)}
