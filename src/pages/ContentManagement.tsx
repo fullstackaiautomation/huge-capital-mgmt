@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Facebook, Instagram, Linkedin, FileText, Copy, Save, Check } from 'lucide-react';
+import { Facebook, Instagram, Linkedin, FileText, Copy, Save, Check, Twitter, Users, Mail } from 'lucide-react';
 
-type Platform = 'LinkedIn' | 'Facebook' | 'Instagram' | 'Blog';
+type Platform = 'LinkedIn' | 'Twitter' | 'Facebook' | 'Instagram' | 'Blog' | 'Skool' | 'Newsletter' | 'ISO Newsletter';
 type Person = 'Zac' | 'Luke' | 'Huge Capital';
 
 export const ContentManagement = () => {
@@ -12,20 +12,55 @@ export const ContentManagement = () => {
     'Excited to share our latest insights on business growth strategies...'
   );
 
-  const platforms = [
-    { name: 'LinkedIn' as Platform, icon: Linkedin, color: 'text-blue-600' },
-    { name: 'Facebook' as Platform, icon: Facebook, color: 'text-blue-500' },
-    { name: 'Instagram' as Platform, icon: Instagram, color: 'text-pink-600' },
-    { name: 'Blog' as Platform, icon: FileText, color: 'text-gray-700' },
-  ];
+  const getPlatformsForPerson = (person: Person) => {
+    const allPlatforms = [
+      { name: 'LinkedIn' as Platform, icon: Linkedin, color: 'text-blue-600' },
+      { name: 'Twitter' as Platform, icon: Twitter, color: 'text-sky-500' },
+      { name: 'Facebook' as Platform, icon: Facebook, color: 'text-blue-500' },
+      { name: 'Instagram' as Platform, icon: Instagram, color: 'text-pink-600' },
+      { name: 'Skool' as Platform, icon: Users, color: 'text-orange-600' },
+      { name: 'Blog' as Platform, icon: FileText, color: 'text-gray-700' },
+      { name: 'Newsletter' as Platform, icon: Mail, color: 'text-green-600' },
+      { name: 'ISO Newsletter' as Platform, icon: Mail, color: 'text-purple-600' },
+    ];
+
+    if (person === 'Zac') {
+      return allPlatforms.filter(p => ['LinkedIn', 'Twitter', 'Facebook', 'Instagram'].includes(p.name));
+    }
+    if (person === 'Luke') {
+      // Return in specific order for Luke
+      return [
+        allPlatforms.find(p => p.name === 'LinkedIn')!,
+        allPlatforms.find(p => p.name === 'Facebook')!,
+        allPlatforms.find(p => p.name === 'Twitter')!,
+        allPlatforms.find(p => p.name === 'Instagram')!,
+        allPlatforms.find(p => p.name === 'Skool')!,
+      ];
+    }
+    if (person === 'Huge Capital') {
+      return [
+        allPlatforms.find(p => p.name === 'Blog')!,
+        allPlatforms.find(p => p.name === 'Newsletter')!,
+        allPlatforms.find(p => p.name === 'ISO Newsletter')!,
+      ];
+    }
+    // For other persons, return all platforms
+    return allPlatforms;
+  };
+
+  const platforms = getPlatformsForPerson(selectedPerson);
 
   const schedules = ['Monday', 'Wednesday', 'Friday'];
 
   const characterLimit = {
     LinkedIn: 3000,
+    Twitter: 280,
     Facebook: 63206,
     Instagram: 2200,
+    Skool: 5000,
     Blog: 10000,
+    Newsletter: 5000,
+    'ISO Newsletter': 5000,
   };
 
   const contentProfiles = {
@@ -53,19 +88,23 @@ export const ContentManagement = () => {
     },
     'Luke': {
       contentPillars: [
-        'Innovation & technology',
-        'Customer success stories',
-        'Operational excellence',
+        'Client Success Stories (40%)',
+        'Educational / Myth-Busting (30%)',
+        'Entrepreneur Spotlights (20%)',
+        'Personal Brand & Leadership (10%)',
       ],
       brandVoice: [
-        'Innovative and forward-thinking',
-        'Customer-centric',
-        'Solution-oriented',
+        'Honest & Trustworthy',
+        'Relational > Transactional',
+        'Personable',
+        'Down to Earth',
       ],
       keyMessaging: [
-        'Technology-driven solutions',
-        'Client success focus',
-        'Continuous improvement',
+        '"If it\'s not good for you, it\'s not good for us."',
+        'We are invested in your success, not a quick buck',
+        'Investment Real Estate Advisor',
+        'Business Credit Expert',
+        'We\'re a part of your team, not just a middleman',
       ],
     },
     'Huge Capital': {
@@ -148,12 +187,12 @@ export const ContentManagement = () => {
               ? 'bg-green-100 border-green-300'
               : 'bg-purple-100 border-purple-300'
           } border-2 rounded-lg p-4`}>
-            <h3 className="font-semibold text-gray-900 mb-2">
+            <h3 className="font-bold text-gray-900 mb-2 text-xl">
               Content Pillars
             </h3>
             <ul className="space-y-1">
               {contentProfiles[selectedPerson].contentPillars.map((pillar) => (
-                <li key={pillar} className="text-sm text-gray-700">
+                <li key={pillar} className="text-lg text-gray-900">
                   • {pillar}
                 </li>
               ))}
@@ -168,12 +207,12 @@ export const ContentManagement = () => {
               ? 'bg-green-100 border-green-300'
               : 'bg-purple-100 border-purple-300'
           } border-2 rounded-lg p-4`}>
-            <h3 className="font-semibold text-gray-900 mb-2">
+            <h3 className="font-bold text-gray-900 mb-2 text-xl">
               Brand Voice
             </h3>
             <ul className="space-y-1">
               {contentProfiles[selectedPerson].brandVoice.map((voice) => (
-                <li key={voice} className="text-sm text-gray-700">
+                <li key={voice} className="text-lg text-gray-900">
                   • {voice}
                 </li>
               ))}
@@ -188,12 +227,12 @@ export const ContentManagement = () => {
               ? 'bg-green-100 border-green-300'
               : 'bg-purple-100 border-purple-300'
           } border-2 rounded-lg p-4`}>
-            <h3 className="font-semibold text-gray-900 mb-2">
+            <h3 className="font-bold text-gray-900 mb-2 text-xl">
               Key Messaging
             </h3>
             <ul className="space-y-1">
               {contentProfiles[selectedPerson].keyMessaging.map((message) => (
-                <li key={message} className="text-sm text-gray-700">
+                <li key={message} className="text-lg text-gray-900">
                   • {message}
                 </li>
               ))}
