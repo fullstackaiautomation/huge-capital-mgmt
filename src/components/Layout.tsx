@@ -11,7 +11,7 @@ export const Layout = () => {
     { name: 'Funding Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Task Tracker', href: '/tracker', icon: CheckSquare },
     { name: 'AI Roadmap', href: '/tasks', icon: Bot },
-    { name: 'Content Management', href: '/content', icon: FileText },
+    { name: 'Content Planner', href: '/content', icon: FileText },
   ];
 
   const comingSoonItems = [

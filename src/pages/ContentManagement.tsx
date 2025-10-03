@@ -43,7 +43,10 @@ export const ContentManagement = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-yellow-500">Content Management</h1>
+      <h1 className="text-3xl font-bold text-gray-100 flex items-center gap-3">
+        <FileText className="w-8 h-8 text-brand-500" />
+        Content Planner
+      </h1>
 
       {/* Person Toggle */}
       <div className="flex gap-3">
