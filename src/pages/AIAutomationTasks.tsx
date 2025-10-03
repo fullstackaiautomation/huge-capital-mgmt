@@ -764,7 +764,8 @@ export const AIAutomationTasks = () => {
 
                 <div className="flex items-center gap-2 mt-2 text-sm">
                   <span className="text-white font-bold">Status:</span>
-                  <select className={`border rounded px-2 py-1 text-xs font-bold focus:outline-none ${getStatusColor(task.status)}`} value={task.status || 'Next Up'} onChange={(e) => updateTask(task.id, 'status', e.target.value)}>
+                  <select className={`border rounded px-2 py-1 text-xs font-bold focus:outline-none ${getStatusColor(task.status)}`} value={task.status || ''} onChange={(e) => updateTask(task.id, 'status', e.target.value)}>
+                    <option value="" className="bg-gray-800 text-gray-400">Select Status</option>
                     <option value="Completed" className="bg-gray-800">Completed</option>
                     <option value="In Progress" className="bg-gray-800">In Progress</option>
                     <option value="Testing" className="bg-gray-800">Testing</option>
@@ -1082,9 +1083,10 @@ export const AIAutomationTasks = () => {
                       <td className="py-3 px-2 text-center">
                         <select
                           className={`border rounded px-2 py-1 text-sm font-semibold focus:outline-none focus:bg-purple-500/10 ${getStatusColor(task.status)}`}
-                          value={task.status || 'Next Up'}
+                          value={task.status || ''}
                           onChange={(e) => updateTask(task.id, 'status', e.target.value)}
                         >
+                          <option value="" className="bg-gray-800 text-gray-400">Select Status</option>
                           <option value="Completed" className="bg-gray-800">Completed</option>
                           <option value="In Progress" className="bg-gray-800">In Progress</option>
                           <option value="Testing" className="bg-gray-800">Testing</option>
