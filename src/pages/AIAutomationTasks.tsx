@@ -640,11 +640,8 @@ export const AIAutomationTasks = () => {
             Huge Capital 12 Month Goals
           </h2>
           <ul className="space-y-3 text-base text-gray-200 font-semibold list-disc pl-5">
-            <li className="pl-2">1M+ Monthly Funding
-              <ul className="mt-2 space-y-2 list-disc pl-5">
-                <li className="pl-2 text-sm">80-100K Monthly Commissions</li>
-              </ul>
-            </li>
+            <li className="pl-2">1M+ Monthly Funding</li>
+            <li className="pl-2">80-100K Monthly Commissions</li>
             <li className="pl-2">2 Bank Turn Downs Per Week (free qualified leads)</li>
             <li className="pl-2">50 Affiliates Generating 1-2 Monthly Deals</li>
             <li className="pl-2">Private Capital Community Launched</li>
