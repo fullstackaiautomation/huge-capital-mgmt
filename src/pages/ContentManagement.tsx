@@ -39,6 +39,11 @@ export const ContentManagement = () => {
       'Customer success stories',
       'Operational excellence',
     ],
+    'Huge Capital': [
+      'Business funding solutions',
+      'Capital expertise',
+      'Client success',
+    ],
   };
 
   return (
@@ -93,21 +98,29 @@ export const ContentManagement = () => {
         <h2 className="text-xl font-bold text-gray-900 mb-4">
           Brand Voice Guidelines
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {Object.entries(brandVoiceGuidelines).map(([founder, pillars]) => (
-            <div key={founder}>
-              <h3 className="font-semibold text-gray-900 mb-2">
-                {founder}'s Content Pillars
-              </h3>
-              <ul className="space-y-1">
-                {pillars.map((pillar) => (
-                  <li key={pillar} className="text-sm text-gray-600">
-                    • {pillar}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {Object.entries(brandVoiceGuidelines).map(([founder, pillars]) => {
+            const boxColor = founder === 'Zac'
+              ? 'bg-blue-100 border-blue-300'
+              : founder === 'Luke'
+              ? 'bg-green-100 border-green-300'
+              : 'bg-purple-100 border-purple-300';
+
+            return (
+              <div key={founder} className={`${boxColor} border-2 rounded-lg p-4`}>
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  {founder}'s Content Pillars
+                </h3>
+                <ul className="space-y-1">
+                  {pillars.map((pillar) => (
+                    <li key={pillar} className="text-sm text-gray-700">
+                      • {pillar}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
         </div>
       </div>
 
