@@ -10,7 +10,7 @@ export const Layout = () => {
   const navigation = [
     { name: 'Funding Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Task Tracker', href: '/tracker', icon: CheckSquare },
-    { name: 'AI Automation', href: '/tasks', icon: Bot },
+    { name: 'AI Roadmap', href: '/tasks', icon: Bot },
     { name: 'Content Management', href: '/content', icon: FileText },
   ];
 

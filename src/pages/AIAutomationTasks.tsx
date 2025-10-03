@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Plus, Search, Lightbulb, ClipboardList, TestTube, Eye, CheckCircle, X, Trash2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Download, GripVertical } from 'lucide-react';
+import { Plus, Search, Lightbulb, ClipboardList, TestTube, Eye, CheckCircle, X, Trash2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Download, GripVertical, Bot } from 'lucide-react';
 import { useOpportunityTasks } from '../hooks/useOpportunityTasks';
 import { migrateLocalStorageToSupabase } from '../utils/migrateLocalStorageToSupabase';
 import {
@@ -609,8 +609,9 @@ export const AIAutomationTasks = () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-100">
-          AI Automation Roadmap
+        <h1 className="text-3xl font-bold text-gray-100 flex items-center gap-3">
+          <Bot className="w-8 h-8 text-brand-500" />
+          AI Roadmap
         </h1>
         {hasLocalStorageData && (
           <button
