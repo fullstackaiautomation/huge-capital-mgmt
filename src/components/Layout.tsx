@@ -53,7 +53,7 @@ export const Layout = () => {
             })}
 
             {/* Coming Soon Section */}
-            <div className="pt-6">
+            <div className="pt-8 mt-4 border-t border-dark-border">
               <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
                 Coming Soon
               </h3>
@@ -62,7 +62,7 @@ export const Layout = () => {
                 return (
                   <div
                     key={item.name}
-                    className="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-600 cursor-not-allowed opacity-50"
+                    className="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-500 cursor-not-allowed opacity-70"
                   >
                     <Icon className="w-5 h-5 mr-3" />
                     {item.name}
