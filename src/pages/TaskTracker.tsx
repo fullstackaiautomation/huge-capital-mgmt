@@ -1,6 +1,5 @@
 import { Plus, Trash2, CheckSquare } from 'lucide-react';
 import { useTaskTracker } from '../hooks/useTaskTracker';
-import { useRef } from 'react';
 
 type Task = {
   id: string;

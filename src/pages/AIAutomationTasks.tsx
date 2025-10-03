@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Plus, Search, Lightbulb, ClipboardList, TestTube, Eye, CheckCircle, X, Trash2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Download, ArrowUpDown, ArrowUp, ArrowDown, GripVertical } from 'lucide-react';
+import { Plus, Search, Lightbulb, ClipboardList, TestTube, Eye, CheckCircle, X, Trash2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Download, GripVertical } from 'lucide-react';
 import { useOpportunityTasks } from '../hooks/useOpportunityTasks';
 import { migrateLocalStorageToSupabase } from '../utils/migrateLocalStorageToSupabase';
 import {
