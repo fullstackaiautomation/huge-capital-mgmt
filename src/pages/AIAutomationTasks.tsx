@@ -667,17 +667,24 @@ export const AIAutomationTasks = () => {
                 const monthIndex = month === 'January' ? 0 : 9 + idx; // Oct=9, Nov=10, Dec=11, Jan=0
                 const year = month === 'January' ? 2026 : 2025;
 
-                const monthTasks = tasks.filter(task => {
-                  if (!task.start_date && !task.finish_date) return false;
+                const monthTasks = tasks
+                  .filter(task => {
+                    if (!task.start_date && !task.finish_date) return false;
 
-                  const startDate = task.start_date ? new Date(task.start_date) : null;
-                  const finishDate = task.finish_date ? new Date(task.finish_date) : null;
+                    const startDate = task.start_date ? new Date(task.start_date) : null;
+                    const finishDate = task.finish_date ? new Date(task.finish_date) : null;
 
-                  return (
-                    (startDate && startDate.getMonth() === monthIndex && startDate.getFullYear() === year) ||
-                    (finishDate && finishDate.getMonth() === monthIndex && finishDate.getFullYear() === year)
-                  );
-                });
+                    return (
+                      (startDate && startDate.getMonth() === monthIndex && startDate.getFullYear() === year) ||
+                      (finishDate && finishDate.getMonth() === monthIndex && finishDate.getFullYear() === year)
+                    );
+                  })
+                  .sort((a, b) => {
+                    // Sort by priority field (lower number = higher priority)
+                    const aPriority = a.priority ?? 999999;
+                    const bPriority = b.priority ?? 999999;
+                    return aPriority - bPriority;
+                  });
 
                 return (
                   <div key={month} className="bg-blue-400/10 border border-blue-300/30 rounded-lg p-6">
