@@ -1,7 +1,24 @@
 import { useState, useRef, useEffect } from 'react';
-import { Plus, Search, Lightbulb, ClipboardList, TestTube, Eye, CheckCircle, X, Trash2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Download, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Search, Lightbulb, ClipboardList, TestTube, Eye, CheckCircle, X, Trash2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Download, ArrowUpDown, ArrowUp, ArrowDown, GripVertical } from 'lucide-react';
 import { useOpportunityTasks } from '../hooks/useOpportunityTasks';
 import { migrateLocalStorageToSupabase } from '../utils/migrateLocalStorageToSupabase';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 type TaskStage = 'Ideas' | 'Planning' | 'Testing' | 'Review' | 'Completed';
 type OpportunityLevel = 'Quick Wins' | 'Big Wins' | 'Mid Opportunities' | 'Ungraded';
@@ -14,6 +31,145 @@ type ChecklistItem = {
 };
 
 // Initial tasks removed - now using Supabase
+
+// Sortable row component for drag and drop
+function SortableRow({ task, index, updateTask, getStatusColor, getEffortInputColor, getScoreColor }: any) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const levelColor =
+    task.opportunity_level === 'Quick Wins' ? 'text-green-400' :
+    task.opportunity_level === 'Big Wins' ? 'text-blue-400' :
+    task.opportunity_level === 'Mid Opportunities' ? 'text-orange-400' :
+    'text-gray-400';
+
+  const effortColor = getEffortInputColor(task.effort_score);
+  const zacColor = getScoreColor(task.zac_score);
+  const lukeColor = getScoreColor(task.luke_score);
+
+  return (
+    <tr ref={setNodeRef} style={style} className="border-b border-gray-700/50 hover:bg-purple-500/5 transition-colors">
+      <td className="py-3 px-2 text-center">
+        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing flex items-center justify-center gap-2">
+          <GripVertical className="w-5 h-5 text-purple-400" />
+          <span className="text-purple-300 font-bold text-sm">{index + 1}</span>
+        </div>
+      </td>
+      <td className="py-3 px-4">
+        <input
+          type="text"
+          className="w-full bg-transparent text-white font-medium focus:outline-none focus:bg-purple-500/10 rounded px-1"
+          placeholder="Task Title"
+          value={task.task_name}
+          onChange={(e) => updateTask(task.id, 'task_name', e.target.value)}
+        />
+        {task.summary && (
+          <div className="text-xs text-gray-400 mt-1 whitespace-normal break-words">
+            {task.summary}
+          </div>
+        )}
+      </td>
+      <td className="py-3 px-2 text-center">
+        <select
+          className={`bg-transparent border-0 rounded px-2 py-1 text-sm font-semibold focus:outline-none focus:bg-purple-500/10 ${levelColor}`}
+          value={task.opportunity_level}
+          onChange={(e) => updateTask(task.id, 'opportunity_level', e.target.value)}
+        >
+          <option value="Quick Wins" className="bg-gray-800 text-green-300">Quick Wins</option>
+          <option value="Big Wins" className="bg-gray-800 text-blue-300">Big Wins</option>
+          <option value="Mid Opportunities" className="bg-gray-800 text-orange-300">Mid Opportunities</option>
+          <option value="Ungraded" className="bg-gray-800 text-gray-400">Ungraded</option>
+        </select>
+      </td>
+      <td className="py-3 px-2 text-center">
+        <select
+          className={`border rounded px-2 py-1 text-sm font-semibold focus:outline-none focus:bg-purple-500/10 ${getStatusColor(task.status)}`}
+          value={task.status || ''}
+          onChange={(e) => updateTask(task.id, 'status', e.target.value)}
+        >
+          <option value="" className="bg-gray-800 text-gray-400">Select Status</option>
+          <option value="Completed" className="bg-gray-800">Completed</option>
+          <option value="In Progress" className="bg-gray-800">In Progress</option>
+          <option value="Testing" className="bg-gray-800">Testing</option>
+          <option value="Next Up" className="bg-gray-800">Next Up</option>
+          <option value="Bench" className="bg-gray-800">Bench</option>
+          <option value="Huge Help" className="bg-gray-800">Huge Help</option>
+          <option value="Ungraded" className="bg-gray-800">Ungraded</option>
+        </select>
+      </td>
+      <td className="py-3 px-2 text-center">
+        <input
+          type="text"
+          className="w-full bg-transparent text-gray-300 text-sm focus:outline-none focus:bg-purple-500/10 rounded px-1 text-center"
+          placeholder="TG Projection"
+          value={task.tg_projection || ''}
+          onChange={(e) => updateTask(task.id, 'tg_projection', e.target.value)}
+        />
+      </td>
+      <td className="py-3 px-2 text-center">
+        <input
+          type="date"
+          className="bg-transparent text-gray-300 text-sm focus:outline-none focus:bg-purple-500/10 rounded px-1 text-center"
+          value={task.start_date || ''}
+          onChange={(e) => updateTask(task.id, 'start_date', e.target.value)}
+        />
+      </td>
+      <td className="py-3 px-2 text-center">
+        <input
+          type="date"
+          className="bg-transparent text-gray-300 text-sm focus:outline-none focus:bg-purple-500/10 rounded px-1 text-center"
+          value={task.finish_date || ''}
+          onChange={(e) => updateTask(task.id, 'finish_date', e.target.value)}
+        />
+      </td>
+      <td className="py-3 px-2 text-center">
+        <input
+          type="number"
+          min="0"
+          max="10"
+          className={`bg-transparent w-12 rounded px-1 font-bold text-center focus:outline-none focus:bg-purple-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${zacColor}`}
+          placeholder="-"
+          value={task.zac_score !== undefined ? task.zac_score : ''}
+          onChange={(e) => updateTask(task.id, 'zac_score', e.target.value ? parseInt(e.target.value) : undefined)}
+        />
+      </td>
+      <td className="py-3 px-2 text-center">
+        <input
+          type="number"
+          min="0"
+          max="10"
+          className={`bg-transparent w-12 rounded px-1 font-bold text-center focus:outline-none focus:bg-purple-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${lukeColor}`}
+          placeholder="-"
+          value={task.luke_score !== undefined ? task.luke_score : ''}
+          onChange={(e) => updateTask(task.id, 'luke_score', e.target.value ? parseInt(e.target.value) : undefined)}
+        />
+      </td>
+      <td className="py-3 px-2 text-center">
+        <input
+          type="number"
+          min="0"
+          max="10"
+          className={`bg-transparent w-12 rounded px-1 font-bold text-center focus:outline-none focus:bg-purple-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${effortColor}`}
+          placeholder="-"
+          value={task.effort_score !== undefined ? task.effort_score : ''}
+          onChange={(e) => updateTask(task.id, 'effort_score', e.target.value ? parseInt(e.target.value) : undefined)}
+        />
+      </td>
+    </tr>
+  );
+}
 
 export const AIAutomationTasks = () => {
   const { tasks, customTools, setTasks, saveTask, deleteTask: deleteTaskFromDb, addCustomTool, refetch } = useOpportunityTasks();
@@ -30,6 +186,13 @@ export const AIAutomationTasks = () => {
   const [hasLocalStorageData, setHasLocalStorageData] = useState(false);
   const [sortColumn, setSortColumn] = useState<string>('start_date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     // Check if localStorage has data
@@ -89,6 +252,30 @@ export const AIAutomationTasks = () => {
       'Ungraded': 'bg-gray-600/30 text-gray-300 border-gray-400/40'
     };
     return status ? statusColors[status] || 'bg-gray-600/30 text-gray-300 border-gray-400/40' : 'bg-gray-600/30 text-gray-300 border-gray-400/40';
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = tasks.findIndex((task: any) => task.id === active.id);
+      const newIndex = tasks.findIndex((task: any) => task.id === over.id);
+
+      const newTasks = arrayMove(tasks, oldIndex, newIndex);
+
+      // Update priority based on new position (1-based)
+      const updatedTasks = newTasks.map((task: any, index: number) => ({
+        ...task,
+        priority: index + 1
+      }));
+
+      setTasks(updatedTasks);
+
+      // Save all updated priorities to database
+      updatedTasks.forEach((task: any) => {
+        saveTask(task);
+      });
+    }
   };
 
   const handleAddCustomTool = async (toolName: string) => {
@@ -300,34 +487,11 @@ export const AIAutomationTasks = () => {
   };
 
   const sortTasks = (tasksToSort: any[]) => {
+    // Sort by priority only
     return [...tasksToSort].sort((a: any, b: any) => {
-      let aVal = a[sortColumn];
-      let bVal = b[sortColumn];
-
-      // Handle null/undefined values
-      if (aVal === null || aVal === undefined) return 1;
-      if (bVal === null || bVal === undefined) return -1;
-
-      // Handle dates
-      if (sortColumn === 'start_date' || sortColumn === 'finish_date') {
-        aVal = aVal ? new Date(aVal).getTime() : 0;
-        bVal = bVal ? new Date(bVal).getTime() : 0;
-      }
-
-      // Handle numbers
-      if (typeof aVal === 'number' && typeof bVal === 'number') {
-        return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
-      }
-
-      // Handle strings
-      const aStr = String(aVal).toLowerCase();
-      const bStr = String(bVal).toLowerCase();
-
-      if (sortDirection === 'asc') {
-        return aStr < bStr ? -1 : aStr > bStr ? 1 : 0;
-      } else {
-        return bStr < aStr ? -1 : bStr > aStr ? 1 : 0;
-      }
+      const aPriority = a.priority ?? 999999;
+      const bPriority = b.priority ?? 999999;
+      return aPriority - bPriority;
     });
   };
 
@@ -644,7 +808,7 @@ export const AIAutomationTasks = () => {
                 <input type="text" className="w-full bg-transparent text-white font-bold text-2xl mb-2 px-0 focus:outline-none" placeholder="Task Title" value={task.task_name} onChange={(e) => updateTask(task.id, 'task_name', e.target.value)} />
 
                 <textarea
-                  className="w-full bg-transparent text-white text-sm mb-1 px-0 focus:outline-none resize-none overflow-x-hidden"
+                  className="w-full bg-transparent text-white text-sm mb-1 px-0 focus:outline-none resize-none overflow-y-auto overflow-x-hidden block"
                   placeholder="Add description..."
                   value={task.summary}
                   onChange={(e) => {
@@ -652,7 +816,15 @@ export const AIAutomationTasks = () => {
                     e.currentTarget.style.height = 'auto';
                     e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
                   }}
-                  style={{overflowWrap: 'break-word', wordBreak: 'break-word', whiteSpace: 'pre-wrap', minHeight: '24px', overflowX: 'hidden'}}
+                  style={{
+                    overflowWrap: 'break-word',
+                    wordBreak: 'break-word',
+                    whiteSpace: 'pre-wrap',
+                    minHeight: '24px',
+                    maxWidth: '100%',
+                    boxSizing: 'border-box',
+                    display: 'block'
+                  }}
                 />
 
                 <div className="border-t border-green-400/20 mt-1 mb-2"></div>
@@ -983,201 +1155,60 @@ export const AIAutomationTasks = () => {
         </h2>
 
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-purple-300/30">
-                <th className="text-center py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10 w-[400px]" onClick={() => handleSort('task_name')}>
-                  <div className="flex items-center justify-center gap-1">
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-purple-300/30">
+                  <th className="text-center py-3 px-2 text-purple-300 font-semibold w-[50px]">
+                    <GripVertical className="w-5 h-5 mx-auto" />
+                  </th>
+                  <th className="text-center py-3 px-4 text-purple-300 font-semibold w-[400px]">
                     Task Name
-                    {sortColumn === 'task_name' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
-                  </div>
-                </th>
-                <th className="text-center py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10 w-[110px]" onClick={() => handleSort('opportunity_level')}>
-                  <div className="flex items-center justify-center gap-1">
+                  </th>
+                  <th className="text-center py-3 px-2 text-purple-300 font-semibold w-[110px]">
                     Opportunity
-                    {sortColumn === 'opportunity_level' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
-                  </div>
-                </th>
-                <th className="text-center py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10 w-[80px]" onClick={() => handleSort('priority')}>
-                  <div className="flex items-center justify-center gap-1">
-                    Priority
-                    {sortColumn === 'priority' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
-                  </div>
-                </th>
-                <th className="text-center py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10 w-[100px]" onClick={() => handleSort('status')}>
-                  <div className="flex items-center justify-center gap-1">
+                  </th>
+                  <th className="text-center py-3 px-2 text-purple-300 font-semibold w-[100px]">
                     Status
-                    {sortColumn === 'status' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
-                  </div>
-                </th>
-                <th className="text-center py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10 w-[120px]" onClick={() => handleSort('tg_projection')}>
-                  <div className="flex items-center justify-center gap-1">
+                  </th>
+                  <th className="text-center py-3 px-2 text-purple-300 font-semibold w-[120px]">
                     TG Projection
-                    {sortColumn === 'tg_projection' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
-                  </div>
-                </th>
-                <th className="text-center py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10 w-[100px]" onClick={() => handleSort('start_date')}>
-                  <div className="flex items-center justify-center gap-1">
+                  </th>
+                  <th className="text-center py-3 px-2 text-purple-300 font-semibold w-[100px]">
                     Start Date
-                    {sortColumn === 'start_date' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
-                  </div>
-                </th>
-                <th className="text-center py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10 w-[100px]" onClick={() => handleSort('finish_date')}>
-                  <div className="flex items-center justify-center gap-1">
+                  </th>
+                  <th className="text-center py-3 px-2 text-purple-300 font-semibold w-[100px]">
                     Completion
-                    {sortColumn === 'finish_date' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
-                  </div>
-                </th>
-                <th className="text-center py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10 w-[80px]" onClick={() => handleSort('zac_score')}>
-                  <div className="flex items-center justify-center gap-1">
+                  </th>
+                  <th className="text-center py-3 px-2 text-purple-300 font-semibold w-[80px]">
                     Zac
-                    {sortColumn === 'zac_score' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
-                  </div>
-                </th>
-                <th className="text-center py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10 w-[80px]" onClick={() => handleSort('luke_score')}>
-                  <div className="flex items-center justify-center gap-1">
+                  </th>
+                  <th className="text-center py-3 px-2 text-purple-300 font-semibold w-[80px]">
                     Luke
-                    {sortColumn === 'luke_score' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
-                  </div>
-                </th>
-                <th className="text-center py-3 px-2 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10 w-[80px]" onClick={() => handleSort('effort_score')}>
-                  <div className="flex items-center justify-center gap-1">
+                  </th>
+                  <th className="text-center py-3 px-2 text-purple-300 font-semibold w-[80px]">
                     Effort
-                    {sortColumn === 'effort_score' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
-                  </div>
-                </th>
+                  </th>
               </tr>
             </thead>
-            <tbody>
-              {sortTasks(tasks).map((task: any) => {
-                  const levelColor =
-                    task.opportunity_level === 'Quick Wins' ? 'text-green-400' :
-                    task.opportunity_level === 'Big Wins' ? 'text-blue-400' :
-                    task.opportunity_level === 'Mid Opportunities' ? 'text-orange-400' :
-                    'text-gray-400';
-
-                  const effortColor = getEffortInputColor(task.effort_score);
-                  const zacColor = getScoreColor(task.zac_score);
-                  const lukeColor = getScoreColor(task.luke_score);
-
-                  return (
-                    <tr key={task.id} className="border-b border-gray-700/50 hover:bg-purple-500/5 transition-colors">
-                      <td className="py-3 px-4">
-                        <input
-                          type="text"
-                          className="w-full bg-transparent text-white font-medium focus:outline-none focus:bg-purple-500/10 rounded px-1"
-                          placeholder="Task Title"
-                          value={task.task_name}
-                          onChange={(e) => updateTask(task.id, 'task_name', e.target.value)}
-                        />
-                        {task.summary && (
-                          <div className="text-xs text-gray-400 mt-1 whitespace-normal break-words">
-                            {task.summary}
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-3 px-2 text-center">
-                        <select
-                          className={`bg-transparent border-0 rounded px-2 py-1 text-sm font-semibold focus:outline-none focus:bg-purple-500/10 ${levelColor}`}
-                          value={task.opportunity_level}
-                          onChange={(e) => updateTask(task.id, 'opportunity_level', e.target.value)}
-                        >
-                          <option value="Quick Wins" className="bg-gray-800 text-green-300">Quick Wins</option>
-                          <option value="Big Wins" className="bg-gray-800 text-blue-300">Big Wins</option>
-                          <option value="Mid Opportunities" className="bg-gray-800 text-orange-300">Mid Opportunities</option>
-                          <option value="Ungraded" className="bg-gray-800 text-gray-400">Ungraded</option>
-                        </select>
-                      </td>
-                      <td className="py-3 px-2 text-center">
-                        <input
-                          type="number"
-                          min="1"
-                          max="50"
-                          className="bg-transparent w-12 rounded px-1 font-bold text-white text-center focus:outline-none focus:bg-purple-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none mx-auto"
-                          placeholder="-"
-                          value={task.priority || ''}
-                          onChange={(e) => updateTask(task.id, 'priority', e.target.value ? parseInt(e.target.value) : undefined)}
-                        />
-                      </td>
-                      <td className="py-3 px-2 text-center">
-                        <select
-                          className={`border rounded px-2 py-1 text-sm font-semibold focus:outline-none focus:bg-purple-500/10 ${getStatusColor(task.status)}`}
-                          value={task.status || ''}
-                          onChange={(e) => updateTask(task.id, 'status', e.target.value)}
-                        >
-                          <option value="" className="bg-gray-800 text-gray-400">Select Status</option>
-                          <option value="Completed" className="bg-gray-800">Completed</option>
-                          <option value="In Progress" className="bg-gray-800">In Progress</option>
-                          <option value="Testing" className="bg-gray-800">Testing</option>
-                          <option value="Next Up" className="bg-gray-800">Next Up</option>
-                          <option value="Bench" className="bg-gray-800">Bench</option>
-                          <option value="Huge Help" className="bg-gray-800">Huge Help</option>
-                          <option value="Ungraded" className="bg-gray-800">Ungraded</option>
-                        </select>
-                      </td>
-                      <td className="py-3 px-2 text-center">
-                        <input
-                          type="text"
-                          className="w-full bg-transparent text-gray-300 text-sm focus:outline-none focus:bg-purple-500/10 rounded px-1 text-center"
-                          placeholder="TG Projection"
-                          value={task.tg_projection || ''}
-                          onChange={(e) => updateTask(task.id, 'tg_projection', e.target.value)}
-                        />
-                      </td>
-                      <td className="py-3 px-2 text-center">
-                        <input
-                          type="date"
-                          className="bg-transparent text-gray-300 text-sm focus:outline-none focus:bg-purple-500/10 rounded px-1 text-center"
-                          value={task.start_date || ''}
-                          onChange={(e) => updateTask(task.id, 'start_date', e.target.value)}
-                        />
-                      </td>
-                      <td className="py-3 px-2 text-center">
-                        <input
-                          type="date"
-                          className="bg-transparent text-gray-300 text-sm focus:outline-none focus:bg-purple-500/10 rounded px-1 text-center"
-                          value={task.finish_date || ''}
-                          onChange={(e) => updateTask(task.id, 'finish_date', e.target.value)}
-                        />
-                      </td>
-                      <td className="py-3 px-2 text-center">
-                        <input
-                          type="number"
-                          min="1"
-                          max="10"
-                          className={`bg-transparent w-12 rounded px-1 font-bold text-center focus:outline-none focus:bg-purple-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${zacColor} mx-auto`}
-                          placeholder="-"
-                          value={task.zac_score || ''}
-                          onChange={(e) => updateTask(task.id, 'zac_score', e.target.value ? parseInt(e.target.value) : undefined)}
-                        />
-                      </td>
-                      <td className="py-3 px-2 text-center">
-                        <input
-                          type="number"
-                          min="1"
-                          max="10"
-                          className={`bg-transparent w-12 rounded px-1 font-bold text-center focus:outline-none focus:bg-purple-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${lukeColor} mx-auto`}
-                          placeholder="-"
-                          value={task.luke_score || ''}
-                          onChange={(e) => updateTask(task.id, 'luke_score', e.target.value ? parseInt(e.target.value) : undefined)}
-                        />
-                      </td>
-                      <td className="py-3 px-2 text-center">
-                        <input
-                          type="number"
-                          min="1"
-                          max="10"
-                          className={`bg-transparent w-12 rounded px-1 font-bold text-center focus:outline-none focus:bg-purple-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${effortColor} mx-auto`}
-                          placeholder="-"
-                          value={task.effort_score || ''}
-                          onChange={(e) => updateTask(task.id, 'effort_score', e.target.value ? parseInt(e.target.value) : undefined)}
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-            </tbody>
+            <SortableContext items={sortTasks(tasks).map((t: any) => t.id)} strategy={verticalListSortingStrategy}>
+              <tbody>
+                {sortTasks(tasks).map((task: any, index: number) => (
+                  <SortableRow
+                    key={task.id}
+                    task={task}
+                    index={index}
+                    updateTask={updateTask}
+                    getStatusColor={getStatusColor}
+                    getEffortInputColor={getEffortInputColor}
+                    getScoreColor={getScoreColor}
+                  />
+                ))}
+              </tbody>
+            </SortableContext>
           </table>
+
+          </DndContext>
 
           {tasks.length === 0 && (
             <div className="text-center py-12 text-gray-400">

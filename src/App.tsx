@@ -6,6 +6,7 @@ import { Layout } from './components/Layout';
 import { FundingDashboard } from './pages/FundingDashboard';
 import { AIAutomationTasks } from './pages/AIAutomationTasks';
 import { ContentManagement } from './pages/ContentManagement';
+import { TaskTracker } from './pages/TaskTracker';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
             <Route index element={<FundingDashboard />} />
             <Route path="tasks" element={<AIAutomationTasks />} />
             <Route path="content" element={<ContentManagement />} />
+            <Route path="tracker" element={<TaskTracker />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

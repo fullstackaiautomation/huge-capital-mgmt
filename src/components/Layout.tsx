@@ -1,6 +1,6 @@
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { LayoutDashboard, Bot, FileText, LogOut } from 'lucide-react';
+import { LayoutDashboard, Bot, FileText, LogOut, CheckSquare } from 'lucide-react';
 import logo from '../assets/logo.webp';
 
 export const Layout = () => {
@@ -9,6 +9,7 @@ export const Layout = () => {
 
   const navigation = [
     { name: 'Funding Dashboard', href: '/', icon: LayoutDashboard },
+    { name: 'Task Tracker', href: '/tracker', icon: CheckSquare },
     { name: 'AI Automation', href: '/tasks', icon: Bot },
     { name: 'Content Management', href: '/content', icon: FileText },
   ];
