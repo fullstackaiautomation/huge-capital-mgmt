@@ -879,6 +879,94 @@ export const AIAutomationTasks = () => {
         </div>
       </div>
 
+      {/* Timeline Planning View */}
+      <div className="bg-gray-800/50 border border-purple-300/30 rounded-xl p-6 mb-6">
+        <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+          <ClipboardList className="w-6 h-6 text-purple-400" />
+          Implementation Timeline - All Tasks
+        </h2>
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-purple-300/30">
+                <th className="text-left py-3 px-4 text-purple-300 font-semibold">Task Name</th>
+                <th className="text-left py-3 px-4 text-purple-300 font-semibold">Opportunity</th>
+                <th className="text-left py-3 px-4 text-purple-300 font-semibold">Start Date</th>
+                <th className="text-left py-3 px-4 text-purple-300 font-semibold">Completion</th>
+                <th className="text-left py-3 px-4 text-purple-300 font-semibold">Timeline</th>
+                <th className="text-left py-3 px-4 text-purple-300 font-semibold">TG Projection</th>
+                <th className="text-left py-3 px-4 text-purple-300 font-semibold">Impact</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tasks
+                .sort((a: any, b: any) => {
+                  // Sort by start date, then by opportunity level
+                  if (a.start_date && b.start_date) {
+                    return new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
+                  }
+                  if (a.start_date) return -1;
+                  if (b.start_date) return 1;
+                  return 0;
+                })
+                .map((task: any) => {
+                  const levelColor =
+                    task.opportunity_level === 'Quick Wins' ? 'text-green-400' :
+                    task.opportunity_level === 'Big Wins' ? 'text-blue-400' :
+                    task.opportunity_level === 'Mid Opportunities' ? 'text-orange-400' :
+                    'text-gray-400';
+
+                  const impactColor = getScoreColor(task.impact_score);
+
+                  return (
+                    <tr key={task.id} className="border-b border-gray-700/50 hover:bg-purple-500/5 transition-colors">
+                      <td className="py-3 px-4">
+                        <div className="text-white font-medium">{task.task_name || 'Untitled Task'}</div>
+                        {task.summary && (
+                          <div className="text-gray-400 text-sm mt-1 line-clamp-1">{task.summary}</div>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`${levelColor} text-sm font-semibold`}>
+                          {task.opportunity_level}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-gray-300 text-sm">
+                        {task.start_date ? new Date(task.start_date).toLocaleDateString() : '-'}
+                      </td>
+                      <td className="py-3 px-4 text-gray-300 text-sm">
+                        {task.finish_date ? new Date(task.finish_date).toLocaleDateString() : '-'}
+                      </td>
+                      <td className="py-3 px-4 text-gray-300 text-sm">
+                        {task.start_date && task.finish_date ? (
+                          <span className="bg-purple-500/20 text-purple-300 px-2 py-1 rounded">
+                            {Math.ceil((new Date(task.finish_date).getTime() - new Date(task.start_date).getTime()) / (1000 * 60 * 60 * 24))} days
+                          </span>
+                        ) : '-'}
+                      </td>
+                      <td className="py-3 px-4 text-gray-300 text-sm">
+                        {task.tg_projection || '-'}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`${impactColor} font-bold`}>
+                          {task.impact_score || '-'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+            </tbody>
+          </table>
+
+          {tasks.length === 0 && (
+            <div className="text-center py-12 text-gray-400">
+              No tasks yet. Add tasks in the Opportunity Heatmap above.
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
