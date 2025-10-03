@@ -995,24 +995,6 @@ export const AIAutomationTasks = () => {
                     {sortColumn === 'tg_projection' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
                   </div>
                 </th>
-                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('impact_score')}>
-                  <div className="flex items-center gap-1">
-                    Impact
-                    {sortColumn === 'impact_score' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
-                  </div>
-                </th>
-                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('effort_score')}>
-                  <div className="flex items-center gap-1">
-                    Effort
-                    {sortColumn === 'effort_score' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
-                  </div>
-                </th>
-                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('input_score')}>
-                  <div className="flex items-center gap-1">
-                    User Input
-                    {sortColumn === 'input_score' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
-                  </div>
-                </th>
                 <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('zac_score')}>
                   <div className="flex items-center gap-1">
                     Zac Score
@@ -1025,6 +1007,12 @@ export const AIAutomationTasks = () => {
                     {sortColumn === 'luke_score' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
                   </div>
                 </th>
+                <th className="text-left py-3 px-4 text-purple-300 font-semibold cursor-pointer hover:bg-purple-500/10" onClick={() => handleSort('effort_score')}>
+                  <div className="flex items-center gap-1">
+                    Effort
+                    {sortColumn === 'effort_score' ? (sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />) : <ArrowUpDown className="w-4 h-4 opacity-30" />}
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -1035,9 +1023,7 @@ export const AIAutomationTasks = () => {
                     task.opportunity_level === 'Mid Opportunities' ? 'text-orange-400' :
                     'text-gray-400';
 
-                  const impactColor = getScoreColor(task.impact_score);
                   const effortColor = getEffortInputColor(task.effort_score);
-                  const inputColor = getEffortInputColor(task.input_score);
                   const zacColor = getScoreColor(task.zac_score);
                   const lukeColor = getScoreColor(task.luke_score);
 
@@ -1075,21 +1061,6 @@ export const AIAutomationTasks = () => {
                         {task.tg_projection || '-'}
                       </td>
                       <td className="py-3 px-4">
-                        <span className={`${impactColor} font-bold`}>
-                          {task.impact_score || '-'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className={`${effortColor} font-bold`}>
-                          {task.effort_score || '-'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className={`${inputColor} font-bold`}>
-                          {task.input_score || '-'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
                         <span className={`${zacColor} font-bold`}>
                           {task.zac_score || '-'}
                         </span>
@@ -1097,6 +1068,11 @@ export const AIAutomationTasks = () => {
                       <td className="py-3 px-4">
                         <span className={`${lukeColor} font-bold`}>
                           {task.luke_score || '-'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`${effortColor} font-bold`}>
+                          {task.effort_score || '-'}
                         </span>
                       </td>
                     </tr>
