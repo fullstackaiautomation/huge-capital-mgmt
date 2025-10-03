@@ -5,7 +5,7 @@ import { migrateLocalStorageToSupabase } from '../utils/migrateLocalStorageToSup
 
 type TaskStage = 'Ideas' | 'Planning' | 'Testing' | 'Review' | 'Completed';
 type OpportunityLevel = 'Quick Wins' | 'Big Wins' | 'Mid Opportunities' | 'Ungraded';
-type TaskStatus = 'Completed' | 'In Progress' | 'Testing' | 'Next Up' | 'Bench' | 'Huge Help';
+type TaskStatus = 'Completed' | 'In Progress' | 'Testing' | 'Next Up' | 'Bench' | 'Huge Help' | 'Ungraded';
 
 type ChecklistItem = {
   id: string;
@@ -85,7 +85,8 @@ export const AIAutomationTasks = () => {
       'Testing': 'bg-purple-600/30 text-purple-300 border-purple-400/40',
       'Next Up': 'bg-yellow-600/30 text-yellow-300 border-yellow-400/40',
       'Bench': 'bg-orange-600/30 text-orange-300 border-orange-400/40',
-      'Huge Help': 'bg-red-600/30 text-red-300 border-red-400/40'
+      'Huge Help': 'bg-red-600/30 text-red-300 border-red-400/40',
+      'Ungraded': 'bg-gray-600/30 text-gray-300 border-gray-400/40'
     };
     return status ? statusColors[status] || 'bg-gray-600/30 text-gray-300 border-gray-400/40' : 'bg-gray-600/30 text-gray-300 border-gray-400/40';
   };
@@ -789,6 +790,7 @@ export const AIAutomationTasks = () => {
                     <option value="Next Up" className="bg-gray-800">Next Up</option>
                     <option value="Bench" className="bg-gray-800">Bench</option>
                     <option value="Huge Help" className="bg-gray-800">Huge Help</option>
+                    <option value="Ungraded" className="bg-gray-800">Ungraded</option>
                   </select>
                 </div>
 
@@ -1110,6 +1112,7 @@ export const AIAutomationTasks = () => {
                           <option value="Next Up" className="bg-gray-800">Next Up</option>
                           <option value="Bench" className="bg-gray-800">Bench</option>
                           <option value="Huge Help" className="bg-gray-800">Huge Help</option>
+                          <option value="Ungraded" className="bg-gray-800">Ungraded</option>
                         </select>
                       </td>
                       <td className="py-3 px-2 text-center">
