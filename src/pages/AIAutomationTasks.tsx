@@ -1030,7 +1030,13 @@ export const AIAutomationTasks = () => {
                   return (
                     <tr key={task.id} className="border-b border-gray-700/50 hover:bg-purple-500/5 transition-colors">
                       <td className="py-3 px-4">
-                        <div className="text-white font-medium">{task.task_name || 'Untitled Task'}</div>
+                        <input
+                          type="text"
+                          className="w-full bg-transparent text-white font-medium focus:outline-none focus:bg-purple-500/10 rounded px-1"
+                          placeholder="Task Title"
+                          value={task.task_name}
+                          onChange={(e) => updateTask(task.id, 'task_name', e.target.value)}
+                        />
                         {task.tools && task.tools.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1">
                             {task.tools.map((tool: string) => (
@@ -1042,38 +1048,88 @@ export const AIAutomationTasks = () => {
                         )}
                       </td>
                       <td className="py-3 px-4">
-                        <span className={`${levelColor} text-sm font-semibold`}>
-                          {task.opportunity_level}
-                        </span>
+                        <select
+                          className={`bg-transparent border-0 rounded px-2 py-1 text-sm font-semibold focus:outline-none focus:bg-purple-500/10 ${levelColor}`}
+                          value={task.opportunity_level}
+                          onChange={(e) => updateTask(task.id, 'opportunity_level', e.target.value)}
+                        >
+                          <option value="Quick Wins" className="bg-gray-800 text-green-300">Quick Wins</option>
+                          <option value="Big Wins" className="bg-gray-800 text-blue-300">Big Wins</option>
+                          <option value="Mid Opportunities" className="bg-gray-800 text-orange-300">Mid Opportunities</option>
+                          <option value="Ungraded" className="bg-gray-800 text-gray-400">Ungraded</option>
+                        </select>
                       </td>
                       <td className="py-3 px-4">
-                        <span className={`${getStatusColor(task.status)} text-sm font-semibold px-2 py-1 rounded border`}>
-                          {task.status || 'Next Up'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-gray-300 text-sm">
-                        {task.tg_projection || '-'}
-                      </td>
-                      <td className="py-3 px-4 text-gray-300 text-sm">
-                        {task.start_date ? new Date(task.start_date).toLocaleDateString() : '-'}
-                      </td>
-                      <td className="py-3 px-4 text-gray-300 text-sm">
-                        {task.finish_date ? new Date(task.finish_date).toLocaleDateString() : '-'}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className={`${zacColor} font-bold`}>
-                          {task.zac_score || '-'}
-                        </span>
+                        <select
+                          className={`border rounded px-2 py-1 text-sm font-semibold focus:outline-none focus:bg-purple-500/10 ${getStatusColor(task.status)}`}
+                          value={task.status || 'Next Up'}
+                          onChange={(e) => updateTask(task.id, 'status', e.target.value)}
+                        >
+                          <option value="Completed" className="bg-gray-800">Completed</option>
+                          <option value="In Progress" className="bg-gray-800">In Progress</option>
+                          <option value="Testing" className="bg-gray-800">Testing</option>
+                          <option value="Next Up" className="bg-gray-800">Next Up</option>
+                          <option value="Bench" className="bg-gray-800">Bench</option>
+                          <option value="Huge Help" className="bg-gray-800">Huge Help</option>
+                        </select>
                       </td>
                       <td className="py-3 px-4">
-                        <span className={`${lukeColor} font-bold`}>
-                          {task.luke_score || '-'}
-                        </span>
+                        <input
+                          type="text"
+                          className="w-full bg-transparent text-gray-300 text-sm focus:outline-none focus:bg-purple-500/10 rounded px-1"
+                          placeholder="TG Projection"
+                          value={task.tg_projection || ''}
+                          onChange={(e) => updateTask(task.id, 'tg_projection', e.target.value)}
+                        />
                       </td>
                       <td className="py-3 px-4">
-                        <span className={`${effortColor} font-bold`}>
-                          {task.effort_score || '-'}
-                        </span>
+                        <input
+                          type="date"
+                          className="bg-transparent text-gray-300 text-sm focus:outline-none focus:bg-purple-500/10 rounded px-1"
+                          value={task.start_date || ''}
+                          onChange={(e) => updateTask(task.id, 'start_date', e.target.value)}
+                        />
+                      </td>
+                      <td className="py-3 px-4">
+                        <input
+                          type="date"
+                          className="bg-transparent text-gray-300 text-sm focus:outline-none focus:bg-purple-500/10 rounded px-1"
+                          value={task.finish_date || ''}
+                          onChange={(e) => updateTask(task.id, 'finish_date', e.target.value)}
+                        />
+                      </td>
+                      <td className="py-3 px-4">
+                        <input
+                          type="number"
+                          min="1"
+                          max="10"
+                          className={`bg-transparent w-12 rounded px-1 font-bold text-center focus:outline-none focus:bg-purple-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${zacColor}`}
+                          placeholder="-"
+                          value={task.zac_score || ''}
+                          onChange={(e) => updateTask(task.id, 'zac_score', e.target.value ? parseInt(e.target.value) : undefined)}
+                        />
+                      </td>
+                      <td className="py-3 px-4">
+                        <input
+                          type="number"
+                          min="1"
+                          max="10"
+                          className={`bg-transparent w-12 rounded px-1 font-bold text-center focus:outline-none focus:bg-purple-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${lukeColor}`}
+                          placeholder="-"
+                          value={task.luke_score || ''}
+                          onChange={(e) => updateTask(task.id, 'luke_score', e.target.value ? parseInt(e.target.value) : undefined)}
+                        />
+                      </td>
+                      <td className="py-3 px-4">
+                        <input
+                          type="number"
+                          min="1"
+                          max="10"
+                          className={`bg-transparent w-12 rounded px-1 font-bold text-center focus:outline-none focus:bg-purple-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${effortColor}`}
+                          placeholder="-"
+                          value={task.effort_score || ''}
+                          onChange={(e) => updateTask(task.id, 'effort_score', e.target.value ? parseInt(e.target.value) : undefined)}
+                        />
                       </td>
                     </tr>
                   );
