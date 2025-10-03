@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Facebook, Instagram, Linkedin, FileText, Copy, Save, Check } from 'lucide-react';
 
 type Platform = 'LinkedIn' | 'Facebook' | 'Instagram' | 'Blog';
-type Person = 'Zac' | 'Luke';
+type Person = 'Zac' | 'Luke' | 'Huge Capital';
 
 export const ContentManagement = () => {
   const [selectedPerson, setSelectedPerson] = useState<Person>('Zac');
@@ -69,6 +69,16 @@ export const ContentManagement = () => {
           }`}
         >
           Luke
+        </button>
+        <button
+          onClick={() => setSelectedPerson('Huge Capital')}
+          className={`px-6 py-3 rounded-lg text-lg font-semibold transition-colors ${
+            selectedPerson === 'Huge Capital'
+              ? 'bg-yellow-500 text-white border-2 border-yellow-600'
+              : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+          }`}
+        >
+          Huge Capital
         </button>
       </div>
 
