@@ -639,15 +639,15 @@ export const AIAutomationTasks = () => {
           <h2 className="text-xl font-bold text-yellow-200 mb-6">
             Huge Capital 12 Month Goals
           </h2>
-          <ul className="space-y-3 text-base text-gray-200 font-semibold list-disc list-inside">
-            <li>1M+ Monthly Funding / 80-100K Monthly Commissions</li>
-            <li>2 Bank Turn Downs Per Week (free qualified leads)</li>
-            <li>50 Affiliates Generating 1-2 Monthly Deals</li>
-            <li>Private Capital Community Launched</li>
-            <li>3K Active Facebook Group Members</li>
-            <li>Luke - Learn SBA Deals</li>
-            <li>Zac - Speak to Investment Real Estate</li>
-            <li>Dillion Full Time Broker (confident)</li>
+          <ul className="space-y-3 text-base text-gray-200 font-semibold list-disc pl-5">
+            <li className="pl-2">1M+ Monthly Funding / 80-100K Monthly Commissions</li>
+            <li className="pl-2">2 Bank Turn Downs Per Week (free qualified leads)</li>
+            <li className="pl-2">50 Affiliates Generating 1-2 Monthly Deals</li>
+            <li className="pl-2">Private Capital Community Launched</li>
+            <li className="pl-2">3K Active Facebook Group Members</li>
+            <li className="pl-2">Luke - Learn SBA Deals</li>
+            <li className="pl-2">Zac - Speak to Investment Real Estate</li>
+            <li className="pl-2">Dillion Full Time Broker (confident)</li>
           </ul>
         </div>
 
