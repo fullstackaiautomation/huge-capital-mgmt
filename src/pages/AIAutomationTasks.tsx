@@ -57,14 +57,7 @@ export const AIAutomationTasks = () => {
   };
 
   // Auto-save when tasks change (debounced)
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      tasks.forEach((task: any) => {
-        saveTask(task);
-      });
-    }, 3000);
-    return () => clearTimeout(timeoutId);
-  }, [tasks]);
+  // Auto-save is now handled in updateTask function with 1-second debounce
 
   const availableTools = ['Claude', 'Drive', 'GHL', 'Gmail', 'n8n', 'Phone Calls', 'Sheets', 'Slack', ...customTools];
 
@@ -146,15 +139,40 @@ export const AIAutomationTasks = () => {
   };
 
   const updateTask = (taskId: string, field: string, value: any) => {
-    setTasks(tasks.map((task: any) =>
+    const updatedTasks = tasks.map((task: any) =>
       task.id === taskId ? { ...task, [field]: value } : task
-    ));
+    );
+    setTasks(updatedTasks);
+
+    // Save only the updated task immediately
+    const updatedTask = updatedTasks.find((task: any) => task.id === taskId);
+    if (updatedTask) {
+      // Debounce the save for this specific task
+      if ((window as any).saveTaskTimeout) {
+        clearTimeout((window as any).saveTaskTimeout);
+      }
+      (window as any).saveTaskTimeout = setTimeout(() => {
+        saveTask(updatedTask);
+      }, 1000);
+    }
   };
 
   const updateTaskTools = (taskId: string, newTools: string[]) => {
-    setTasks(tasks.map((task: any) =>
+    const updatedTasks = tasks.map((task: any) =>
       task.id === taskId ? { ...task, tools: newTools } : task
-    ));
+    );
+    setTasks(updatedTasks);
+
+    // Save the updated task
+    const updatedTask = updatedTasks.find((task: any) => task.id === taskId);
+    if (updatedTask) {
+      if ((window as any).saveTaskTimeout) {
+        clearTimeout((window as any).saveTaskTimeout);
+      }
+      (window as any).saveTaskTimeout = setTimeout(() => {
+        saveTask(updatedTask);
+      }, 1000);
+    }
   };
 
   const handleDeleteTask = async (taskId: string) => {
