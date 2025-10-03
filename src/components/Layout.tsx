@@ -1,6 +1,6 @@
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { LayoutDashboard, Bot, FileText, LogOut, CheckSquare } from 'lucide-react';
+import { LayoutDashboard, Bot, FileText, LogOut, CheckSquare, Users, Building2, Briefcase } from 'lucide-react';
 import logo from '../assets/logo.webp';
 
 export const Layout = () => {
@@ -12,6 +12,12 @@ export const Layout = () => {
     { name: 'Task Tracker', href: '/tracker', icon: CheckSquare },
     { name: 'AI Roadmap', href: '/tasks', icon: Bot },
     { name: 'Content Management', href: '/content', icon: FileText },
+  ];
+
+  const comingSoonItems = [
+    { name: 'Affiliates', icon: Users },
+    { name: 'Lenders', icon: Building2 },
+    { name: 'Deals', icon: Briefcase },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -27,7 +33,7 @@ export const Layout = () => {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-2">
+          <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
             {navigation.map((item) => {
               const Icon = item.icon;
               return (
@@ -45,6 +51,25 @@ export const Layout = () => {
                 </Link>
               );
             })}
+
+            {/* Coming Soon Section */}
+            <div className="pt-6">
+              <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                Coming Soon
+              </h3>
+              {comingSoonItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div
+                    key={item.name}
+                    className="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-600 cursor-not-allowed opacity-50"
+                  >
+                    <Icon className="w-5 h-5 mr-3" />
+                    {item.name}
+                  </div>
+                );
+              })}
+            </div>
           </nav>
 
           {/* User info and logout */}
