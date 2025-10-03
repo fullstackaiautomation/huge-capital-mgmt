@@ -644,7 +644,7 @@ export const AIAutomationTasks = () => {
                 <input type="text" className="w-full bg-transparent text-white font-bold text-2xl mb-2 px-0 focus:outline-none" placeholder="Task Title" value={task.task_name} onChange={(e) => updateTask(task.id, 'task_name', e.target.value)} />
 
                 <textarea
-                  className="w-full bg-transparent text-white text-sm mb-1 px-0 focus:outline-none resize-none break-words"
+                  className="w-full bg-transparent text-white text-sm mb-1 px-0 focus:outline-none resize-none overflow-x-hidden"
                   placeholder="Add description..."
                   value={task.summary}
                   onChange={(e) => {
@@ -652,7 +652,7 @@ export const AIAutomationTasks = () => {
                     e.currentTarget.style.height = 'auto';
                     e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
                   }}
-                  style={{overflowWrap: 'anywhere', wordBreak: 'break-word', minHeight: '24px'}}
+                  style={{overflowWrap: 'break-word', wordBreak: 'break-word', whiteSpace: 'pre-wrap', minHeight: '24px', overflowX: 'hidden'}}
                 />
 
                 <div className="border-t border-green-400/20 mt-1 mb-2"></div>
