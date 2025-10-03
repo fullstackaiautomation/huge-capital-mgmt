@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Plus, Search, Lightbulb, ClipboardList, TestTube, Eye, CheckCircle, X, Trash2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Download, GripVertical, Bot } from 'lucide-react';
+import { Plus, Search, Lightbulb, ClipboardList, TestTube, Eye, CheckCircle, X, Trash2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Download, GripVertical, Bot, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useOpportunityTasks } from '../hooks/useOpportunityTasks';
 import { migrateLocalStorageToSupabase } from '../utils/migrateLocalStorageToSupabase';
 import {
@@ -184,6 +184,7 @@ export const AIAutomationTasks = () => {
   const [migrating, setMigrating] = useState(false);
   const [migrationMessage, setMigrationMessage] = useState<string | null>(null);
   const [hasLocalStorageData, setHasLocalStorageData] = useState(false);
+  const [monthlyRoadmapIndex, setMonthlyRoadmapIndex] = useState(0);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -632,7 +633,7 @@ export const AIAutomationTasks = () => {
       )}
 
       {/* 12 Month Goals and Monthly Roadmaps */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* 12 Month Goals */}
         <div className="lg:col-span-1 bg-yellow-400/10 border border-yellow-300/30 rounded-lg p-6">
           <h2 className="text-xl font-bold text-yellow-200 mb-4">
@@ -654,49 +655,81 @@ export const AIAutomationTasks = () => {
           </div>
         </div>
 
-        {/* Monthly Roadmaps */}
-        {['October', 'November', 'December', 'January'].map((month, idx) => {
-          const monthIndex = month === 'January' ? 0 : 9 + idx; // Oct=9, Nov=10, Dec=11, Jan=0
-          const year = month === 'January' ? 2026 : 2025;
-
-          const monthTasks = tasks.filter(task => {
-            if (!task.start_date && !task.finish_date) return false;
-
-            const startDate = task.start_date ? new Date(task.start_date) : null;
-            const finishDate = task.finish_date ? new Date(task.finish_date) : null;
-
-            return (
-              (startDate && startDate.getMonth() === monthIndex && startDate.getFullYear() === year) ||
-              (finishDate && finishDate.getMonth() === monthIndex && finishDate.getFullYear() === year)
-            );
-          });
+        {/* Monthly Roadmaps with Navigation */}
+        {(() => {
+          const allMonths = ['October', 'November', 'December', 'January'];
+          const visibleMonths = allMonths.slice(monthlyRoadmapIndex, monthlyRoadmapIndex + 3);
 
           return (
-            <div key={month} className="bg-blue-400/10 border border-blue-300/30 rounded-lg p-6">
-              <h2 className="text-xl font-bold text-blue-200 mb-4">
-                {month} Roadmap
-              </h2>
-              <div className="space-y-3">
-                {monthTasks.length === 0 ? (
-                  <p className="text-sm text-gray-400 italic">No tasks scheduled</p>
-                ) : (
-                  monthTasks.map(task => (
-                    <div key={task.id} className="bg-blue-500/10 border border-blue-400/20 rounded-lg p-3">
-                      <h3 className="text-sm font-semibold text-blue-200 mb-1">
-                        {task.task_name}
-                      </h3>
-                      {task.description && (
-                        <p className="text-xs text-gray-400 line-clamp-2">
-                          {task.description}
-                        </p>
+            <>
+              {visibleMonths.map((month) => {
+                const idx = allMonths.indexOf(month);
+                const monthIndex = month === 'January' ? 0 : 9 + idx; // Oct=9, Nov=10, Dec=11, Jan=0
+                const year = month === 'January' ? 2026 : 2025;
+
+                const monthTasks = tasks.filter(task => {
+                  if (!task.start_date && !task.finish_date) return false;
+
+                  const startDate = task.start_date ? new Date(task.start_date) : null;
+                  const finishDate = task.finish_date ? new Date(task.finish_date) : null;
+
+                  return (
+                    (startDate && startDate.getMonth() === monthIndex && startDate.getFullYear() === year) ||
+                    (finishDate && finishDate.getMonth() === monthIndex && finishDate.getFullYear() === year)
+                  );
+                });
+
+                return (
+                  <div key={month} className="bg-blue-400/10 border border-blue-300/30 rounded-lg p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-xl font-bold text-blue-200">
+                        {month} Roadmap
+                      </h2>
+                      {visibleMonths.indexOf(month) === visibleMonths.length - 1 && (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setMonthlyRoadmapIndex(Math.max(0, monthlyRoadmapIndex - 1))}
+                            disabled={monthlyRoadmapIndex === 0}
+                            className="p-1 text-blue-300 hover:text-blue-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                            title="Previous"
+                          >
+                            <ArrowLeft className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => setMonthlyRoadmapIndex(Math.min(allMonths.length - 3, monthlyRoadmapIndex + 1))}
+                            disabled={monthlyRoadmapIndex >= allMonths.length - 3}
+                            className="p-1 text-blue-300 hover:text-blue-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                            title="Next"
+                          >
+                            <ArrowRight className="w-5 h-5" />
+                          </button>
+                        </div>
                       )}
                     </div>
-                  ))
-                )}
-              </div>
-            </div>
+                    <div className="space-y-3">
+                      {monthTasks.length === 0 ? (
+                        <p className="text-sm text-gray-400 italic">No tasks scheduled</p>
+                      ) : (
+                        monthTasks.map(task => (
+                          <div key={task.id} className="bg-blue-500/10 border border-blue-400/20 rounded-lg p-3">
+                            <h3 className="text-sm font-semibold text-blue-200 mb-1">
+                              {task.task_name}
+                            </h3>
+                            {task.description && (
+                              <p className="text-xs text-gray-400 line-clamp-2">
+                                {task.description}
+                              </p>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </>
           );
-        })}
+        })()}
       </div>
 
       {/* Opportunity Heatmap */}
