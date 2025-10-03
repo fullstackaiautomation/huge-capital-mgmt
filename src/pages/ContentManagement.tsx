@@ -87,7 +87,7 @@ export const ContentManagement = () => {
         </button>
       </div>
 
-      {/* Brand Voice Guidelines */}
+      {/* Content Profile */}
       <div className={`rounded-lg shadow p-6 ${
         selectedPerson === 'Zac'
           ? 'bg-blue-50 border-2 border-blue-200'
@@ -96,7 +96,7 @@ export const ContentManagement = () => {
           : 'bg-purple-50 border-2 border-purple-200'
       }`}>
         <h2 className="text-xl font-bold text-gray-900 mb-4">
-          Brand Voice Guidelines
+          {selectedPerson} Content Profile
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {Object.entries(brandVoiceGuidelines).map(([founder, pillars]) => {
