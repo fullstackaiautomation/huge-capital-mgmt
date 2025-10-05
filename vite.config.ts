@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
-    base: '/huge-capital-mgmt/',
+    base: '/',
     build: {
       outDir: 'dist',
       sourcemap: false,
