@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Plus, X, Trash2, GripVertical, Folder, CheckCircle2, Calendar } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, X, Trash2, GripVertical, Folder, CheckCircle2, Calendar } from 'lucide-react';
 import { useProjects, usePhases, useTasks } from '../hooks/useProjects';
 import type { HugeProject, ProjectPhase, PhaseTask, TaskStatus } from '../types/projects';
 import {
@@ -341,13 +341,12 @@ export const Projects = () => {
   const { projects, fetchProjectWithPhases, loading, saveProject } = useProjects();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<any>(null);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [filterMonth, setFilterMonth] = useState<string>('all');
+  const [filterStatus] = useState<string>('all');
+  const [filterMonth] = useState<string>('all');
   const [loadingProject, setLoadingProject] = useState(false);
   const [showToolDropdown, setShowToolDropdown] = useState(false);
   const [newToolInput, setNewToolInput] = useState<string>('');
   const [editingToolColor, setEditingToolColor] = useState<string | null>(null);
-  const [toolColors, setToolColors] = useState<{ [key: string]: string }>({});
 
   // Color helper functions
   const getScoreColor = (score: number | undefined) => {
@@ -411,11 +410,11 @@ export const Projects = () => {
   };
 
   // Load tool colors from selected project
-  React.useEffect(() => {
-    if (selectedProject && selectedProject.tool_colors) {
-      setToolColors(selectedProject.tool_colors);
-    }
-  }, [selectedProject]);
+  // React.useEffect(() => {
+  //   if (selectedProject && selectedProject.tool_colors) {
+  //     setToolColors(selectedProject.tool_colors);
+  //   }
+  // }, [selectedProject]);
 
   // Calculate statistics
   const nonUngradedProjects = projects.filter(p => p.status !== 'Ungraded');
@@ -425,7 +424,7 @@ export const Projects = () => {
   const completedPhases = projects.reduce((acc, p) => acc + (p.completed_phases || 0), 0);
 
   // Calculate total tasks across all projects by counting tasks in phases
-  const allTasksStats = projects.reduce((acc, p) => {
+  const allTasksStats = projects.reduce((acc, p: any) => {
     if (p.phases && Array.isArray(p.phases)) {
       const projectTotalTasks = p.phases.reduce((phaseAcc: number, phase: any) => {
         return phaseAcc + (phase.tasks?.length || 0);
@@ -497,15 +496,15 @@ export const Projects = () => {
   });
 
   // Get unique months from all projects based on their date ranges
-  const availableMonths = Array.from(
-    new Set(
-      projects.flatMap(p => getProjectMonths(p))
-    )
-  ).sort((a, b) => {
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                        'July', 'August', 'September', 'October', 'November', 'December'];
-    return monthNames.indexOf(a) - monthNames.indexOf(b);
-  });
+  // const availableMonths = Array.from(
+  //   new Set(
+  //     projects.flatMap(p => getProjectMonths(p))
+  //   )
+  // ).sort((a, b) => {
+  //   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+  //                       'July', 'August', 'September', 'October', 'November', 'December'];
+  //   return monthNames.indexOf(a) - monthNames.indexOf(b);
+  // });
 
   // Auto-select first filtered project on load or when filters change
   useEffect(() => {
@@ -528,7 +527,7 @@ export const Projects = () => {
     setLoadingProject(false);
   };
 
-  const { phases, savePhase, deletePhase } = usePhases(selectedProjectId || undefined);
+  const { savePhase, deletePhase } = usePhases(selectedProjectId || undefined);
 
   const addNewPhase = () => {
     if (!selectedProjectId) return;
