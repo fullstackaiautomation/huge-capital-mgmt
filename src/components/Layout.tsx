@@ -2,7 +2,7 @@ import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { LayoutDashboard, Bot, FileText, LogOut, CheckSquare, Users, Building2, Briefcase, Lightbulb } from 'lucide-react';
 import logo from '../assets/logo.webp';
-import aiIcon from '../assets/ai-icon.svg';
+import { AIIcon } from './AIIcon';
 
 export const Layout = () => {
   const { user, signOut } = useAuth();
@@ -16,7 +16,7 @@ export const Layout = () => {
 
   const middleNavigation = [
     { name: 'AI Roadmap', href: '/tasks', icon: Bot },
-    { name: 'AI Projects', href: '/projects', icon: 'custom', customIcon: aiIcon },
+    { name: 'AI Projects', href: '/projects', icon: AIIcon },
   ];
 
   const bottomNavigation = [
@@ -67,7 +67,7 @@ export const Layout = () => {
 
             {/* Middle Navigation */}
             {middleNavigation.map((item) => {
-              const Icon = item.icon !== 'custom' ? item.icon : null;
+              const Icon = item.icon;
               return (
                 <Link
                   key={item.name}
@@ -78,11 +78,7 @@ export const Layout = () => {
                       : 'text-gray-400 hover:bg-dark-hover hover:text-gray-200'
                   }`}
                 >
-                  {Icon ? (
-                    <Icon className="w-5 h-5 mr-3" />
-                  ) : (
-                    <img src={(item as any).customIcon} alt="" className="w-5 h-5 mr-3" />
-                  )}
+                  <Icon className="w-5 h-5 mr-3" />
                   {item.name}
                 </Link>
               );
