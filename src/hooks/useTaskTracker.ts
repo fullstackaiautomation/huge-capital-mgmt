@@ -5,8 +5,8 @@ type Task = {
   id: string;
   taskName: string;
   description: string;
-  assignee: 'Zac' | 'Luke' | 'Dillion' | '';
-  area: 'Tactstack' | 'Full Stack' | 'Admin' | 'Marketing' | '';
+  assignee: 'Zac' | 'Luke' | 'Dillon' | '';
+  area: 'Tactstack' | 'Full Stack' | 'Admin' | 'Marketing' | 'Deals' | '';
   dueDate: string;
   completed: boolean;
   completed_date?: string;

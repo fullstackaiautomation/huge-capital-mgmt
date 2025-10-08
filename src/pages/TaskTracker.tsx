@@ -6,8 +6,8 @@ type Task = {
   id: string;
   taskName: string;
   description: string;
-  assignee: 'Zac' | 'Luke' | 'Dillion' | '';
-  area: 'Tactstack' | 'Full Stack' | 'Admin' | 'Marketing' | '';
+  assignee: 'Zac' | 'Luke' | 'Dillon' | '';
+  area: 'Tactstack' | 'Full Stack' | 'Admin' | 'Marketing' | 'Deals' | '';
   dueDate: string;
   completed: boolean;
   completed_date?: string;
@@ -112,7 +112,7 @@ export const TaskTracker = () => {
     const colors: { [key: string]: string } = {
       'Zac': 'bg-blue-600/30 text-blue-300 border-blue-400/40',
       'Luke': 'bg-green-600/30 text-green-300 border-green-400/40',
-      'Dillion': 'bg-purple-600/30 text-purple-300 border-purple-400/40',
+      'Dillon': 'bg-purple-600/30 text-purple-300 border-purple-400/40',
     };
     return assignee ? colors[assignee] || 'bg-gray-600/30 text-gray-300 border-gray-400/40' : 'bg-gray-600/30 text-gray-300 border-gray-400/40';
   };
@@ -123,6 +123,7 @@ export const TaskTracker = () => {
       'Full Stack': 'bg-cyan-600/30 text-cyan-300 border-cyan-400/40',
       'Admin': 'bg-yellow-600/30 text-yellow-300 border-yellow-400/40',
       'Marketing': 'bg-pink-600/30 text-pink-300 border-pink-400/40',
+      'Deals': 'bg-green-600/30 text-green-300 border-green-400/40',
     };
     return area ? colors[area] || 'bg-gray-600/30 text-gray-300 border-gray-400/40' : 'bg-gray-600/30 text-gray-300 border-gray-400/40';
   };
@@ -200,7 +201,7 @@ export const TaskTracker = () => {
                 const getRowColor = () => {
                   if (task.assignee === 'Zac') return 'bg-blue-500/20 border-l-4 border-l-blue-500';
                   if (task.assignee === 'Luke') return 'bg-green-500/20 border-l-4 border-l-green-500';
-                  if (task.assignee === 'Dillion') return 'bg-purple-500/20 border-l-4 border-l-purple-500';
+                  if (task.assignee === 'Dillon') return 'bg-purple-500/20 border-l-4 border-l-purple-500';
                   return '';
                 };
 
@@ -315,7 +316,7 @@ export const TaskTracker = () => {
                         <option value="" className="bg-gray-800 text-gray-400">Select</option>
                         <option value="Zac" className="bg-gray-800">Zac</option>
                         <option value="Luke" className="bg-gray-800">Luke</option>
-                        <option value="Dillion" className="bg-gray-800">Dillion</option>
+                        <option value="Dillon" className="bg-gray-800">Dillon</option>
                       </select>
                     </td>
                     <td className="py-3 px-3 text-center">
@@ -329,6 +330,7 @@ export const TaskTracker = () => {
                         <option value="Full Stack" className="bg-gray-800">Full Stack</option>
                         <option value="Admin" className="bg-gray-800">Admin</option>
                         <option value="Marketing" className="bg-gray-800">Marketing</option>
+                        <option value="Deals" className="bg-gray-800">Deals</option>
                       </select>
                     </td>
                     <td className="py-3 px-2 text-center">
