@@ -584,12 +584,12 @@ export const Projects = () => {
     const updatedProject = { ...selectedProject, [field]: value };
     setSelectedProject(updatedProject);
 
-    // Debounce save
+    // Debounce save - skip refetch to prevent losing focus while typing
     if ((window as any).saveProjectTimeout) {
       clearTimeout((window as any).saveProjectTimeout);
     }
     (window as any).saveProjectTimeout = setTimeout(() => {
-      saveProject(updatedProject);
+      saveProject(updatedProject, true); // skipRefetch = true
     }, 1000);
   };
 

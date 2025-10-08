@@ -115,7 +115,7 @@ export const useProjects = () => {
   };
 
   // Save or update a project
-  const saveProject = async (project: HugeProject) => {
+  const saveProject = async (project: HugeProject, skipRefetch = false) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
 
@@ -152,7 +152,11 @@ export const useProjects = () => {
 
       if (error) throw error;
 
-      await fetchProjects();
+      // Only refetch if explicitly requested (e.g., when creating new projects)
+      if (!skipRefetch) {
+        // Update local state without full refetch to prevent losing focus
+        setProjects(prev => prev.map(p => p.id === project.id ? { ...p, ...project } : p));
+      }
     } catch (err: any) {
       console.error('Error saving project:', err);
       setError(err.message);
