@@ -1,8 +1,7 @@
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { LayoutDashboard, Bot, FileText, LogOut, CheckSquare, Users, Building2, Briefcase, Lightbulb } from 'lucide-react';
+import { LayoutDashboard, Bot, FileText, LogOut, CheckSquare, Users, Building2, Briefcase, Folder, Lightbulb } from 'lucide-react';
 import logo from '../assets/logo.webp';
-import { AIIcon } from './AIIcon';
 
 export const Layout = () => {
   const { user, signOut } = useAuth();
@@ -16,7 +15,7 @@ export const Layout = () => {
 
   const middleNavigation = [
     { name: 'AI Roadmap', href: '/tasks', icon: Bot },
-    { name: 'AI Projects', href: '/projects', icon: AIIcon },
+    { name: 'AI Projects', href: '/projects', icon: Folder },
   ];
 
   const bottomNavigation = [
