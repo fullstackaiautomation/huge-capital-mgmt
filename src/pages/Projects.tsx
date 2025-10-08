@@ -510,14 +510,20 @@ export const Projects = () => {
   useEffect(() => {
     if (filteredProjects.length > 0 && !selectedProjectId) {
       loadProject(filteredProjects[0].id);
-    } else if (filteredProjects.length > 0 && selectedProjectId) {
-      // Check if selected project is still in filtered list
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredProjects.length]);
+
+  // Check if selected project is still in filtered list when filters change
+  useEffect(() => {
+    if (selectedProjectId && filteredProjects.length > 0) {
       const stillExists = filteredProjects.find(p => p.id === selectedProjectId);
       if (!stillExists) {
         loadProject(filteredProjects[0].id);
       }
     }
-  }, [filteredProjects, selectedProjectId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterStatus, filterMonth]);
 
   const loadProject = async (projectId: string) => {
     setLoadingProject(true);
