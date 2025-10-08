@@ -1,17 +1,25 @@
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { LayoutDashboard, Bot, FileText, LogOut, CheckSquare, Users, Building2, Briefcase } from 'lucide-react';
+import { LayoutDashboard, Bot, FileText, LogOut, CheckSquare, Users, Building2, Briefcase, Folder, Lightbulb } from 'lucide-react';
 import logo from '../assets/logo.webp';
 
 export const Layout = () => {
   const { user, signOut } = useAuth();
   const location = useLocation();
 
-  const navigation = [
+  const topNavigation = [
     { name: 'Funding Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Task Tracker', href: '/tracker', icon: CheckSquare },
-    { name: 'AI Roadmap', href: '/tasks', icon: Bot },
     { name: 'Content Planner', href: '/content', icon: FileText },
+  ];
+
+  const middleNavigation = [
+    { name: 'AI Roadmap', href: '/tasks', icon: Bot },
+    { name: 'AI Projects', href: '/projects', icon: Folder },
+  ];
+
+  const bottomNavigation = [
+    { name: 'Bugs & Requests', href: '/bugs', icon: Lightbulb },
   ];
 
   const comingSoonItems = [
@@ -34,7 +42,30 @@ export const Layout = () => {
 
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-            {navigation.map((item) => {
+            {/* Top Navigation */}
+            {topNavigation.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
+                    isActive(item.href)
+                      ? 'bg-brand-500/10 text-brand-500 border border-brand-500/20'
+                      : 'text-gray-400 hover:bg-dark-hover hover:text-gray-200'
+                  }`}
+                >
+                  <Icon className="w-5 h-5 mr-3" />
+                  {item.name}
+                </Link>
+              );
+            })}
+
+            {/* Spacer */}
+            <div className="pt-4 mt-4 border-t border-dark-border"></div>
+
+            {/* Middle Navigation */}
+            {middleNavigation.map((item) => {
               const Icon = item.icon;
               return (
                 <Link
@@ -71,6 +102,27 @@ export const Layout = () => {
               })}
             </div>
           </nav>
+
+          {/* Bottom Navigation */}
+          <div className="px-4 pb-4">
+            {bottomNavigation.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
+                    isActive(item.href)
+                      ? 'bg-brand-500/10 text-brand-500'
+                      : 'text-gray-400 hover:bg-dark-hover hover:text-gray-200'
+                  }`}
+                >
+                  <Icon className="w-5 h-5 mr-3" />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </div>
 
           {/* User info and logout */}
           <div className="p-4 border-t border-dark-border">

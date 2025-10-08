@@ -42,7 +42,7 @@ export const useOpportunityTasks = () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('opportunity_tasks')
+        .from('huge_projects')
         .select('*')
         .order('created_at', { ascending: true });
 
@@ -113,7 +113,7 @@ export const useOpportunityTasks = () => {
       console.log('Saving task:', task.id, 'Status:', task.status, 'Priority:', task.priority);
 
       const { error } = await supabase
-        .from('opportunity_tasks')
+        .from('huge_projects')
         .upsert(taskData);
 
       if (error) {
@@ -133,7 +133,7 @@ export const useOpportunityTasks = () => {
   const deleteTask = async (taskId: string) => {
     try {
       const { error } = await supabase
-        .from('opportunity_tasks')
+        .from('huge_projects')
         .delete()
         .eq('id', taskId);
 

@@ -7,6 +7,8 @@ import { FundingDashboard } from './pages/FundingDashboard';
 import { AIAutomationTasks } from './pages/AIAutomationTasks';
 import { ContentManagement } from './pages/ContentManagement';
 import { TaskTracker } from './pages/TaskTracker';
+import { Projects } from './pages/Projects';
+import { BugsIdeas } from './pages/BugsIdeas';
 
 function App() {
   return (
@@ -24,8 +26,10 @@ function App() {
           >
             <Route index element={<FundingDashboard />} />
             <Route path="tasks" element={<AIAutomationTasks />} />
+            <Route path="projects" element={<Projects />} />
             <Route path="content" element={<ContentManagement />} />
             <Route path="tracker" element={<TaskTracker />} />
+            <Route path="bugs" element={<BugsIdeas />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

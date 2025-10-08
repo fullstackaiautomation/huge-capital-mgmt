@@ -9,6 +9,7 @@ type Task = {
   area: 'Tactstack' | 'Full Stack' | 'Admin' | 'Marketing' | '';
   dueDate: string;
   completed: boolean;
+  completed_date?: string;
   created_by?: string;
 };
 
@@ -37,6 +38,7 @@ export const useTaskTracker = () => {
         area: task.area || '',
         dueDate: task.due_date || '',
         completed: task.completed || false,
+        completed_date: task.completed_date || '',
         created_by: task.created_by,
       }));
 
@@ -60,14 +62,22 @@ export const useTaskTracker = () => {
         area: task.area || null,
         due_date: task.dueDate || null,
         completed: task.completed,
+        completed_date: task.completed_date || null,
         created_by: user?.id,
       };
+
+      console.log('Saving task:', taskData);
 
       const { error } = await supabase
         .from('tracker_tasks')
         .upsert(taskData);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error saving task:', error);
+        throw error;
+      }
+
+      console.log('Task saved successfully');
     } catch (error) {
       console.error('Error saving task:', error);
     }

@@ -1,5 +1,6 @@
 import { Plus, Trash2, CheckSquare } from 'lucide-react';
 import { useTaskTracker } from '../hooks/useTaskTracker';
+import { useState } from 'react';
 
 type Task = {
   id: string;
@@ -9,10 +10,16 @@ type Task = {
   area: 'Tactstack' | 'Full Stack' | 'Admin' | 'Marketing' | '';
   dueDate: string;
   completed: boolean;
+  completed_date?: string;
 };
 
 export const TaskTracker = () => {
   const { tasks, setTasks, saveTask, deleteTask: deleteTaskFromDb } = useTaskTracker();
+  const [showCompleted, setShowCompleted] = useState(false);
+
+  const filteredTasks = showCompleted
+    ? tasks.filter(task => task.completed)
+    : tasks.filter(task => !task.completed);
 
   const formatDueDate = (dateString: string) => {
     if (!dateString) return { text: '', isOverdue: false, isToday: false, displayDate: '' };
@@ -51,6 +58,7 @@ export const TaskTracker = () => {
       area: '',
       dueDate: '',
       completed: false,
+      completed_date: undefined,
     };
     const updatedTasks = [...tasks, newTask];
     setTasks(updatedTasks);
@@ -75,12 +83,22 @@ export const TaskTracker = () => {
   };
 
   const toggleCompleted = (taskId: string) => {
-    const updatedTasks = tasks.map(task =>
-      task.id === taskId ? { ...task, completed: !task.completed } : task
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const newCompletedState = !task.completed;
+    const updatedTasks = tasks.map(t =>
+      t.id === taskId
+        ? {
+            ...t,
+            completed: newCompletedState,
+            completed_date: newCompletedState ? new Date().toISOString() : undefined
+          }
+        : t
     );
     setTasks(updatedTasks);
 
-    const updatedTask = updatedTasks.find(task => task.id === taskId);
+    const updatedTask = updatedTasks.find(t => t.id === taskId);
     if (updatedTask) {
       saveTask(updatedTask);
     }
@@ -116,13 +134,37 @@ export const TaskTracker = () => {
           <CheckSquare className="w-8 h-8 text-brand-500" />
           Task Tracker
         </h1>
-        <button
-          onClick={addNewTask}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-lg shadow-green-500/50"
-        >
-          <Plus className="w-4 h-4" />
-          Add Task
-        </button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 bg-gray-800/50 rounded-lg p-1 border border-gray-700/50">
+            <button
+              onClick={() => setShowCompleted(false)}
+              className={`px-4 py-2 rounded-md transition-colors ${
+                !showCompleted
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              Open Tasks ({tasks.filter(t => !t.completed).length})
+            </button>
+            <button
+              onClick={() => setShowCompleted(true)}
+              className={`px-4 py-2 rounded-md transition-colors ${
+                showCompleted
+                  ? 'bg-green-600 text-white'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              Completed ({tasks.filter(t => t.completed).length})
+            </button>
+          </div>
+          <button
+            onClick={addNewTask}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-lg shadow-green-500/50"
+          >
+            <Plus className="w-4 h-4" />
+            Add Task
+          </button>
+        </div>
       </div>
 
       <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 overflow-hidden">
@@ -154,7 +196,7 @@ export const TaskTracker = () => {
               </tr>
             </thead>
             <tbody>
-              {tasks.map((task) => {
+              {filteredTasks.map((task) => {
                 const getRowColor = () => {
                   if (task.assignee === 'Zac') return 'bg-blue-500/20 border-l-4 border-l-blue-500';
                   if (task.assignee === 'Luke') return 'bg-green-500/20 border-l-4 border-l-green-500';
@@ -167,6 +209,23 @@ export const TaskTracker = () => {
                     <td className="py-3 px-3 text-center">
                       <div className="flex flex-col items-center gap-1">
                         {(() => {
+                          // If task is completed, show completed date in green
+                          if (task.completed && task.completed_date) {
+                            const completedDate = new Date(task.completed_date);
+                            const displayDate = completedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                            return (
+                              <div className="rounded-lg px-3 py-2 border min-w-[100px] bg-green-600/30 border-green-500/50">
+                                <div className="text-[10px] text-green-300 font-semibold uppercase tracking-wider">
+                                  Completed
+                                </div>
+                                <div className="text-green-200 text-sm font-bold text-center">
+                                  {displayDate}
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          // Otherwise show due date
                           const dateInfo = task.dueDate ? formatDueDate(task.dueDate) : { text: 'Set date', isOverdue: false, isToday: false, displayDate: '' };
                           return (
                             <div
