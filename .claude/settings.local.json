@@ -5,7 +5,11 @@
       "Bash(npx tsc:*)",
       "Bash(npx supabase db diff:*)",
       "Bash(supabase db:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh run list:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []
