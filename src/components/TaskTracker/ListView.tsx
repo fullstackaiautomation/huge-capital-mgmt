@@ -1,5 +1,5 @@
 import { Trash2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 
 type Task = {
