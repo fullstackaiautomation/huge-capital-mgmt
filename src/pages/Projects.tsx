@@ -42,7 +42,7 @@ function SortableTaskRow({ task, onUpdate, onDelete }: { task: PhaseTask; onUpda
   const getStatusColor = (status: TaskStatus) => {
     const colors = {
       'Not Started': 'bg-gray-600/30 text-gray-300 border-gray-400/40',
-      'In Progress': 'bg-blue-600/30 text-blue-300 border-blue-400/40',
+      'In Progress': 'bg-orange-600/30 text-orange-300 border-orange-400/40',
       'Completed': 'bg-green-600/30 text-green-300 border-green-400/40',
       'Huge Help': 'bg-red-600/30 text-red-300 border-red-400/40',
     };
@@ -192,7 +192,7 @@ function PhaseSection({ phase, phaseNumber, projectId, onPhaseUpdate, onPhaseDel
   const getStatusColor = (status: TaskStatus) => {
     const colors = {
       'Not Started': 'bg-gray-600/30 text-gray-300 border-gray-400/40',
-      'In Progress': 'bg-blue-600/30 text-blue-300 border-blue-400/40',
+      'In Progress': 'bg-orange-600/30 text-orange-300 border-orange-400/40',
       'Completed': 'bg-green-600/30 text-green-300 border-green-400/40',
       'Huge Help': 'bg-red-600/30 text-red-300 border-red-400/40',
     };
@@ -247,7 +247,7 @@ function PhaseSection({ phase, phaseNumber, projectId, onPhaseUpdate, onPhaseDel
   const getPhaseBackgroundColor = (status: TaskStatus) => {
     const colors = {
       'Not Started': 'bg-gray-500/10 border-gray-400/30',
-      'In Progress': 'bg-blue-500/10 border-blue-400/30',
+      'In Progress': 'bg-orange-500/10 border-orange-400/30',
       'Completed': 'bg-green-500/10 border-green-400/30',
       'Huge Help': 'bg-red-500/10 border-red-400/30',
     };
@@ -676,9 +676,9 @@ export const Projects = () => {
               selectedColor = 'bg-green-500/30 border-2 border-green-400 text-green-200';
               hoverColor = 'hover:border-green-400 hover:text-green-200';
             } else if (project.status === 'In Progress') {
-              statusColor = 'bg-blue-500/20 border-blue-400/40 text-blue-300';
-              selectedColor = 'bg-blue-500/30 border-2 border-blue-400 text-blue-200';
-              hoverColor = 'hover:border-blue-400 hover:text-blue-200';
+              statusColor = 'bg-orange-500/20 border-orange-400/40 text-orange-300';
+              selectedColor = 'bg-orange-500/30 border-2 border-orange-400 text-orange-200';
+              hoverColor = 'hover:border-orange-400 hover:text-orange-200';
             } else if (project.status === 'Next Up') {
               statusColor = 'bg-yellow-500/20 border-yellow-400/40 text-yellow-300';
               selectedColor = 'bg-yellow-500/30 border-2 border-yellow-400 text-yellow-200';
@@ -725,7 +725,7 @@ export const Projects = () => {
             selectedProject.status === 'Completed'
               ? 'bg-green-500/20 border-green-400/40'
               : selectedProject.status === 'In Progress'
-              ? 'bg-blue-500/20 border-blue-400/40'
+              ? 'bg-orange-500/20 border-orange-400/40'
               : selectedProject.status === 'Next Up'
               ? 'bg-yellow-500/20 border-yellow-400/40'
               : selectedProject.status === 'Huge Help'
@@ -972,7 +972,7 @@ export const Projects = () => {
                         selectedProject.status === 'Completed'
                           ? 'bg-green-500/10 border-green-400/30 text-green-300'
                           : selectedProject.status === 'In Progress'
-                          ? 'bg-blue-500/10 border-blue-400/30 text-blue-300'
+                          ? 'bg-orange-500/10 border-orange-400/30 text-orange-300'
                           : selectedProject.status === 'Next Up'
                           ? 'bg-yellow-500/10 border-yellow-400/30 text-yellow-300'
                           : selectedProject.status === 'Huge Help'
