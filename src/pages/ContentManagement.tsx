@@ -15,6 +15,7 @@ import {
   Clock,
   BookOpen,
   User,
+  CalendarDays,
 } from 'lucide-react';
 import { ContentEditor } from '../components/ContentPlanner/ContentEditor';
 import { ContentCalendar } from '../components/ContentPlanner/ContentCalendar';
@@ -22,7 +23,6 @@ import { StoryLibrary } from '../components/ContentPlanner/StoryLibrary';
 import { useContentPlanner } from '../hooks/useContentPlanner';
 import type { Person, Platform, ContentPost } from '../types/content';
 import { PLATFORM_COLORS, PERSON_COLORS, CONTENT_PILLARS } from '../types/content';
-import contentPlannerIcon from '../assets/content-planner-icon.svg';
 
 type ViewMode = 'editor' | 'calendar' | 'analytics' | 'goals' | 'stories' | 'profile';
 
@@ -148,7 +148,7 @@ export const ContentManagement = () => {
       {/* Header with Title and Person Selector */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-100 flex items-center gap-3">
-          <img src={contentPlannerIcon} alt="Content Planner" className="w-8 h-8 text-brand-500" style={{ filter: 'invert(59%) sepia(68%) saturate(4424%) hue-rotate(360deg) brightness(101%) contrast(101%)' }} />
+          <CalendarDays className="w-8 h-8 text-brand-500" />
           Content Planner
         </h1>
 
