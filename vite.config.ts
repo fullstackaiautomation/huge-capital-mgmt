@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, './src'),
       },
     },
-    base: mode === 'production' ? '/huge-capital-mgmt/' : '/',
+    base: '/',
     build: {
       outDir: 'dist',
       sourcemap: false,
