@@ -11,7 +11,7 @@ interface LenderListProps {
   onRefresh: () => void;
 }
 
-export default function LenderList({ lenders, loading, onRefresh }: LenderListProps) {
+export default function LenderList({ lenders, loading }: LenderListProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">

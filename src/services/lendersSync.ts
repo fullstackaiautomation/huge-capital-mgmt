@@ -2,7 +2,7 @@
 // Syncs from 4-tab Google Sheet: SBA, Term Loans, Business Line of Credits, Equipment Financing
 
 import { supabase } from '../lib/supabase';
-import { fetchSheetData, rowsToObjects } from '../lib/googleSheets';
+import { rowsToObjects } from '../lib/googleSheets';
 
 const LENDERS_SHEET_ID = import.meta.env.VITE_LENDERS_GOOGLE_SHEETS_ID;
 

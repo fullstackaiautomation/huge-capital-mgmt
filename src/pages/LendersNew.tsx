@@ -1,23 +1,16 @@
 // Lenders Page - Updated with Google Sheets Sync
 import { useState, useEffect } from 'react';
-import { Plus, Search, RefreshCw, CheckCircle, AlertCircle, Loader2, Building2 } from 'lucide-react';
-import { useLenderDetails } from '../hooks/useLenders';
-import type { LenderFilters } from '../types/lender';
+import { Plus, Search, Building2 } from 'lucide-react';
 import LenderCard from '../components/Lenders/LenderCard';
-import { syncAllLendersComplete as syncAllLenders, getLastSyncTime } from '../services/lendersSyncFull';
+import { getLastSyncTime } from '../services/lendersSyncFull';
 import { supabase } from '../lib/supabase';
 
 export default function Lenders() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState<LenderFilters>({});
-  const [syncing, setSyncing] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [syncMessage, setSyncMessage] = useState('');
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
 
   const [lenders, setLenders] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [hasAutoSynced, setHasAutoSynced] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingLender, setEditingLender] = useState<any>(null);
@@ -112,30 +105,6 @@ export default function Lenders() {
     fetchLenders();
   };
 
-  const handleSync = async () => {
-    setSyncing(true);
-    setSyncStatus('idle');
-    setSyncMessage('');
-
-    try {
-      const result = await syncAllLenders();
-
-      setSyncStatus('success');
-      setSyncMessage(`Synced! Added: ${result.added}, Updated: ${result.updated}`);
-
-      // Refresh the lenders list
-      await fetchLenders();
-
-      // Clear message after 5 seconds
-      setTimeout(() => setSyncStatus('idle'), 5000);
-    } catch (error: any) {
-      console.error('Sync failed:', error);
-      setSyncStatus('error');
-      setSyncMessage(`Sync failed: ${error.message}`);
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   const activeLenders = lenders.filter(l => l.status === 'active');
   const avgRating = lenders.filter(l => l.rating).length > 0
@@ -160,24 +129,6 @@ export default function Lenders() {
           Add Lender
         </button>
       </div>
-
-      {/* Sync Status */}
-      {syncStatus !== 'idle' && (
-        <div
-          className={`flex items-center gap-2 p-4 rounded-lg ${
-            syncStatus === 'success'
-              ? 'bg-green-500/10 border border-green-500 text-green-400'
-              : 'bg-red-500/10 border border-red-500 text-red-400'
-          }`}
-        >
-          {syncStatus === 'success' ? (
-            <CheckCircle className="w-5 h-5" />
-          ) : (
-            <AlertCircle className="w-5 h-5" />
-          )}
-          <span>{syncMessage}</span>
-        </div>
-      )}
 
       {/* Last Sync Time */}
       {lastSyncTime && (

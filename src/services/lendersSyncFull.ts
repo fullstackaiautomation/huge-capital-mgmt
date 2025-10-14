@@ -110,7 +110,8 @@ export async function syncAllLendersComplete() {
 
           // Store ALL other columns as structured data
           const allData: Record<string, any> = {};
-          headers.forEach((header, index) => {
+          headers.forEach((header: string) => {
+            const index = headers.indexOf(header);
             // Skip the basic fields we're handling separately
             if (!['Lender Name', 'Contact Person', 'Phone', 'Email'].includes(header)) {
               allData[header] = row[index] || '';
@@ -216,7 +217,7 @@ export async function syncAllLendersComplete() {
  */
 async function syncContact(
   lenderId: string,
-  lenderName: string,
+  _lenderName: string,
   contactPerson: string,
   phone: string,
   email: string
