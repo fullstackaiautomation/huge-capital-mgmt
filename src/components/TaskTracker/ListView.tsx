@@ -167,7 +167,7 @@ export const ListView = ({ tasks, updateTask, toggleCompleted, deleteTask }: Lis
   };
 
   const formatDueDate = (dateString: string) => {
-    if (!dateString) return { text: '', isOverdue: false, isToday: false, displayDate: '' };
+    if (!dateString) return { text: '', isOverdue: false, isToday: false, isTomorrow: false, displayDate: '' };
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -180,16 +180,17 @@ export const ListView = ({ tasks, updateTask, toggleCompleted, deleteTask }: Lis
 
     const isOverdue = dueDate.getTime() < today.getTime();
     const isToday = dueDate.getTime() === today.getTime();
+    const isTomorrow = dueDate.getTime() === tomorrow.getTime();
     const displayDate = dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
     if (isOverdue) {
-      return { text: 'OVERDUE', isOverdue: true, isToday: false, displayDate };
+      return { text: 'OVERDUE', isOverdue: true, isToday: false, isTomorrow: false, displayDate };
     } else if (isToday) {
-      return { text: 'Today', isOverdue: false, isToday: true, displayDate };
-    } else if (dueDate.getTime() === tomorrow.getTime()) {
-      return { text: 'Tomorrow', isOverdue: false, isToday: false, displayDate };
+      return { text: 'Today', isOverdue: false, isToday: true, isTomorrow: false, displayDate };
+    } else if (isTomorrow) {
+      return { text: 'Tomorrow', isOverdue: false, isToday: false, isTomorrow: true, displayDate };
     } else {
-      return { text: displayDate, isOverdue: false, isToday: false, displayDate };
+      return { text: displayDate, isOverdue: false, isToday: false, isTomorrow: false, displayDate };
     }
   };
 
@@ -386,7 +387,7 @@ export const ListView = ({ tasks, updateTask, toggleCompleted, deleteTask }: Lis
 
                   const dateInfo = task.dueDate
                     ? formatDueDate(task.dueDate)
-                    : { text: 'Set', isOverdue: false, isToday: false, displayDate: '' };
+                    : { text: 'Set', isOverdue: false, isToday: false, isTomorrow: false, displayDate: '' };
                   return (
                     <div
                       className={`rounded-lg px-3 py-3 border min-w-[90px] cursor-pointer transition-all hover:scale-105 text-center relative ${
@@ -394,6 +395,8 @@ export const ListView = ({ tasks, updateTask, toggleCompleted, deleteTask }: Lis
                           ? 'bg-red-600/20 border-red-500/40 hover:bg-red-600/30'
                           : dateInfo.isToday
                           ? 'bg-yellow-600/20 border-yellow-500/40 hover:bg-yellow-600/30'
+                          : dateInfo.isTomorrow
+                          ? 'bg-purple-600/20 border-purple-500/40 hover:bg-purple-600/30'
                           : 'bg-gray-700/30 border-gray-600/40 hover:bg-gray-700/50'
                       }`}
                       onClick={(e) => {
@@ -407,10 +410,12 @@ export const ListView = ({ tasks, updateTask, toggleCompleted, deleteTask }: Lis
                             ? 'text-red-400'
                             : dateInfo.isToday
                             ? 'text-yellow-400'
+                            : dateInfo.isTomorrow
+                            ? 'text-purple-400'
                             : 'text-gray-400'
                         }`}
                       >
-                        {dateInfo.isOverdue ? 'Overdue' : dateInfo.isToday ? 'Today' : 'Due'}
+                        {dateInfo.isOverdue ? 'Overdue' : dateInfo.isToday ? 'Due' : 'Due'}
                       </div>
                       <div
                         className={`text-base font-bold ${
@@ -418,6 +423,8 @@ export const ListView = ({ tasks, updateTask, toggleCompleted, deleteTask }: Lis
                             ? 'text-red-300'
                             : dateInfo.isToday
                             ? 'text-yellow-300'
+                            : dateInfo.isTomorrow
+                            ? 'text-purple-300'
                             : 'text-gray-100'
                         }`}
                       >

@@ -93,13 +93,37 @@ export const FilterBar = ({
 
   const activeFilterCount = selectedAssignees.length + selectedAreas.length + (searchQuery ? 1 : 0);
 
-  const getAssigneeColor = (assignee: string) => {
-    const colors: { [key: string]: string } = {
-      'Zac': 'bg-blue-600 hover:bg-blue-700 border-blue-500',
-      'Luke': 'bg-green-600 hover:bg-green-700 border-green-500',
-      'Dillon': 'bg-orange-600 hover:bg-orange-700 border-orange-500',
+  const getAssigneeColorStates = (assignee: string) => {
+    const colorMap: { [key: string]: { active: string; selected: string; inactive: string; badgeActive: string; badgeInactive: string } } = {
+      'Zac': {
+        active: 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/30',
+        selected: 'bg-blue-600/70 border-blue-500/70 text-white shadow-md shadow-blue-500/20',
+        inactive: 'bg-blue-600/20 border-blue-500/40 text-blue-300 hover:bg-blue-600/30 hover:border-blue-500/50',
+        badgeActive: 'bg-white/20 text-white',
+        badgeInactive: 'bg-blue-500/30 text-blue-200',
+      },
+      'Luke': {
+        active: 'bg-green-600 border-green-500 text-white shadow-lg shadow-green-500/30',
+        selected: 'bg-green-600/70 border-green-500/70 text-white shadow-md shadow-green-500/20',
+        inactive: 'bg-green-600/20 border-green-500/40 text-green-300 hover:bg-green-600/30 hover:border-green-500/50',
+        badgeActive: 'bg-white/20 text-white',
+        badgeInactive: 'bg-green-500/30 text-green-200',
+      },
+      'Dillon': {
+        active: 'bg-orange-600 border-orange-500 text-white shadow-lg shadow-orange-500/30',
+        selected: 'bg-orange-600/70 border-orange-500/70 text-white shadow-md shadow-orange-500/20',
+        inactive: 'bg-orange-600/20 border-orange-500/40 text-orange-300 hover:bg-orange-600/30 hover:border-orange-500/50',
+        badgeActive: 'bg-white/20 text-white',
+        badgeInactive: 'bg-orange-500/30 text-orange-200',
+      },
     };
-    return colors[assignee] || 'bg-gray-600 hover:bg-gray-700 border-gray-500';
+    return colorMap[assignee] || {
+      active: 'bg-gray-600 border-gray-500 text-white shadow-lg shadow-gray-500/30',
+      selected: 'bg-gray-600/70 border-gray-500/70 text-white shadow-md shadow-gray-500/20',
+      inactive: 'bg-gray-600/20 border-gray-500/40 text-gray-300 hover:bg-gray-600/30 hover:border-gray-500/50',
+      badgeActive: 'bg-white/20 text-white',
+      badgeInactive: 'bg-gray-500/30 text-gray-200',
+    };
   };
 
   const getAreaColor = (area: string) => {
@@ -119,7 +143,7 @@ export const FilterBar = ({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {/* Left Column: Assignee Filter */}
         <div className="flex items-center gap-3 bg-gray-800/30 backdrop-blur-sm rounded-lg border border-gray-700/30 p-4">
-          <div className="flex items-center gap-2 text-base text-gray-400 font-bold whitespace-nowrap">
+          <div className="flex items-center gap-2 text-base text-gray-400 font-bold whitespace-nowrap w-[110px]">
             <User className="w-5 h-5" />
             <span>Assignee:</span>
           </div>
@@ -127,17 +151,17 @@ export const FilterBar = ({
             {/* All Tasks Button - Shows all tasks including unassigned */}
             <button
               onClick={setAllTasks}
-              className={`px-4 py-2.5 rounded-lg font-bold transition-all transform hover:scale-105 flex items-center gap-2 text-base ${
+              className={`px-5 py-3 rounded-lg font-bold transition-all transform hover:scale-105 flex items-center gap-2 text-base border-2 ${
                 selectedAssignees.length === 0
-                  ? 'bg-brand-500 text-white shadow-lg ring-2 ring-white/30'
-                  : 'bg-gray-700/50 border border-gray-600/50 text-gray-300 hover:bg-gray-700'
+                  ? 'bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-500/30'
+                  : 'bg-purple-600/20 border-purple-500/40 text-purple-300 hover:bg-purple-600/30 hover:border-purple-500/50'
               }`}
             >
               <span>All Tasks</span>
-              <span className={`px-2 py-1 rounded-full text-sm font-bold ${
+              <span className={`px-2.5 py-1 rounded-full text-sm font-bold ${
                 selectedAssignees.length === 0
-                  ? 'bg-white/20'
-                  : 'bg-gray-600/50'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-purple-500/30 text-purple-200'
               }`}>
                 {totalAllTasks}
               </span>
@@ -148,24 +172,25 @@ export const FilterBar = ({
               const isOnlySelected = selectedAssignees.length === 1 && selectedAssignees[0] === assignee;
               const isSelected = selectedAssignees.includes(assignee);
               const taskCount = workloadByAssignee[assignee] || 0;
+              const colors = getAssigneeColorStates(assignee);
 
               return (
                 <button
                   key={assignee}
                   onClick={() => setOnlyAssignee(assignee)}
-                  className={`px-4 py-2.5 rounded-lg font-bold transition-all transform hover:scale-105 flex items-center gap-2 text-base ${
+                  className={`px-5 py-3 rounded-lg font-bold transition-all transform hover:scale-105 flex items-center gap-2 text-base border-2 ${
                     isOnlySelected
-                      ? `${getAssigneeColor(assignee)} text-white shadow-lg ring-2 ring-white/30`
+                      ? colors.active
                       : isSelected
-                      ? `${getAssigneeColor(assignee)} text-white shadow-md opacity-70`
-                      : 'bg-gray-700/50 border border-gray-600/50 text-gray-300 hover:bg-gray-700'
+                      ? colors.selected
+                      : colors.inactive
                   }`}
                 >
                   <span>{assignee}</span>
-                  <span className={`px-2 py-1 rounded-full text-sm font-bold ${
+                  <span className={`px-2.5 py-1 rounded-full text-sm font-bold ${
                     isOnlySelected || isSelected
-                      ? 'bg-white/20'
-                      : 'bg-gray-600/50'
+                      ? colors.badgeActive
+                      : colors.badgeInactive
                   }`}>
                     {taskCount}
                   </span>

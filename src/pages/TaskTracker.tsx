@@ -1,4 +1,4 @@
-import { Plus, CheckSquare } from 'lucide-react';
+import { Plus, CheckSquare, ListChecks } from 'lucide-react';
 import { useTaskTracker } from '../hooks/useTaskTracker';
 import { useState, useMemo } from 'react';
 import { FilterBar } from '../components/TaskTracker/FilterBar';
@@ -6,6 +6,7 @@ import { ViewToggle, type ViewMode } from '../components/TaskTracker/ViewToggle'
 import { ListView } from '../components/TaskTracker/ListView';
 import { BoardView } from '../components/TaskTracker/BoardView';
 import { CalendarView } from '../components/TaskTracker/CalendarView';
+import { AddTaskModal } from '../components/TaskTracker/AddTaskModal';
 
 type Task = {
   id: string;
@@ -27,6 +28,7 @@ export const TaskTracker = () => {
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
 
   // Apply all filters
   const filteredTasks = useMemo(() => {
@@ -63,13 +65,13 @@ export const TaskTracker = () => {
   }, [tasks, taskFilter, selectedAssignees, selectedAreas, searchQuery]);
 
   const addNewTask = () => {
+    setIsAddTaskModalOpen(true);
+  };
+
+  const handleSaveNewTask = (taskData: Omit<Task, 'id' | 'completed' | 'completed_date'>) => {
     const newTask: Task = {
       id: `task-${Date.now()}`,
-      taskName: '',
-      description: '',
-      assignee: '',
-      area: '',
-      dueDate: '',
+      ...taskData,
       completed: false,
       completed_date: undefined,
     };
@@ -123,50 +125,89 @@ export const TaskTracker = () => {
 
   return (
     <div className="space-y-6 max-w-[1800px] mx-auto">
-      {/* Header */}
+      {/* Header - Title and View Toggle Only */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         <h1 className="text-4xl font-bold text-gray-100 flex items-center gap-3">
           <CheckSquare className="w-10 h-10 text-brand-500" />
           Task Tracker
         </h1>
-        <div className="flex flex-wrap items-center gap-4">
-          {/* View Toggle */}
-          <ViewToggle currentView={currentView} onViewChange={setCurrentView} />
+        {/* View Toggle */}
+        <ViewToggle currentView={currentView} onViewChange={setCurrentView} />
+      </div>
 
-          {/* Task Filter Toggle */}
-          <div className="flex items-center gap-2 bg-gray-800/50 rounded-lg p-1.5 border border-gray-700/50">
+      {/* Task Status Filters and Add Task Button */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {/* Status Filter Box - Matches left column width */}
+        <div className="flex items-center gap-3 bg-gray-800/30 backdrop-blur-sm rounded-lg border border-gray-700/30 p-4">
+          <div className="flex items-center gap-2 text-base text-gray-400 font-bold whitespace-nowrap w-[110px]">
+            <ListChecks className="w-5 h-5" />
+            <span>Status:</span>
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Task Filter Toggle */}
             <button
               onClick={() => setTaskFilter('all')}
-              className={`px-5 py-3 rounded-md transition-colors text-base font-bold ${
-                taskFilter === 'all' ? 'bg-brand-500 text-white' : 'text-gray-400 hover:text-white'
+              className={`px-5 py-3 rounded-lg font-bold transition-all transform hover:scale-105 flex items-center gap-2 text-base border-2 ${
+                taskFilter === 'all'
+                  ? 'bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-500/30'
+                  : 'bg-purple-600/20 border-purple-500/40 text-purple-300 hover:bg-purple-600/30 hover:border-purple-500/50'
               }`}
             >
-              All Tasks ({tasks.length})
+              <span>All Tasks</span>
+              <span className={`px-2.5 py-1 rounded-full text-sm font-bold ${
+                taskFilter === 'all'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-purple-500/30 text-purple-200'
+              }`}>
+                {tasks.length}
+              </span>
             </button>
+
             <button
               onClick={() => setTaskFilter('open')}
-              className={`px-5 py-3 rounded-md transition-colors text-base font-bold ${
-                taskFilter === 'open' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
+              className={`px-5 py-3 rounded-lg font-bold transition-all transform hover:scale-105 flex items-center gap-2 text-base border-2 ${
+                taskFilter === 'open'
+                  ? 'bg-yellow-500 border-yellow-400 text-white shadow-lg shadow-yellow-500/30'
+                  : 'bg-yellow-500/20 border-yellow-400/40 text-yellow-300 hover:bg-yellow-500/30 hover:border-yellow-400/50'
               }`}
             >
-              Open ({tasks.filter(t => !t.completed).length})
+              <span>Open</span>
+              <span className={`px-2.5 py-1 rounded-full text-sm font-bold ${
+                taskFilter === 'open'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-yellow-400/30 text-yellow-200'
+              }`}>
+                {tasks.filter(t => !t.completed).length}
+              </span>
             </button>
+
             <button
               onClick={() => setTaskFilter('completed')}
-              className={`px-5 py-3 rounded-md transition-colors text-base font-bold ${
-                taskFilter === 'completed' ? 'bg-green-600 text-white' : 'text-gray-400 hover:text-white'
+              className={`px-5 py-3 rounded-lg font-bold transition-all transform hover:scale-105 flex items-center gap-2 text-base border-2 ${
+                taskFilter === 'completed'
+                  ? 'bg-green-600 border-green-500 text-white shadow-lg shadow-green-500/30'
+                  : 'bg-green-600/20 border-green-500/40 text-green-300 hover:bg-green-600/30 hover:border-green-500/50'
               }`}
             >
-              Completed ({tasks.filter(t => t.completed).length})
+              <span>Completed</span>
+              <span className={`px-2.5 py-1 rounded-full text-sm font-bold ${
+                taskFilter === 'completed'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-green-500/30 text-green-200'
+              }`}>
+                {tasks.filter(t => t.completed).length}
+              </span>
             </button>
           </div>
+        </div>
 
-          {/* Add Task Button */}
+        {/* Add Task Button - Right column */}
+        <div className="flex items-center">
           <button
             onClick={addNewTask}
-            className="flex items-center gap-2 px-5 py-3 text-base font-bold bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-lg shadow-green-500/50"
+            className="flex items-center justify-center gap-2 px-10 py-3 text-lg font-bold bg-emerald-600 border-2 border-emerald-500 text-white rounded-lg hover:bg-emerald-700 hover:border-emerald-600 transition-all transform hover:scale-105 shadow-lg shadow-emerald-500/30 h-full"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-6 h-6" />
             Add Task
           </button>
         </div>
@@ -219,6 +260,13 @@ export const TaskTracker = () => {
           <p className="text-gray-500 text-sm">Click "Add Task" to create your first task</p>
         </div>
       )}
+
+      {/* Add Task Modal */}
+      <AddTaskModal
+        isOpen={isAddTaskModalOpen}
+        onClose={() => setIsAddTaskModalOpen(false)}
+        onSave={handleSaveNewTask}
+      />
     </div>
   );
 };
