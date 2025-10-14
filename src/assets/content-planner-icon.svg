@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 708 635" fill="currentColor">
+  <!-- Database/content card shape -->
+  <path d="M176 53c0-19.33 15.67-35 35-35h286c19.33 0 35 15.67 35 35v100c0 8.84-7.16 16-16 16h-324c-8.84 0-16-7.16-16-16V53z" fill="currentColor"/>
+
+  <!-- Top buttons/pills -->
+  <rect x="428" y="83" width="84" height="52" rx="26" fill="currentColor"/>
+  <rect x="512" y="83" width="84" height="52" rx="26" fill="currentColor"/>
+
+  <!-- Middle card -->
+  <path d="M176 215c0-8.84 7.16-16 16-16h324c8.84 0 16 7.16 16 16v194c0 8.84-7.16 16-16 16h-324c-8.84 0-16-7.16-16-16V215z" fill="currentColor"/>
+
+  <!-- Content lines in middle -->
+  <rect x="385" y="255" width="199" height="42" rx="21" fill="white"/>
+  <rect x="385" y="315" width="199" height="42" rx="21" fill="white"/>
+  <rect x="385" y="375" width="199" height="42" rx="21" fill="white"/>
+
+  <!-- Play button circle -->
+  <circle cx="215" cy="485" r="150" fill="currentColor"/>
+  <circle cx="215" cy="485" r="120" fill="none" stroke="currentColor" stroke-width="20"/>
+
+  <!-- Play triangle -->
+  <path d="M185 435 L285 485 L185 535 Z" fill="white"/>
+</svg>
