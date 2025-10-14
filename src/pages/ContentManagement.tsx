@@ -1,130 +1,145 @@
 import { useState } from 'react';
-import { Facebook, Instagram, Linkedin, FileText, Copy, Save, Check, Twitter, Users, Mail } from 'lucide-react';
+import {
+  Facebook,
+  Instagram,
+  Linkedin,
+  FileText,
+  Twitter,
+  Users,
+  Mail,
+  Calendar,
+  BarChart3,
+  Target,
+  MessageSquare,
+  TrendingUp,
+  Clock,
+  BookOpen,
+} from 'lucide-react';
+import { ContentEditor } from '../components/ContentPlanner/ContentEditor';
+import { ContentCalendar } from '../components/ContentPlanner/ContentCalendar';
+import { StoryLibrary } from '../components/ContentPlanner/StoryLibrary';
+import { useContentPlanner } from '../hooks/useContentPlanner';
+import type { Person, Platform, ContentPost } from '../types/content';
+import { PLATFORM_COLORS, PERSON_COLORS, CONTENT_PILLARS } from '../types/content';
 
-type Platform = 'LinkedIn' | 'Twitter' | 'Facebook' | 'Instagram' | 'Blog' | 'Skool' | 'Newsletter' | 'ISO Newsletter';
-type Person = 'Zac' | 'Luke' | 'Huge Capital';
+type ViewMode = 'editor' | 'calendar' | 'analytics' | 'goals' | 'stories';
 
 export const ContentManagement = () => {
+  const {
+    posts,
+    profiles,
+    tags,
+    stories,
+    loading,
+    savePost,
+    approvePost,
+    getPostingStats,
+    addStory,
+    updateStory,
+    deleteStory,
+    approveStory,
+  } = useContentPlanner();
+
   const [selectedPerson, setSelectedPerson] = useState<Person>('Zac');
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('LinkedIn');
-  const [selectedTab, setSelectedTab] = useState('Monday');
-  const [content, setContent] = useState(
-    'Excited to share our latest insights on business growth strategies...'
-  );
+  const [currentView, setCurrentView] = useState<ViewMode>('editor');
+  const [selectedPost, setSelectedPost] = useState<Partial<ContentPost>>({});
 
+  // Platform configuration for each person
   const getPlatformsForPerson = (person: Person) => {
     const allPlatforms = [
-      { name: 'LinkedIn' as Platform, icon: Linkedin, color: 'text-blue-600' },
-      { name: 'Twitter' as Platform, icon: Twitter, color: 'text-sky-500' },
-      { name: 'Facebook' as Platform, icon: Facebook, color: 'text-blue-500' },
-      { name: 'Instagram' as Platform, icon: Instagram, color: 'text-pink-600' },
-      { name: 'Skool' as Platform, icon: Users, color: 'text-orange-600' },
-      { name: 'Blog' as Platform, icon: FileText, color: 'text-gray-700' },
-      { name: 'Newsletter' as Platform, icon: Mail, color: 'text-green-600' },
-      { name: 'ISO Newsletter' as Platform, icon: Mail, color: 'text-purple-600' },
+      { name: 'LinkedIn' as Platform, icon: Linkedin },
+      { name: 'Twitter' as Platform, icon: Twitter },
+      { name: 'Facebook' as Platform, icon: Facebook },
+      { name: 'Instagram' as Platform, icon: Instagram },
+      { name: 'Skool' as Platform, icon: Users },
+      { name: 'Blog' as Platform, icon: FileText },
+      { name: 'Newsletter' as Platform, icon: Mail },
+      { name: 'ISO Newsletter' as Platform, icon: Mail },
     ];
 
     if (person === 'Zac') {
-      return allPlatforms.filter(p => ['LinkedIn', 'Twitter', 'Facebook', 'Instagram'].includes(p.name));
+      return allPlatforms.filter(p =>
+        ['LinkedIn', 'Twitter', 'Facebook', 'Instagram'].includes(p.name)
+      );
     }
     if (person === 'Luke') {
-      // Return in specific order for Luke
-      return [
-        allPlatforms.find(p => p.name === 'LinkedIn')!,
-        allPlatforms.find(p => p.name === 'Facebook')!,
-        allPlatforms.find(p => p.name === 'Twitter')!,
-        allPlatforms.find(p => p.name === 'Instagram')!,
-        allPlatforms.find(p => p.name === 'Skool')!,
-      ];
+      return allPlatforms.filter(p =>
+        ['LinkedIn', 'Facebook', 'Twitter', 'Instagram', 'Skool'].includes(p.name)
+      );
     }
     if (person === 'Huge Capital') {
-      return [
-        allPlatforms.find(p => p.name === 'Blog')!,
-        allPlatforms.find(p => p.name === 'Newsletter')!,
-        allPlatforms.find(p => p.name === 'ISO Newsletter')!,
-      ];
+      return allPlatforms.filter(p =>
+        ['Blog', 'Newsletter', 'ISO Newsletter'].includes(p.name)
+      );
     }
-    // For other persons, return all platforms
     return allPlatforms;
   };
 
   const platforms = getPlatformsForPerson(selectedPerson);
 
-  const schedules = ['Monday', 'Wednesday', 'Friday'];
+  // Get content pillars for selected person
+  const contentPillars = CONTENT_PILLARS[selectedPerson].map(p => p.name);
 
-  const characterLimit = {
-    LinkedIn: 3000,
-    Twitter: 280,
-    Facebook: 63206,
-    Instagram: 2200,
-    Skool: 5000,
-    Blog: 10000,
-    Newsletter: 5000,
-    'ISO Newsletter': 5000,
+  // Get profile data for selected person
+  const currentProfile = profiles.find(p => p.personName === selectedPerson);
+
+  // Get posting stats for current selection
+  const weekStats = getPostingStats(selectedPerson, selectedPlatform, 'week');
+  const monthStats = getPostingStats(selectedPerson, selectedPlatform, 'month');
+
+  // Handle post selection from calendar
+  const handlePostClick = (post: ContentPost) => {
+    setSelectedPost(post);
+    setSelectedPerson(post.personName);
+    setSelectedPlatform(post.platform);
+    setCurrentView('editor');
   };
 
-  const contentProfiles = {
-    'Zac': {
-      contentPillars: [
-        'Client Success Stories (40%)',
-        'Educational / Legal Updates (30%)',
-        'Entrepreneur Spotlights (20%)',
-        'Personal Brand Building (10%)',
-      ],
-      brandVoice: [
-        'Trustworthy & Professional',
-        'Long Term Relationships > Quick Commissions',
-        'Creative Problem Solver',
-        'Authentic',
-        'Not Super Serious / Funny (Twitter)',
-      ],
-      keyMessaging: [
-        '7+ Years Saving Businesses',
-        'SBA Specialist Expertise',
-        'Knows the Best Solution for Your Situation',
-        'Creative Funder',
-        'Consultative Approach',
-      ],
-    },
-    'Luke': {
-      contentPillars: [
-        'Client Success Stories (40%)',
-        'Educational / Myth-Busting (30%)',
-        'Entrepreneur Spotlights (20%)',
-        'Personal Brand & Leadership (10%)',
-      ],
-      brandVoice: [
-        'Honest & Trustworthy',
-        'Relational > Transactional',
-        'Personable',
-        'Down to Earth',
-      ],
-      keyMessaging: [
-        '"If it\'s not good for you, it\'s not good for us."',
-        'We are invested in your success, not a quick buck',
-        'Investment Real Estate Advisor',
-        'Business Credit Expert',
-        'We\'re a part of your team, not just a middleman',
-      ],
-    },
-    'Huge Capital': {
-      contentPillars: [
-        'Business funding solutions',
-        'Capital expertise',
-        'Client success',
-      ],
-      brandVoice: [
-        'Trusted and reliable',
-        'Expert and knowledgeable',
-        'Client-focused',
-      ],
-      keyMessaging: [
-        'Comprehensive funding solutions',
-        'Industry expertise',
-        'Committed to client success',
-      ],
-    },
+  // Handle date click from calendar
+  const handleDateClick = (date: Date) => {
+    setSelectedPost({
+      scheduledFor: date.toISOString(),
+      personName: selectedPerson,
+      platform: selectedPlatform,
+      status: 'draft',
+    });
+    setCurrentView('editor');
   };
+
+  // Handle save
+  const handleSave = async (post: Partial<ContentPost>) => {
+    await savePost({
+      ...post,
+      personName: selectedPerson,
+      platform: selectedPlatform,
+    });
+  };
+
+  // Handle schedule
+  const handleSchedule = async (post: Partial<ContentPost>) => {
+    await savePost({
+      ...post,
+      personName: selectedPerson,
+      platform: selectedPlatform,
+      status: 'scheduled',
+    });
+  };
+
+  // Handle approve
+  const handleApprove = async (post: Partial<ContentPost>) => {
+    if (post.id) {
+      await approvePost(post.id);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-400">Loading content planner...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -133,271 +148,315 @@ export const ContentManagement = () => {
         Content Planner
       </h1>
 
-      {/* Person Toggle */}
+      {/* Person Selector */}
       <div className="flex gap-3">
-        <button
-          onClick={() => setSelectedPerson('Zac')}
-          className={`px-6 py-3 rounded-lg text-lg font-semibold transition-colors ${
-            selectedPerson === 'Zac'
-              ? 'bg-blue-500 text-white border-2 border-blue-600'
-              : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-          }`}
-        >
-          Zac
-        </button>
-        <button
-          onClick={() => setSelectedPerson('Luke')}
-          className={`px-6 py-3 rounded-lg text-lg font-semibold transition-colors ${
-            selectedPerson === 'Luke'
-              ? 'bg-green-500 text-white border-2 border-green-600'
-              : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-          }`}
-        >
-          Luke
-        </button>
-        <button
-          onClick={() => setSelectedPerson('Huge Capital')}
-          className={`px-6 py-3 rounded-lg text-lg font-semibold transition-colors ${
-            selectedPerson === 'Huge Capital'
-              ? 'bg-purple-500 text-white border-2 border-purple-600'
-              : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-          }`}
-        >
-          Huge Capital
-        </button>
+        {(['Zac', 'Luke', 'Huge Capital'] as Person[]).map((person) => (
+          <button
+            key={person}
+            onClick={() => setSelectedPerson(person)}
+            className={`px-6 py-3 rounded-lg text-lg font-semibold transition-all transform hover:scale-105 ${
+              selectedPerson === person
+                ? 'text-white shadow-lg'
+                : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50'
+            }`}
+            style={{
+              backgroundColor:
+                selectedPerson === person ? PERSON_COLORS[person] : undefined,
+              boxShadow:
+                selectedPerson === person
+                  ? `0 10px 25px ${PERSON_COLORS[person]}40`
+                  : undefined,
+            }}
+          >
+            {person}
+          </button>
+        ))}
       </div>
 
-      {/* Content Profile */}
-      <div className={`rounded-lg shadow p-6 ${
-        selectedPerson === 'Zac'
-          ? 'bg-blue-500 border-2 border-blue-600'
-          : selectedPerson === 'Luke'
-          ? 'bg-green-500 border-2 border-green-600'
-          : 'bg-purple-500 border-2 border-purple-600'
-      }`}>
-        <h2 className="text-xl font-bold text-white mb-4">
-          {selectedPerson} Content Profile
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Content Pillars */}
-          <div className={`${
-            selectedPerson === 'Zac'
-              ? 'bg-blue-100 border-blue-300'
-              : selectedPerson === 'Luke'
-              ? 'bg-green-100 border-green-300'
-              : 'bg-purple-100 border-purple-300'
-          } border-2 rounded-lg p-4`}>
-            <h3 className="font-bold text-gray-900 mb-2 text-xl">
-              Content Pillars
-            </h3>
-            <ul className="space-y-1">
-              {contentProfiles[selectedPerson].contentPillars.map((pillar) => (
-                <li key={pillar} className="text-lg text-gray-900">
-                  • {pillar}
-                </li>
-              ))}
-            </ul>
-          </div>
+      {/* Content Profile Card */}
+      {currentProfile && (
+        <div
+          className="rounded-lg shadow-xl p-6 border-2"
+          style={{
+            backgroundColor: `${PERSON_COLORS[selectedPerson]}20`,
+            borderColor: `${PERSON_COLORS[selectedPerson]}40`,
+          }}
+        >
+          <h2 className="text-xl font-bold text-white mb-4">
+            {selectedPerson} Content Profile
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Content Pillars */}
+            <div className="bg-gray-900/50 rounded-lg p-4">
+              <h3 className="font-bold text-gray-100 mb-2">Content Pillars</h3>
+              <ul className="space-y-1">
+                {CONTENT_PILLARS[selectedPerson].map((pillar) => (
+                  <li key={pillar.name} className="text-sm text-gray-300">
+                    • {pillar.name} ({pillar.percentage}%)
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-          {/* Brand Voice */}
-          <div className={`${
-            selectedPerson === 'Zac'
-              ? 'bg-blue-100 border-blue-300'
-              : selectedPerson === 'Luke'
-              ? 'bg-green-100 border-green-300'
-              : 'bg-purple-100 border-purple-300'
-          } border-2 rounded-lg p-4`}>
-            <h3 className="font-bold text-gray-900 mb-2 text-xl">
-              Brand Voice
-            </h3>
-            <ul className="space-y-1">
-              {contentProfiles[selectedPerson].brandVoice.map((voice) => (
-                <li key={voice} className="text-lg text-gray-900">
-                  • {voice}
-                </li>
-              ))}
-            </ul>
-          </div>
+            {/* Brand Voice */}
+            <div className="bg-gray-900/50 rounded-lg p-4">
+              <h3 className="font-bold text-gray-100 mb-2">Brand Voice</h3>
+              <ul className="space-y-1">
+                {currentProfile.brandVoice.slice(0, 4).map((voice) => (
+                  <li key={voice} className="text-sm text-gray-300">
+                    • {voice}
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-          {/* Key Messaging */}
-          <div className={`${
-            selectedPerson === 'Zac'
-              ? 'bg-blue-100 border-blue-300'
-              : selectedPerson === 'Luke'
-              ? 'bg-green-100 border-green-300'
-              : 'bg-purple-100 border-purple-300'
-          } border-2 rounded-lg p-4`}>
-            <h3 className="font-bold text-gray-900 mb-2 text-xl">
-              Key Messaging
-            </h3>
-            <ul className="space-y-1">
-              {contentProfiles[selectedPerson].keyMessaging.map((message) => (
-                <li key={message} className="text-lg text-gray-900">
-                  • {message}
-                </li>
-              ))}
-            </ul>
+            {/* Posting Stats */}
+            <div className="bg-gray-900/50 rounded-lg p-4">
+              <h3 className="font-bold text-gray-100 mb-2">Posting Frequency</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-400">This Week</span>
+                  <span className="text-sm font-bold text-brand-500">
+                    {weekStats.actual} / {weekStats.target}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-800 rounded-full h-2">
+                  <div
+                    className="bg-brand-500 h-2 rounded-full transition-all"
+                    style={{ width: `${Math.min(weekStats.percentage, 100)}%` }}
+                  />
+                </div>
+                <div className="flex justify-between items-center mt-2">
+                  <span className="text-sm text-gray-400">This Month</span>
+                  <span className="text-sm font-bold text-brand-500">
+                    {monthStats.actual} / {monthStats.target}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-800 rounded-full h-2">
+                  <div
+                    className="bg-brand-500 h-2 rounded-full transition-all"
+                    style={{ width: `${Math.min(monthStats.percentage, 100)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Platform Selector */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex gap-4 mb-6">
+      {/* View Toggle */}
+      <div className="flex items-center justify-between">
+        {/* Platform Selector */}
+        <div className="flex gap-2">
           {platforms.map((platform) => {
             const Icon = platform.icon;
             return (
               <button
                 key={platform.name}
                 onClick={() => setSelectedPlatform(platform.name)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
                   selectedPlatform === platform.name
-                    ? 'bg-indigo-100 text-indigo-700 border-2 border-indigo-500'
-                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                    ? 'text-white shadow-lg'
+                    : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50'
                 }`}
+                style={{
+                  backgroundColor:
+                    selectedPlatform === platform.name
+                      ? PLATFORM_COLORS[platform.name]
+                      : undefined,
+                  boxShadow:
+                    selectedPlatform === platform.name
+                      ? `0 5px 15px ${PLATFORM_COLORS[platform.name]}40`
+                      : undefined,
+                }}
               >
-                <Icon className={`w-5 h-5 ${platform.color}`} />
+                <Icon className="w-4 h-4" />
                 {platform.name}
               </button>
             );
           })}
         </div>
 
-        {/* Schedule Tabs */}
-        <div className="flex gap-2 mb-6 border-b border-gray-200">
-          {schedules.map((schedule) => (
-            <button
-              key={schedule}
-              onClick={() => setSelectedTab(schedule)}
-              className={`px-4 py-2 font-medium transition-colors ${
-                selectedTab === schedule
-                  ? 'text-indigo-600 border-b-2 border-indigo-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {schedule} Post
-            </button>
-          ))}
+        {/* View Mode Selector */}
+        <div className="flex gap-2 bg-gray-800/50 p-1 rounded-lg">
+          <button
+            onClick={() => setCurrentView('editor')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              currentView === 'editor'
+                ? 'bg-brand-500 text-white'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            Editor
+          </button>
+          <button
+            onClick={() => setCurrentView('calendar')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              currentView === 'calendar'
+                ? 'bg-brand-500 text-white'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <Calendar className="w-4 h-4" />
+            Calendar
+          </button>
+          <button
+            onClick={() => setCurrentView('stories')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              currentView === 'stories'
+                ? 'bg-brand-500 text-white'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <BookOpen className="w-4 h-4" />
+            Stories
+          </button>
+          <button
+            onClick={() => setCurrentView('analytics')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              currentView === 'analytics'
+                ? 'bg-brand-500 text-white'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <BarChart3 className="w-4 h-4" />
+            Analytics
+          </button>
+          <button
+            onClick={() => setCurrentView('goals')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              currentView === 'goals'
+                ? 'bg-brand-500 text-white'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <Target className="w-4 h-4" />
+            Goals
+          </button>
         </div>
+      </div>
 
-        {/* Content Editor and Preview */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left: Editor */}
-          <div className="space-y-4">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Edit Content
-                </label>
-                <span
-                  className={`text-xs ${
-                    content.length > characterLimit[selectedPlatform]
-                      ? 'text-red-600'
-                      : 'text-gray-500'
-                  }`}
-                >
-                  {content.length} / {characterLimit[selectedPlatform]}
-                </span>
-              </div>
-              <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                className="w-full h-64 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
-                placeholder="Write your post content here..."
-              />
-            </div>
+      {/* Main Content Area */}
+      <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-6">
+        {currentView === 'editor' && (
+          <ContentEditor
+            post={selectedPost}
+            platform={selectedPlatform}
+            person={selectedPerson}
+            profile={currentProfile}
+            stories={stories}
+            onSave={handleSave}
+            onSchedule={handleSchedule}
+            onApprove={handleApprove}
+            tags={tags.map(t => t.tagName)}
+            pillars={contentPillars}
+          />
+        )}
 
-            <div className="flex gap-2">
-              <button className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-                <Copy className="w-4 h-4" />
-                Copy
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                <Save className="w-4 h-4" />
-                Save Changes
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                <Check className="w-4 h-4" />
-                Approve Post
-              </button>
-            </div>
+        {currentView === 'calendar' && (
+          <ContentCalendar
+            posts={posts}
+            onPostClick={handlePostClick}
+            onDateClick={handleDateClick}
+            selectedPerson={selectedPerson}
+            selectedPlatform={selectedPlatform}
+          />
+        )}
 
-            <div className="flex gap-2">
-              <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
-                Pending
-              </span>
+        {currentView === 'stories' && (
+          <StoryLibrary
+            stories={stories}
+            onAddStory={async (story) => { await addStory(story); }}
+            onUpdateStory={async (id, story) => { await updateStory(id, story); }}
+            onDeleteStory={async (id) => { await deleteStory(id); }}
+            onApproveStory={async (id) => { await approveStory(id); }}
+          />
+        )}
+
+        {currentView === 'analytics' && (
+          <div className="space-y-6">
+            <div className="text-center py-12">
+              <BarChart3 className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-300 mb-2">
+                Analytics Dashboard
+              </h3>
+              <p className="text-gray-400">
+                Track engagement, reach, and performance across all platforms
+              </p>
+              <p className="text-gray-500 text-sm mt-4">Coming soon...</p>
             </div>
           </div>
+        )}
 
-          {/* Right: Preview */}
-          <div className="space-y-4">
-            <label className="text-sm font-medium text-gray-700">
-              Live Preview
-            </label>
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 min-h-[300px]">
-              {selectedPlatform === 'LinkedIn' && (
-                <div className="bg-white rounded-lg shadow-sm p-4">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold">
-                      HC
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">
-                        Huge Capital
-                      </p>
-                      <p className="text-xs text-gray-500">Just now</p>
-                    </div>
-                  </div>
-                  <p className="text-gray-800 text-sm whitespace-pre-wrap">
-                    {content}
-                  </p>
-                </div>
-              )}
-              {selectedPlatform === 'Facebook' && (
-                <div className="bg-white rounded-lg shadow-sm p-4">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">
-                      HC
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">
-                        Huge Capital
-                      </p>
-                      <p className="text-xs text-gray-500">Just now · 🌎</p>
-                    </div>
-                  </div>
-                  <p className="text-gray-800 text-sm whitespace-pre-wrap">
-                    {content}
-                  </p>
-                </div>
-              )}
-              {selectedPlatform === 'Instagram' && (
-                <div className="bg-white rounded-lg shadow-sm">
-                  <div className="flex items-center gap-3 p-4 border-b">
-                    <div className="w-8 h-8 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 rounded-full"></div>
-                    <p className="font-semibold text-sm">hugecapital</p>
-                  </div>
-                  <div className="p-4">
-                    <p className="text-sm">
-                      <span className="font-semibold">hugecapital</span>{' '}
-                      {content}
-                    </p>
-                  </div>
-                </div>
-              )}
-              {selectedPlatform === 'Blog' && (
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                  <h2 className="text-xl font-bold text-gray-900 mb-4">
-                    Blog Post Preview
-                  </h2>
-                  <div className="prose prose-sm max-w-none">
-                    <p className="text-gray-700 whitespace-pre-wrap">
-                      {content}
-                    </p>
-                  </div>
-                </div>
-              )}
+        {currentView === 'goals' && (
+          <div className="space-y-6">
+            <div className="text-center py-12">
+              <Target className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-300 mb-2">
+                Posting Goals & Frequency
+              </h3>
+              <p className="text-gray-400">
+                Set and track your content posting targets
+              </p>
+              <p className="text-gray-500 text-sm mt-4">Coming soon...</p>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Quick Stats Bar */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-400 text-sm">Scheduled Posts</p>
+              <p className="text-2xl font-bold text-brand-500">
+                {posts.filter(p => p.status === 'scheduled').length}
+              </p>
+            </div>
+            <Clock className="w-8 h-8 text-gray-600" />
+          </div>
+        </div>
+
+        <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-400 text-sm">Published Today</p>
+              <p className="text-2xl font-bold text-green-500">
+                {
+                  posts.filter(
+                    p =>
+                      p.status === 'published' &&
+                      p.publishedAt &&
+                      new Date(p.publishedAt).toDateString() === new Date().toDateString()
+                  ).length
+                }
+              </p>
+            </div>
+            <TrendingUp className="w-8 h-8 text-gray-600" />
+          </div>
+        </div>
+
+        <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-400 text-sm">Draft Posts</p>
+              <p className="text-2xl font-bold text-yellow-500">
+                {posts.filter(p => p.status === 'draft').length}
+              </p>
+            </div>
+            <FileText className="w-8 h-8 text-gray-600" />
+          </div>
+        </div>
+
+        <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-400 text-sm">Engagement Rate</p>
+              <p className="text-2xl font-bold text-blue-500">--</p>
+            </div>
+            <MessageSquare className="w-8 h-8 text-gray-600" />
           </div>
         </div>
       </div>
