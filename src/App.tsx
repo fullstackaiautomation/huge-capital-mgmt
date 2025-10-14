@@ -9,6 +9,7 @@ import { ContentManagement } from './pages/ContentManagement';
 import { TaskTracker } from './pages/TaskTracker';
 import { Projects } from './pages/Projects';
 import { BugsIdeas } from './pages/BugsIdeas';
+import Lenders from './pages/LendersNew';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
             <Route path="tasks" element={<AIAutomationTasks />} />
             <Route path="projects" element={<Projects />} />
             <Route path="content" element={<ContentManagement />} />
+            <Route path="lenders" element={<Lenders />} />
             <Route path="tracker" element={<TaskTracker />} />
             <Route path="bugs" element={<BugsIdeas />} />
           </Route>

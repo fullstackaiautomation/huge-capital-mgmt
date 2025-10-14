@@ -28,3 +28,14 @@ dist-ssr
 .env.local
 .env.production
 test-sheets-api.html
+
+# Scripts with hardcoded keys (DO NOT COMMIT)
+scripts/sync-lenders.ts
+scripts/test-sheet-fetch.ts
+scripts/apply-lenders-migration.ts
+
+# Claude Code settings (may contain API keys)
+.claude/settings.local.json
+
+# Documentation with example keys
+GOOGLE-SHEETS-SETUP.md

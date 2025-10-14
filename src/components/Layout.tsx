@@ -11,6 +11,7 @@ export const Layout = () => {
     { name: 'Funding Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Task Tracker', href: '/tracker', icon: CheckSquare },
     { name: 'Content Planner', href: '/content', icon: CalendarDays },
+    { name: 'Lenders', href: '/lenders', icon: Building2 },
   ];
 
   const middleNavigation = [
@@ -24,7 +25,6 @@ export const Layout = () => {
 
   const comingSoonItems = [
     { name: 'Affiliates', icon: Users },
-    { name: 'Lenders', icon: Building2 },
     { name: 'Deals', icon: Briefcase },
   ];
 
