@@ -37,6 +37,7 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_GOOGLE_SHEETS_API_KEY: ${{ secrets.VITE_GOOGLE_SHEETS_API_KEY }}
           VITE_GOOGLE_SHEETS_ID: ${{ secrets.VITE_GOOGLE_SHEETS_ID }}
+          VITE_LENDERS_GOOGLE_SHEETS_ID: ${{ secrets.VITE_LENDERS_GOOGLE_SHEETS_ID }}
         run: npm run build
 
       - name: Upload artifact
