@@ -16,6 +16,7 @@ import {
   BookOpen,
   User,
   CalendarDays,
+  PenTool,
 } from 'lucide-react';
 import { ContentEditor } from '../components/ContentPlanner/ContentEditor';
 import { ContentCalendar } from '../components/ContentPlanner/ContentCalendar';
@@ -145,141 +146,157 @@ export const ContentManagement = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header with Title and Person Selector */}
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex items-center justify-center mb-8">
         <h1 className="text-3xl font-bold text-gray-100 flex items-center gap-3">
           <CalendarDays className="w-8 h-8 text-brand-500" />
           Content Planner
         </h1>
+      </div>
 
-        {/* Person Selector - Prominent Boxes */}
-        <div className="flex gap-3">
-          {(['Zac', 'Luke', 'Huge Capital'] as Person[]).map((person) => (
+      {/* Person Selector - Sharp & Clean */}
+      <div className="flex items-center justify-center gap-6 mb-8">
+        {(['Zac', 'Luke', 'Huge Capital'] as Person[]).map((person) => {
+          const isSelected = selectedPerson === person;
+          return (
             <button
               key={person}
               onClick={() => setSelectedPerson(person)}
-              className={`px-8 py-4 rounded-xl text-xl font-bold transition-all transform hover:scale-105 border-2 ${
-                selectedPerson === person
-                  ? 'text-white shadow-2xl'
-                  : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50 border-gray-700'
+              className={`group relative flex-1 max-w-sm px-16 py-8 rounded-2xl text-3xl font-black transition-all duration-200 transform ${
+                isSelected
+                  ? 'scale-105 text-white'
+                  : 'scale-100 bg-gray-800/90 text-gray-400 hover:text-gray-200 hover:scale-[1.02] border border-gray-700/80 hover:border-gray-600'
               }`}
               style={{
-                backgroundColor:
-                  selectedPerson === person ? PERSON_COLORS[person] : undefined,
-                borderColor:
-                  selectedPerson === person ? PERSON_COLORS[person] : undefined,
-                boxShadow:
-                  selectedPerson === person
-                    ? `0 15px 35px ${PERSON_COLORS[person]}60`
-                    : undefined,
+                backgroundColor: isSelected ? PERSON_COLORS[person] : undefined,
+                borderColor: isSelected ? PERSON_COLORS[person] : undefined,
+                boxShadow: isSelected
+                  ? `0 8px 32px ${PERSON_COLORS[person]}50, 0 0 0 1px ${PERSON_COLORS[person]}, inset 0 1px 0 rgba(255,255,255,0.15)`
+                  : '0 4px 12px rgba(0,0,0,0.4)',
               }}
             >
-              {person}
+              {/* Sharp shine effect for selected */}
+              {isSelected && (
+                <div
+                  className="absolute inset-0 rounded-2xl opacity-20 pointer-events-none"
+                  style={{
+                    background: `linear-gradient(180deg, rgba(255,255,255,0.25) 0%, transparent 50%)`,
+                  }}
+                />
+              )}
+
+              {/* Text content */}
+              <div className="relative z-10 text-center tracking-wide uppercase font-black">
+                {person}
+              </div>
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
       {/* View Toggle */}
-      <div className="flex items-center justify-between">
-        {/* Platform Selector */}
-        <div className="flex gap-2">
+      <div className="flex items-center justify-between gap-6">
+        {/* Platform Selector - Modern Pills */}
+        <div className="flex gap-2 flex-wrap">
           {platforms.map((platform) => {
             const Icon = platform.icon;
+            const isSelected = selectedPlatform === platform.name;
             return (
               <button
                 key={platform.name}
                 onClick={() => setSelectedPlatform(platform.name)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-                  selectedPlatform === platform.name
-                    ? 'text-white shadow-lg'
-                    : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50'
+                className={`group relative flex items-center gap-2 px-5 py-2.5 rounded-full font-medium transition-all duration-300 hover:scale-105 ${
+                  isSelected
+                    ? 'text-white shadow-lg scale-105'
+                    : 'bg-gray-800/40 text-gray-400 hover:text-gray-200 hover:bg-gray-800/60 border border-gray-700/50'
                 }`}
                 style={{
-                  backgroundColor:
-                    selectedPlatform === platform.name
-                      ? PLATFORM_COLORS[platform.name]
-                      : undefined,
-                  boxShadow:
-                    selectedPlatform === platform.name
-                      ? `0 5px 15px ${PLATFORM_COLORS[platform.name]}40`
-                      : undefined,
+                  backgroundColor: isSelected ? PLATFORM_COLORS[platform.name] : undefined,
+                  boxShadow: isSelected ? `0 8px 24px ${PLATFORM_COLORS[platform.name]}50, 0 0 0 1px ${PLATFORM_COLORS[platform.name]}30` : undefined,
                 }}
               >
-                <Icon className="w-4 h-4" />
-                {platform.name}
+                <Icon className={`w-4 h-4 transition-transform duration-300 ${isSelected ? 'scale-110' : 'group-hover:scale-110'}`} />
+                <span className="text-sm font-semibold tracking-wide">{platform.name}</span>
+                {isSelected && (
+                  <div
+                    className="absolute inset-0 rounded-full animate-pulse"
+                    style={{
+                      background: `radial-gradient(circle at center, ${PLATFORM_COLORS[platform.name]}20 0%, transparent 70%)`,
+                    }}
+                  />
+                )}
               </button>
             );
           })}
         </div>
 
-        {/* View Mode Selector */}
-        <div className="flex gap-2 bg-gray-800/50 p-1 rounded-lg">
+        {/* View Mode Selector - Sleek Segmented Control */}
+        <div className="flex gap-1 bg-gray-900/60 backdrop-blur-xl p-1.5 rounded-2xl border border-gray-700/40 shadow-xl">
           <button
             onClick={() => setCurrentView('editor')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+            className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 ${
               currentView === 'editor'
-                ? 'bg-brand-500 text-white'
-                : 'text-gray-400 hover:text-white'
+                ? 'bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30 scale-105'
+                : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
             }`}
           >
-            <FileText className="w-4 h-4" />
-            Editor
+            <PenTool className="w-4 h-4" />
+            <span className="text-sm font-semibold">Editor</span>
           </button>
           <button
             onClick={() => setCurrentView('calendar')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+            className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 ${
               currentView === 'calendar'
-                ? 'bg-brand-500 text-white'
-                : 'text-gray-400 hover:text-white'
+                ? 'bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30 scale-105'
+                : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
             }`}
           >
             <Calendar className="w-4 h-4" />
-            Calendar
+            <span className="text-sm font-semibold">Calendar</span>
           </button>
           <button
             onClick={() => setCurrentView('stories')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+            className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 ${
               currentView === 'stories'
-                ? 'bg-brand-500 text-white'
-                : 'text-gray-400 hover:text-white'
+                ? 'bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30 scale-105'
+                : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
             }`}
           >
             <BookOpen className="w-4 h-4" />
-            Stories
+            <span className="text-sm font-semibold">Stories</span>
           </button>
           <button
             onClick={() => setCurrentView('profile')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+            className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 ${
               currentView === 'profile'
-                ? 'bg-brand-500 text-white'
-                : 'text-gray-400 hover:text-white'
+                ? 'bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30 scale-105'
+                : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
             }`}
           >
             <User className="w-4 h-4" />
-            Profile
+            <span className="text-sm font-semibold">Profile</span>
           </button>
           <button
             onClick={() => setCurrentView('analytics')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+            className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 ${
               currentView === 'analytics'
-                ? 'bg-brand-500 text-white'
-                : 'text-gray-400 hover:text-white'
+                ? 'bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30 scale-105'
+                : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
             }`}
           >
             <BarChart3 className="w-4 h-4" />
-            Analytics
+            <span className="text-sm font-semibold">Analytics</span>
           </button>
           <button
             onClick={() => setCurrentView('goals')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+            className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 ${
               currentView === 'goals'
-                ? 'bg-brand-500 text-white'
-                : 'text-gray-400 hover:text-white'
+                ? 'bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30 scale-105'
+                : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
             }`}
           >
             <Target className="w-4 h-4" />
-            Goals
+            <span className="text-sm font-semibold">Goals</span>
           </button>
         </div>
       </div>
