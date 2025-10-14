@@ -5,13 +5,15 @@ import {
   Views,
   type View,
   type Event,
+  type ToolbarProps,
+  type Components,
 } from 'react-big-calendar';
-import { format, parse, startOfWeek, getDay, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
+import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Calendar, Plus, Filter } from 'lucide-react';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import type { ContentPost, Person, Platform } from '../../types/content';
-import { PLATFORM_COLORS, PERSON_COLORS } from '../../types/content';
+import { PERSON_COLORS } from '../../types/content';
 
 interface ContentCalendarProps {
   posts: ContentPost[];
@@ -34,13 +36,12 @@ const localizer = dateFnsLocalizer({
 });
 
 // Custom toolbar component
-const CustomToolbar = ({
-  date,
+const CustomToolbar: React.FC<ToolbarProps> = ({
   view,
   onNavigate,
   onView,
   label,
-}: any) => {
+}) => {
   return (
     <div className="flex items-center justify-between mb-4 p-4 bg-gray-800/50 rounded-lg border border-gray-700/50">
       <div className="flex items-center gap-4">
@@ -154,8 +155,8 @@ export const ContentCalendar = ({
   };
 
   // Custom event component
-  const CustomEvent = ({ event }: { event: any }) => {
-    const post = event.resource as ContentPost;
+  const CustomEvent = ({ event }: { event: Event }) => {
+    const post = (event as any).resource as ContentPost;
     const statusIcon = {
       published: '✓',
       scheduled: '⏰',
@@ -172,7 +173,7 @@ export const ContentCalendar = ({
   };
 
   // Custom date cell wrapper for adding new posts
-  const CustomDateCellWrapper = ({ children, value }: any) => {
+  const CustomDateCellWrapper = ({ children, value }: { children?: React.ReactNode; value: Date }) => {
     return (
       <div className="relative h-full">
         {children}
@@ -240,10 +241,10 @@ export const ContentCalendar = ({
           onNavigate={setDate}
           eventPropGetter={eventStyleGetter}
           components={{
-            toolbar: CustomToolbar,
-            event: CustomEvent,
-            dateCellWrapper: CustomDateCellWrapper,
-          }}
+            toolbar: CustomToolbar as any,
+            event: CustomEvent as any,
+            dateCellWrapper: CustomDateCellWrapper as any,
+          } as Components<Event, any>}
           onSelectEvent={(event: any) => {
             if (onPostClick) {
               onPostClick(event.resource);
@@ -261,7 +262,7 @@ export const ContentCalendar = ({
       </div>
 
       {/* Calendar CSS overrides */}
-      <style jsx global>{`
+      <style>{`
         .calendar-dark .rbc-calendar {
           background: transparent;
           color: #e5e7eb;

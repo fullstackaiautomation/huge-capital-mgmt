@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { Upload, Mic, Loader2, CheckCircle, AlertCircle, FileAudio } from 'lucide-react';
 import { transcribeAudio, validateAudioFile, formatDuration } from '../../services/voiceTranscription';
 import { extractStoryData } from '../../services/storyExtraction';
-import type { Story, StoryType, FundingType } from '../../types/story';
+import type { Story } from '../../types/story';
 
 interface VoiceMemoUploadProps {
   person: 'Zac' | 'Luke' | 'Huge Capital';

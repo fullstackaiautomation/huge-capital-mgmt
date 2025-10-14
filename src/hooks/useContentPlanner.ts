@@ -3,15 +3,11 @@ import { supabase } from '../lib/supabase';
 import type {
   ContentPost,
   ContentProfile,
-  ContentAnalytics,
-  CompetitorPost,
   ContentTag,
   PostingGoal,
   ContentTemplate,
-  ContentComment,
   Person,
   Platform,
-  ContentStatus,
   TwitterThread,
 } from '../types/content';
 import type { Story } from '../types/story';

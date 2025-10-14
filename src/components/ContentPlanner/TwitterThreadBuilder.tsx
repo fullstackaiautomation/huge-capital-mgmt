@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Plus, X, GripVertical, Twitter, AlertCircle } from 'lucide-react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
