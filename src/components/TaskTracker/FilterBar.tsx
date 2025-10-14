@@ -126,6 +126,15 @@ export const FilterBar = ({
     };
   };
 
+  const getAssigneeColor = (assignee: string) => {
+    const colors: { [key: string]: string } = {
+      'Zac': 'bg-blue-600 hover:bg-blue-700 border-blue-500',
+      'Luke': 'bg-green-600 hover:bg-green-700 border-green-500',
+      'Dillon': 'bg-orange-600 hover:bg-orange-700 border-orange-500',
+    };
+    return colors[assignee] || 'bg-gray-600 hover:bg-gray-700 border-gray-500';
+  };
+
   const getAreaColor = (area: string) => {
     const colors: { [key: string]: string } = {
       'Tactstack': 'bg-orange-600 hover:bg-orange-700 border-orange-500',
