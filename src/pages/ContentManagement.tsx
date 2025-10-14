@@ -14,6 +14,7 @@ import {
   TrendingUp,
   Clock,
   BookOpen,
+  User,
 } from 'lucide-react';
 import { ContentEditor } from '../components/ContentPlanner/ContentEditor';
 import { ContentCalendar } from '../components/ContentPlanner/ContentCalendar';
@@ -22,7 +23,7 @@ import { useContentPlanner } from '../hooks/useContentPlanner';
 import type { Person, Platform, ContentPost } from '../types/content';
 import { PLATFORM_COLORS, PERSON_COLORS, CONTENT_PILLARS } from '../types/content';
 
-type ViewMode = 'editor' | 'calendar' | 'analytics' | 'goals' | 'stories';
+type ViewMode = 'editor' | 'calendar' | 'analytics' | 'goals' | 'stories' | 'profile';
 
 export const ContentManagement = () => {
   const {
@@ -143,106 +144,40 @@ export const ContentManagement = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-100 flex items-center gap-3">
-        <FileText className="w-8 h-8 text-brand-500" />
-        Content Planner
-      </h1>
+      {/* Header with Title and Person Selector */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-gray-100 flex items-center gap-3">
+          <FileText className="w-8 h-8 text-brand-500" />
+          Content Planner
+        </h1>
 
-      {/* Person Selector */}
-      <div className="flex gap-3">
-        {(['Zac', 'Luke', 'Huge Capital'] as Person[]).map((person) => (
-          <button
-            key={person}
-            onClick={() => setSelectedPerson(person)}
-            className={`px-6 py-3 rounded-lg text-lg font-semibold transition-all transform hover:scale-105 ${
-              selectedPerson === person
-                ? 'text-white shadow-lg'
-                : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50'
-            }`}
-            style={{
-              backgroundColor:
-                selectedPerson === person ? PERSON_COLORS[person] : undefined,
-              boxShadow:
+        {/* Person Selector - Prominent Boxes */}
+        <div className="flex gap-3">
+          {(['Zac', 'Luke', 'Huge Capital'] as Person[]).map((person) => (
+            <button
+              key={person}
+              onClick={() => setSelectedPerson(person)}
+              className={`px-8 py-4 rounded-xl text-xl font-bold transition-all transform hover:scale-105 border-2 ${
                 selectedPerson === person
-                  ? `0 10px 25px ${PERSON_COLORS[person]}40`
-                  : undefined,
-            }}
-          >
-            {person}
-          </button>
-        ))}
-      </div>
-
-      {/* Content Profile Card */}
-      {currentProfile && (
-        <div
-          className="rounded-lg shadow-xl p-6 border-2"
-          style={{
-            backgroundColor: `${PERSON_COLORS[selectedPerson]}20`,
-            borderColor: `${PERSON_COLORS[selectedPerson]}40`,
-          }}
-        >
-          <h2 className="text-xl font-bold text-white mb-4">
-            {selectedPerson} Content Profile
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Content Pillars */}
-            <div className="bg-gray-900/50 rounded-lg p-4">
-              <h3 className="font-bold text-gray-100 mb-2">Content Pillars</h3>
-              <ul className="space-y-1">
-                {CONTENT_PILLARS[selectedPerson].map((pillar) => (
-                  <li key={pillar.name} className="text-sm text-gray-300">
-                    • {pillar.name} ({pillar.percentage}%)
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Brand Voice */}
-            <div className="bg-gray-900/50 rounded-lg p-4">
-              <h3 className="font-bold text-gray-100 mb-2">Brand Voice</h3>
-              <ul className="space-y-1">
-                {currentProfile.brandVoice.slice(0, 4).map((voice) => (
-                  <li key={voice} className="text-sm text-gray-300">
-                    • {voice}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Posting Stats */}
-            <div className="bg-gray-900/50 rounded-lg p-4">
-              <h3 className="font-bold text-gray-100 mb-2">Posting Frequency</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-400">This Week</span>
-                  <span className="text-sm font-bold text-brand-500">
-                    {weekStats.actual} / {weekStats.target}
-                  </span>
-                </div>
-                <div className="w-full bg-gray-800 rounded-full h-2">
-                  <div
-                    className="bg-brand-500 h-2 rounded-full transition-all"
-                    style={{ width: `${Math.min(weekStats.percentage, 100)}%` }}
-                  />
-                </div>
-                <div className="flex justify-between items-center mt-2">
-                  <span className="text-sm text-gray-400">This Month</span>
-                  <span className="text-sm font-bold text-brand-500">
-                    {monthStats.actual} / {monthStats.target}
-                  </span>
-                </div>
-                <div className="w-full bg-gray-800 rounded-full h-2">
-                  <div
-                    className="bg-brand-500 h-2 rounded-full transition-all"
-                    style={{ width: `${Math.min(monthStats.percentage, 100)}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
+                  ? 'text-white shadow-2xl'
+                  : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50 border-gray-700'
+              }`}
+              style={{
+                backgroundColor:
+                  selectedPerson === person ? PERSON_COLORS[person] : undefined,
+                borderColor:
+                  selectedPerson === person ? PERSON_COLORS[person] : undefined,
+                boxShadow:
+                  selectedPerson === person
+                    ? `0 15px 35px ${PERSON_COLORS[person]}60`
+                    : undefined,
+              }}
+            >
+              {person}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
       {/* View Toggle */}
       <div className="flex items-center justify-between">
@@ -313,6 +248,17 @@ export const ContentManagement = () => {
             Stories
           </button>
           <button
+            onClick={() => setCurrentView('profile')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              currentView === 'profile'
+                ? 'bg-brand-500 text-white'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <User className="w-4 h-4" />
+            Profile
+          </button>
+          <button
             onClick={() => setCurrentView('analytics')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
               currentView === 'analytics'
@@ -372,6 +318,78 @@ export const ContentManagement = () => {
             onDeleteStory={async (id) => { await deleteStory(id); }}
             onApproveStory={async (id) => { await approveStory(id); }}
           />
+        )}
+
+        {currentView === 'profile' && currentProfile && (
+          <div className="space-y-6">
+            <div
+              className="rounded-lg shadow-xl p-6 border-2"
+              style={{
+                backgroundColor: `${PERSON_COLORS[selectedPerson]}20`,
+                borderColor: `${PERSON_COLORS[selectedPerson]}40`,
+              }}
+            >
+              <h2 className="text-2xl font-bold text-white mb-6">
+                {selectedPerson} Content Profile
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Content Pillars */}
+                <div className="bg-gray-900/50 rounded-lg p-4">
+                  <h3 className="font-bold text-gray-100 mb-2">Content Pillars</h3>
+                  <ul className="space-y-1">
+                    {CONTENT_PILLARS[selectedPerson].map((pillar) => (
+                      <li key={pillar.name} className="text-sm text-gray-300">
+                        • {pillar.name} ({pillar.percentage}%)
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Brand Voice */}
+                <div className="bg-gray-900/50 rounded-lg p-4">
+                  <h3 className="font-bold text-gray-100 mb-2">Brand Voice</h3>
+                  <ul className="space-y-1">
+                    {currentProfile.brandVoice.slice(0, 4).map((voice) => (
+                      <li key={voice} className="text-sm text-gray-300">
+                        • {voice}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Posting Stats */}
+                <div className="bg-gray-900/50 rounded-lg p-4">
+                  <h3 className="font-bold text-gray-100 mb-2">Posting Frequency</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-400">This Week</span>
+                      <span className="text-sm font-bold text-brand-500">
+                        {weekStats.actual} / {weekStats.target}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-800 rounded-full h-2">
+                      <div
+                        className="bg-brand-500 h-2 rounded-full transition-all"
+                        style={{ width: `${Math.min(weekStats.percentage, 100)}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-sm text-gray-400">This Month</span>
+                      <span className="text-sm font-bold text-brand-500">
+                        {monthStats.actual} / {monthStats.target}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-800 rounded-full h-2">
+                      <div
+                        className="bg-brand-500 h-2 rounded-full transition-all"
+                        style={{ width: `${Math.min(monthStats.percentage, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {currentView === 'analytics' && (
