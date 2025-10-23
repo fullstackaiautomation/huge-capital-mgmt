@@ -9,6 +9,7 @@ import { ContentManagement } from './pages/ContentManagement';
 import { TaskTracker } from './pages/TaskTracker';
 import { Projects } from './pages/Projects';
 import { BugsIdeas } from './pages/BugsIdeas';
+import { Logins } from './pages/Logins';
 import Lenders from './pages/LendersNew';
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
             <Route path="lenders" element={<Lenders />} />
             <Route path="tracker" element={<TaskTracker />} />
             <Route path="bugs" element={<BugsIdeas />} />
+            <Route path="logins" element={<Logins />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
