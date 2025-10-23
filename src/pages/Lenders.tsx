@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { Building2, Edit, Plus, X } from 'lucide-react';
-import { useAllLenders } from '../hooks/useAllLenders';
+import { useAllLenders, type UnifiedLender } from '../hooks/useAllLenders';
 
 export default function Lenders() {
   const [activeFilter, setActiveFilter] = useState('all');
@@ -23,9 +23,9 @@ export default function Lenders() {
   const stats = {
     total: lenders.length,
     byType: {
-      'Business Line of Credit': lenders.filter(l => l.lender_type === 'Business Line of Credit').length,
-      'MCA': lenders.filter(l => l.lender_type === 'MCA').length,
-      'SBA': lenders.filter(l => l.lender_type === 'SBA').length,
+      'Business Line of Credit': lenders.filter((l: UnifiedLender) => l.lender_type === 'Business Line of Credit').length,
+      'MCA': lenders.filter((l: UnifiedLender) => l.lender_type === 'MCA').length,
+      'SBA': lenders.filter((l: UnifiedLender) => l.lender_type === 'SBA').length,
     },
   };
 
