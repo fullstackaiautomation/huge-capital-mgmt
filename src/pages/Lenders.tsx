@@ -2,7 +2,7 @@
 // Epic 2: Lenders Dashboard (LD-001)
 
 import { useState } from 'react';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Building2 } from 'lucide-react';
 import { useLenders } from '../hooks/useLenders';
 import type { LenderFilters } from '../types/lender';
 import LenderList from '../components/Lenders/LenderList';
@@ -20,11 +20,14 @@ export default function Lenders() {
   const { lenders, loading, error, refetch } = useLenders(filters);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="w-full px-10 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-white">Lenders</h1>
+          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+            <Building2 className="w-8 h-8 text-white" />
+            Lenders
+          </h1>
           <p className="text-gray-400 mt-1">
             Manage your lender database and relationships
           </p>

@@ -301,10 +301,10 @@ export const Logins = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto">
+    <div className="space-y-6 w-full px-10">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-100 flex items-center gap-3">
-          <Key className="w-8 h-8 text-blue-500" />
+          <Key className="w-8 h-8 text-white" />
           Logins
         </h1>
         <div className="flex gap-2">
