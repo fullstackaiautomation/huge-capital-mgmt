@@ -614,11 +614,9 @@ export const Projects = () => {
   // Single project view
   return (
     <div className="w-full px-10 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-          <Folder className="w-8 h-8 text-white" />
-          AI Projects
-        </h1>
+      <div className="flex items-center gap-3">
+        <Folder className="w-8 h-8 text-white" />
+        <h1 className="text-3xl font-bold text-white">AI Projects</h1>
       </div>
 
       {/* Statistics Dashboard */}
