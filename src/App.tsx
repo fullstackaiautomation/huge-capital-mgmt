@@ -10,7 +10,7 @@ import { TaskTracker } from './pages/TaskTracker';
 import { Projects } from './pages/Projects';
 import { BugsIdeas } from './pages/BugsIdeas';
 import { Logins } from './pages/Logins';
-import Lenders from './pages/LendersNew';
+import Lenders from './pages/Lenders';
 
 function App() {
   return (
