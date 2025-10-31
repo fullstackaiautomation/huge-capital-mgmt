@@ -236,8 +236,10 @@ export default function Lenders() {
           <td className="text-left py-3 pr-2 pl-4 font-medium text-white">
             <div>
               <div className="text-gray-300">{lender.lender_name}</div>
-              {lender.lender_type === 'MCA' && rawData?.paper && (
-                <div className="text-gray-500 text-xs">{rawData.paper}</div>
+              {lender.lender_type === 'MCA' && (
+                <div className="text-gray-500 text-xs">
+                  {rawData?.paper || '—'}
+                </div>
               )}
             </div>
           </td>
