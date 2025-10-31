@@ -29,6 +29,32 @@ import type { BusinessLineOfCreditLenderFormData } from '../types/lenders/busine
 import type { McaLenderFormData } from '../types/lenders/mca';
 import type { SbaLenderFormData } from '../types/lenders/sba';
 
+// Utility function to convert URLs in text to clickable links
+const renderTextWithLinks = (text: string) => {
+  if (!text) return text;
+
+  // Regex to match URLs
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+
+  return parts.map((part, idx) => {
+    if (urlRegex.test(part)) {
+      return (
+        <a
+          key={idx}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-400 hover:text-blue-300 underline break-all"
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
+
 export default function Lenders() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [relationshipFilter, setRelationshipFilter] = useState<'all' | 'Huge Capital' | 'IFS'>('Huge Capital');
@@ -541,7 +567,7 @@ export default function Lenders() {
                               .split(/,\s*|\+\s*/)
                               .map((email: string, idx: number) => (
                                 email.trim() && (
-                                  <div key={idx}>{email.trim()}</div>
+                                  <div key={idx}>{renderTextWithLinks(email.trim())}</div>
                                 )
                               ))
                           ) : (
@@ -721,7 +747,7 @@ export default function Lenders() {
                               .split(/,\s*|\+\s*/)
                               .map((email: string, idx: number) => (
                                 email.trim() && (
-                                  <div key={idx}>{email.trim()}</div>
+                                  <div key={idx}>{renderTextWithLinks(email.trim())}</div>
                                 )
                               ))
                           ) : (
@@ -885,7 +911,7 @@ export default function Lenders() {
                               .split(/,\s*|\+\s*/)
                               .map((email: string, idx: number) => (
                                 email.trim() && (
-                                  <div key={idx}>{email.trim()}</div>
+                                  <div key={idx}>{renderTextWithLinks(email.trim())}</div>
                                 )
                               ))
                           ) : (
