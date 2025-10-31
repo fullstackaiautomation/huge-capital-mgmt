@@ -77,6 +77,7 @@ export function useAllLenders(filterType?: string) {
             status: lender.status,
             relationship: lender.relationship,
             created_at: lender.created_at,
+            sort_order: (lender as any).sort_order || 0,
             raw_data: lender,
           });
         });
@@ -104,6 +105,7 @@ export function useAllLenders(filterType?: string) {
             status: lender.status,
             relationship: lender.relationship,
             created_at: lender.created_at,
+            sort_order: (lender as any).sort_order || 0,
             raw_data: lender,
           });
         });
@@ -131,6 +133,7 @@ export function useAllLenders(filterType?: string) {
             status: lender.status,
             relationship: lender.relationship,
             created_at: lender.created_at,
+            sort_order: (lender as any).sort_order || 0,
             raw_data: lender,
           });
         });

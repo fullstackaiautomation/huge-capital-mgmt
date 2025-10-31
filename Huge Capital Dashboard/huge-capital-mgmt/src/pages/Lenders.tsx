@@ -105,7 +105,7 @@ export default function Lenders() {
   };
 
   // Handle drag end for lender reordering
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
@@ -114,6 +114,31 @@ export default function Lenders() {
 
       const newLenders = arrayMove(lenders, oldIndex, newIndex);
       setDisplayLenders(newLenders);
+
+      // Save the new sort order to the database
+      try {
+        const currentLender = lenders.find(l => l.id === active.id);
+        if (currentLender) {
+          const table =
+            currentLender.lender_type === 'Business Line of Credit' ? 'lenders_business_line_of_credit' :
+            currentLender.lender_type === 'MCA' ? 'lenders_mca' :
+            currentLender.lender_type === 'SBA' ? 'lenders_sba' : null;
+
+          if (table) {
+            // Update sort_order for the moved lender
+            const { error } = await supabase
+              .from(table)
+              .update({ sort_order: newIndex + 1 })
+              .eq('id', active.id);
+
+            if (error) {
+              console.error('Error updating sort order:', error);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error saving sort order:', err);
+      }
     }
   };
 
