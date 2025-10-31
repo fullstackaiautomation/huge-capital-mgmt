@@ -273,7 +273,7 @@ Migration created: `20251101000004_add_doc_links_to_mca.sql`
 | Credibly | https://portal.credibly.com/# |
 | Rapid | https://login.rapidfinance.com/Account/Login?ticket=e5c73ceaeb8d4dc985acafee7911b1fc&userType=Partner |
 
-**Migration: `20251101000006_populate_mca_website_and_drive_links.sql` - Website & Drive Links**
+**Migration: `20251101000006_populate_mca_website_and_drive_links.sql` - Website & Drive Links (Initial 5)**
 | Lender | Website | Drive |
 |--------|---------|-------|
 | Credibly | https://www.credibly.com/ | https://drive.google.com/drive/folders/1M89s6eSRheha_O1VOvNPXc4oAnvbB7FJ |
@@ -281,6 +281,17 @@ Migration created: `20251101000004_add_doc_links_to_mca.sql`
 | Fundworks | https://thefundworks.com/ | https://drive.google.com/drive/folders/1MVK1-4ZcxYrCgdfpXuuHrSJBzQnUEtB9 |
 | TMRnow | https://tmrnow.com/ | https://drive.google.com/drive/folders/1RjZY6TuP_aN7izsQxjCntDQ5q0qgjgSs?usp=drive_link |
 | TVT Capital | https://tvt-capital.com/ | https://drive.google.com/drive/folders/1TnGGsuXqB97NE1lL9wJ8oBayg36KguO2 |
+
+**Migration: `20251101000007_populate_additional_mca_links.sql` - Website & Drive Links (Additional 7)**
+| Lender | Website | Drive |
+|--------|---------|-------|
+| Fintegra | https://getfintegra.com/ | https://drive.google.com/drive/folders/1xE3W6ngg8X2fqKXrBUgN15ZpNjVE2aDI |
+| Fresh Funding | http://gofreshfunding.com/ | https://drive.google.com/drive/folders/1DOV5wbLF-VQ0HaOQcHduTKnH5NzUEoHG |
+| Fintap | https://www.fintap.com/ | https://drive.google.com/drive/folders/1s_VNKIcZgHGxhOD2vaK-p6ezkFML64jS |
+| Legend Advance | https://legendadvancefunding.com/ | https://drive.google.com/drive/folders/1oHLgjPmZOQmWnsjJUDXjFMJ4tJl8_m04 |
+| Mantis | https://mantisfunding.com/ | https://drive.google.com/drive/folders/1AnKnaygR4gxWIkR7Ec8ae9QL-5pQB89I |
+| Emmy Capital | https://emmycapitalgroup.com/ | https://drive.google.com/drive/folders/1MHEMLbeiwt09FSihXt2QZRwi3-Nwy5zw |
+| Kalamata | https://www.kalamatacapitalgroup.com/ | https://drive.google.com/drive/folders/1jlHhe0b7_Bk1FnACRiqIdig7GJLwhgXO |
 
 #### MCA Columns NOT Used in Expandable Details
 These fields exist in the MCA schema but are not displayed in the expanded row details:
