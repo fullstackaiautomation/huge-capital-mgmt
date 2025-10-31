@@ -1,0 +1,13 @@
+-- Populate Google Drive links for SBA lenders (7 lenders from spreadsheet)
+-- Note: These are placeholder updates until specific lender names are confirmed
+-- The links from the SBA sheet (rows 2-8) will be assigned to the first 7 SBA lenders
+
+-- Placeholder: Will need to update with actual lender names from SBA sheet
+-- For now, document the 7 links available:
+-- 1. https://drive.google.com/drive/folders/107mw9CAcyVJXUqnnRH6-tFQ-7WfUKZRv?usp=drive_link
+-- 2. https://drive.google.com/drive/folders/1DYzAVErbJMGkjTpkkvOdV-4MRXGyjBVF?usp=drive_link
+-- 3. https://drive.google.com/drive/folders/1p-8hZihwiPY54NUjFp-UrLLt4ZsJR0us?usp=drive_link
+-- 4. https://drive.google.com/drive/folders/1vvjtynhnQrXe-EgX7LJw18fhfEXZthXS?usp=drive_link
+-- 5. https://drive.google.com/drive/folders/1TNZsN1VlZja3dy5JHO4jbap4NM1spZWj?usp=sharing
+-- 6. https://drive.google.com/drive/folders/1_CxzzauJgWh_ajMWOLf6TEwcvqGguHCe?usp=drive_link
+-- 7. https://drive.google.com/drive/folders/18rmcnBW2kaWeKnW74BQmVS9AsifHzE14?usp=drive_link

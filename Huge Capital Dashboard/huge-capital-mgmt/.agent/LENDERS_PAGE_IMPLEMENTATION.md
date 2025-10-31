@@ -314,19 +314,63 @@ Note: These can be added to the expandable section in the future if needed.
 
 ---
 
-### SBA Implementation Status: ⏳ PENDING
+### SBA Implementation Status: ✅ COMPLETED (2025-11-01)
 
-**Next Steps:**
-1. Add same 3 columns to `lenders_sba` table via database migration
-2. Update SBA types with new fields
-3. Create SBA-specific 4-column expandable layout
-4. Map SBA fields appropriately (e.g., `use_of_funds`, `credit_requirement`, etc.)
-5. Test and validate all features
+#### Database Schema
+Migration created: `20251101000009_add_doc_links_to_sba.sql`
+- ✅ Added `portal_url` TEXT
+- ✅ Added `preferred_industries_doc_link` TEXT
+- ✅ Added `restricted_industries_doc_link` TEXT
 
-**SBA Field Mappings (Planned):**
-- Use existing `google_drive`
-- `minimum_loan_amount`, `max_loan_amount`
-- `credit_requirement`, `use_of_funds`
+#### Type Definitions Updated
+- ✅ Updated `SbaLender` interface with 3 new fields
+- ✅ Updated `SbaLenderFormData` interface with 3 new fields
+- Location: `src/types/lenders/sba.ts`
+
+#### UI Implementation
+- ✅ Added SBA-specific 4-column expandable details layout in `SortableLenderRow`
+- ✅ Conditional rendering: `lender.lender_type === 'SBA' ? ...`
+- ✅ Uses `google_drive` for resource links
+- Lines 697-860 in `src/pages/Lenders.tsx`
+
+#### SBA Field Mappings Used
+
+**Lender Info Column (Blue):**
+- Lender Type
+- Contact Person (SBA-specific field)
+- Products Offered
+- Preferred Industries (with hyperlinked doc if `preferred_industries_doc_link` exists)
+- Industry Restrictions (with hyperlinked "Full List" if `restricted_industries_doc_link` exists)
+- Links: Website + Google Drive
+
+**Requirements Column (Purple):**
+- Credit Requirement
+- States Available
+- Timeline
+
+**Terms Column (Green):**
+- Use of Funds (SBA-specific field)
+- Min Loan (mapped from `minimum_loan_amount`)
+- Max Loan (mapped from `max_loan_amount`)
+
+**Submissions Column (Orange):**
+- Submission Type
+- Portal URL (only shows if `submission_type === 'Online Portal'` and `portal_url` exists)
+- Submission Docs (split by commas, plus signs, "and")
+- Emails (from `submission_process`, cleaned of "Email:" prefix and "CC" prefix)
+
+#### SBA Google Drive Links Available
+Migration: `20251101000010_populate_sba_google_drive_links.sql`
+7 Google Drive folder links extracted from SBA sheet (rows 2-8):
+1. https://drive.google.com/drive/folders/107mw9CAcyVJXUqnnRH6-tFQ-7WfUKZRv?usp=drive_link
+2. https://drive.google.com/drive/folders/1DYzAVErbJMGkjTpkkvOdV-4MRXGyjBVF?usp=drive_link
+3. https://drive.google.com/drive/folders/1p-8hZihwiPY54NUjFp-UrLLt4ZsJR0us?usp=drive_link
+4. https://drive.google.com/drive/folders/1vvjtynhnQrXe-EgX7LJw18fhfEXZthXS?usp=drive_link
+5. https://drive.google.com/drive/folders/1TNZsN1VlZja3dy5JHO4jbap4NM1spZWj?usp=sharing
+6. https://drive.google.com/drive/folders/1_CxzzauJgWh_ajMWOLf6TEwcvqGguHCe?usp=drive_link
+7. https://drive.google.com/drive/folders/18rmcnBW2kaWeKnW74BQmVS9AsifHzE14?usp=drive_link
+
+**Next:** Provide SBA lender names for rows 2-8 to populate the drive links correctly
 
 ---
 

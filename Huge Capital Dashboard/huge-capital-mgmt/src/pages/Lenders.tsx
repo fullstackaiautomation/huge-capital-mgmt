@@ -694,6 +694,170 @@ export default function Lenders() {
                     </div>
                   </div>
                 </div>
+              ) : lender.lender_type === 'SBA' ? (
+                <div className="grid grid-cols-4 gap-4 text-sm">
+                  {/* Column 1: Lender Info (SBA) */}
+                  <div className="bg-gray-900/40 border border-gray-700/50 rounded-lg p-4">
+                    <div className="text-blue-400 font-semibold text-xs uppercase mb-4 pb-3 border-b border-gray-700/30">Lender Info</div>
+                    <div className="space-y-3">
+                      <div>
+                        <div className="text-gray-500 text-xs uppercase mb-1 font-semibold">Lender Type</div>
+                        <div className="text-gray-300">{lender.lender_type}</div>
+                      </div>
+                      <div>
+                        <div className="text-gray-500 text-xs uppercase mb-1 font-semibold">Contact Person</div>
+                        <div className="text-gray-300">{rawData?.contact_person || '—'}</div>
+                      </div>
+                      <div>
+                        <div className="text-gray-500 text-xs uppercase mb-1 font-semibold">Products Offered</div>
+                        <div className="text-gray-300 text-xs">{rawData?.products_offered || '—'}</div>
+                      </div>
+                      <div>
+                        <div className="text-gray-500 text-xs uppercase mb-1 font-semibold">Preferred Industries</div>
+                        <div className="text-gray-300 text-xs">
+                          {rawData?.preferred_industries ? (
+                            rawData?.preferred_industries_doc_link ? (
+                              <a href={rawData.preferred_industries_doc_link} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">
+                                {rawData.preferred_industries}
+                              </a>
+                            ) : (
+                              rawData.preferred_industries
+                            )
+                          ) : (
+                            '—'
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-gray-500 text-xs uppercase mb-1 font-semibold">Industry Restrictions</div>
+                        <div className="text-gray-300 text-xs">
+                          {rawData?.restricted_industries_doc_link ? (
+                            <a href={rawData.restricted_industries_doc_link} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">
+                              Full List
+                            </a>
+                          ) : (
+                            '—'
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-gray-500 text-xs uppercase mb-1 font-semibold">Links</div>
+                        <div className="flex gap-4">
+                          <div className="text-gray-300">
+                            {lender.website ? (
+                              <a href={lender.website} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
+                                Website
+                              </a>
+                            ) : (
+                              <span className="text-gray-500">—</span>
+                            )}
+                          </div>
+                          <div className="text-gray-300">
+                            {rawData?.google_drive ? (
+                              <a href={rawData.google_drive} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
+                                Drive
+                              </a>
+                            ) : (
+                              <span className="text-gray-500">—</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Column 2: Requirements (SBA) */}
+                  <div className="bg-gray-900/40 border border-gray-700/50 rounded-lg p-4">
+                    <div className="text-purple-400 font-semibold text-xs uppercase mb-4 pb-3 border-b border-gray-700/30">Requirements</div>
+                    <div className="space-y-3">
+                      <div>
+                        <div className="text-gray-500 text-xs uppercase mb-1 font-semibold">Credit Requirement</div>
+                        <div className="text-gray-300">{lender.credit_requirement || '—'}</div>
+                      </div>
+                      <div>
+                        <div className="text-gray-500 text-xs uppercase mb-1 font-semibold">States Available</div>
+                        <div className="text-gray-300">{rawData?.states_available || '—'}</div>
+                      </div>
+                      <div>
+                        <div className="text-gray-500 text-xs uppercase mb-1 font-semibold">Timeline</div>
+                        <div className="text-gray-300">{rawData?.timeline || '—'}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Column 3: Terms (SBA) */}
+                  <div className="bg-gray-900/40 border border-gray-700/50 rounded-lg p-4">
+                    <div className="text-green-400 font-semibold text-xs uppercase mb-4 pb-3 border-b border-gray-700/30">Terms</div>
+                    <div className="space-y-3">
+                      <div>
+                        <div className="text-gray-500 text-xs uppercase mb-1 font-semibold">Use of Funds</div>
+                        <div className="text-gray-300">{rawData?.use_of_funds || '—'}</div>
+                      </div>
+                      <div>
+                        <div className="text-gray-500 text-xs uppercase mb-1 font-semibold">Min Loan</div>
+                        <div className="text-gray-300">{rawData?.minimum_loan_amount || '—'}</div>
+                      </div>
+                      <div>
+                        <div className="text-gray-500 text-xs uppercase mb-1 font-semibold">Max Loan</div>
+                        <div className="text-gray-300">{rawData?.max_loan_amount || '—'}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Column 4: Submissions (SBA) */}
+                  <div className="bg-gray-900/40 border border-gray-700/50 rounded-lg p-4">
+                    <div className="text-orange-400 font-semibold text-xs uppercase mb-4 pb-3 border-b border-gray-700/30">Submissions</div>
+                    <div className="space-y-3">
+                      <div>
+                        <div className="text-gray-500 text-xs uppercase mb-1 font-semibold">Submission Type</div>
+                        <div className="text-gray-300">{lender.submission_type || '—'}</div>
+                      </div>
+                      {lender.submission_type === 'Online Portal' && rawData?.portal_url ? (
+                        <div>
+                          <div className="text-gray-500 text-xs uppercase mb-1 font-semibold">Portal URL</div>
+                          <div className="text-gray-300">
+                            <a href={rawData.portal_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">
+                              Open Portal
+                            </a>
+                          </div>
+                        </div>
+                      ) : null}
+                      <div>
+                        <div className="text-gray-500 text-xs uppercase mb-1 font-semibold">Submission Docs</div>
+                        <div className="text-gray-300 text-xs space-y-1">
+                          {rawData?.submission_docs ? (
+                            rawData.submission_docs
+                              .split(/,\s*|\+\s*|\s+and\s+/i)
+                              .map((doc: string, idx: number) => (
+                                doc.trim() && (
+                                  <div key={idx}>{doc.trim()}</div>
+                                )
+                              ))
+                          ) : (
+                            <div>—</div>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-gray-500 text-xs uppercase mb-1 font-semibold">Emails</div>
+                        <div className="text-gray-300 text-xs space-y-1">
+                          {rawData?.submission_process ? (
+                            rawData.submission_process
+                              .replace(/^Email:\s*/i, '')
+                              .split(/,\s*|\+\s*/)
+                              .map((email: string, idx: number) => (
+                                email.trim() && (
+                                  <div key={idx}>{email.trim()}</div>
+                                )
+                              ))
+                          ) : (
+                            <div>—</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               ) : (
                 // Default layout for other lender types
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-6 text-sm">

@@ -18,6 +18,9 @@ export interface SbaLender {
   preferred_industries: string | null;
   industry_restrictions: string | null;
   google_drive: string | null;
+  portal_url: string | null;
+  preferred_industries_doc_link: string | null;
+  restricted_industries_doc_link: string | null;
   note: string | null;
   created_at: string;
   updated_at: string;
@@ -46,6 +49,9 @@ export interface SbaLenderFormData {
   preferred_industries?: string;
   industry_restrictions?: string;
   google_drive?: string;
+  portal_url?: string;
+  preferred_industries_doc_link?: string;
+  restricted_industries_doc_link?: string;
   note?: string;
   status: 'active' | 'inactive' | 'pending' | 'archived';
   relationship?: 'Huge Capital' | 'IFS';
