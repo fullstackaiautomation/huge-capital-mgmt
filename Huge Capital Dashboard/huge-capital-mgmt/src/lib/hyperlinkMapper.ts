@@ -68,7 +68,6 @@ export function parseHyperlinkCSV(csvData: string[][]): ExtractedHyperlinks {
  * Maps display text like "Google Drive" to actual URLs
  */
 export function extractHyperlinksForLender(
-  lenderName: string,
   rowNumber: number,
   sheetName: string,
   hyperlinks: ExtractedHyperlinks
@@ -200,13 +199,15 @@ export function processBatchHyperlinks(
   lenders: Array<{ lenderName: string; row: number; sheet: string }>,
   hyperlinks: ExtractedHyperlinks
 ): Array<Record<string, string>> {
-  return lenders.map((lender) => ({
-    ...lender,
-    ...extractHyperlinksForLender(
-      lender.lenderName,
+  return lenders.map((lender) => {
+    const { lenderName, ...linkData } = extractHyperlinksForLender(
       lender.row,
       lender.sheet,
       hyperlinks
-    ),
-  }));
+    );
+    return {
+      lenderName: lender.lenderName,
+      ...linkData,
+    };
+  });
 }

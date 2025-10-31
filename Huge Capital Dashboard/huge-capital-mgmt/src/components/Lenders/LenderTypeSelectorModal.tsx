@@ -8,14 +8,12 @@ interface LenderTypeSelectorModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (typeId: string) => void;
-  selectedRelationship?: 'Huge Capital' | 'IFS' | 'all';
 }
 
 export default function LenderTypeSelectorModal({
   isOpen,
   onClose,
   onSelect,
-  selectedRelationship = 'Huge Capital',
 }: LenderTypeSelectorModalProps) {
   const allTypes = getAllLenderTypes();
 

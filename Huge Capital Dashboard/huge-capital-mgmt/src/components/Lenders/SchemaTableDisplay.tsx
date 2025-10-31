@@ -1,6 +1,6 @@
 // Schema-Based Table Display Component
 // Automatically renders table columns based on lender type schema
-import { Building2, MapPin, Star, ExternalLink, MoreVertical, ChevronDown, ChevronUp } from 'lucide-react';
+import { Building2, ExternalLink, MoreVertical, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 import { getLenderTypeSchema } from '../../config/lenderTypeSchema';
 import type { UnifiedLenderRow } from '../../types/schema';
@@ -101,7 +101,6 @@ export default function SchemaTableDisplay({
 
   // Format phone/email as links
   const isPhone = (str: string) => /^[\d\s\-().+]{10,}$/.test(str);
-  const isEmail = (str: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str);
   const isUrl = (str: string) => str.startsWith('http://') || str.startsWith('https://');
 
   // ============================================================================

@@ -13,7 +13,6 @@ import {
 } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
@@ -132,7 +131,6 @@ export default function Lenders() {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      const oldIndex = lenders.findIndex(lender => lender.id === active.id);
       const newIndex = lenders.findIndex(lender => lender.id === over.id);
 
       // Save the new sort order to the database
@@ -242,7 +240,6 @@ export default function Lenders() {
     const minMonthlyRevenue = rawData?.minimum_monthly_revenue || rawData?.min_monthly_revenue_amount || null;
     const adbMin = rawData?.minimum_daily_balances || rawData?.min_avg_daily_balance || null;
     const stateRestrictions = rawData?.states_restrictions || rawData?.ineligible_states || lender.restricted_industries || null;
-    const submissionEmail = rawData?.email || lender.email || null;
 
     const handleCopyEmail = (email: string) => {
       navigator.clipboard.writeText(email);
@@ -1036,7 +1033,6 @@ export default function Lenders() {
       <div className="overflow-x-auto">
         <div className="flex gap-1 pb-2">
           {filters.map(filter => {
-          const isPrimary = ['Business Line of Credit', 'MCA', 'SBA'].includes(filter.id);
           let bgColor = 'bg-gray-500/10';
           let borderColor = 'border-gray-400/30';
           let textColor = 'text-gray-300';

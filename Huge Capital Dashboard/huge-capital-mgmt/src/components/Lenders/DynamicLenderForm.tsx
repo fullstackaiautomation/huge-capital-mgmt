@@ -1,6 +1,6 @@
 // Dynamic Lender Form Component
 // Generates form fields based on lender type schema
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { getLenderTypeSchema } from '../../config/lenderTypeSchema';
 import type { FieldDefinition, FieldCategory } from '../../types/schema';
@@ -14,7 +14,7 @@ interface DynamicLenderFormProps {
 }
 
 interface FormErrors {
-  [key: string]: string;
+  [key: string]: string | undefined;
 }
 
 interface FormTouched {
