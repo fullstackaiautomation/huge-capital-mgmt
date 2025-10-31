@@ -255,17 +255,25 @@ export default function Lenders() {
           </td>
           <td className="text-left py-3 pr-2 pl-4 font-medium text-white">
             <div>
-              <div className="text-gray-300 text-base font-semibold">{lender.lender_name}</div>
-              {lender.lender_type === 'MCA' && (
-                <div className="text-gray-500 text-sm">
-                  {rawData?.paper || '—'}
-                </div>
-              )}
-              {lender.lender_name?.includes('ARF Financial') && rawData?.deal_type && (
-                <div className="text-gray-500 text-sm">
-                  {rawData.deal_type}
-                </div>
-              )}
+              {(() => {
+                const nameMatch = lender.lender_name?.match(/^(.*?)\s*\((.*?)\)$/);
+                const baseName = nameMatch ? nameMatch[1] : lender.lender_name;
+                const subtitle = nameMatch ? nameMatch[2] : null;
+
+                return (
+                  <>
+                    <div className="text-gray-300 text-base font-semibold">{baseName}</div>
+                    {subtitle && (
+                      <div className="text-gray-500 text-sm">{subtitle}</div>
+                    )}
+                    {lender.lender_type === 'MCA' && !subtitle && (
+                      <div className="text-gray-500 text-sm">
+                        {rawData?.paper || '—'}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </td>
           <td className="text-left py-3 px-4">
