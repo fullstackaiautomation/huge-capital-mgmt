@@ -6,7 +6,7 @@ WHERE lender_name = 'US Bank';
 
 UPDATE lenders_sba
 SET industry_restrictions = 'Transportation, Warehousing, Food Services, Hotels, Advertising and Consulting Services'
-WHERE lender_name = 'Credit Bench' OR lender_name = 'Bayfirst';
+WHERE lender_name ILIKE '%Credit Bench%' OR lender_name ILIKE '%Bayfirst%';
 
 UPDATE lenders_sba
 SET industry_restrictions = 'Restaurants, Coffee Shops, Bars, Adult Stores, Marijuana, Logistics and Trucking'
