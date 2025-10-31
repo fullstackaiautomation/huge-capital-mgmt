@@ -1032,8 +1032,8 @@ export default function Lenders() {
               onClick={() => setActiveFilter(filter.id)}
               className={`flex-1 px-4 py-3 rounded-lg transition-all ${
                 activeFilter === filter.id
-                  ? `${bgColor} ${borderColor} border-2 ${textColor} font-bold shadow-lg scale-105`
-                  : `${bgColor} ${borderColor} border border-transparent ${textColor} opacity-60 hover:opacity-80`
+                  ? `${bgColor} ${borderColor} border-2 ${textColor} font-semibold`
+                  : `${bgColor} ${borderColor} border border-transparent ${textColor}`
               }`}
             >
               <div className="flex flex-col items-center gap-2">
