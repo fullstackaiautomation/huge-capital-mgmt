@@ -6,7 +6,7 @@ import type { SbaLender } from '../types/lenders/sba';
 
 export interface UnifiedLender {
   id: string;
-  lender_type: 'Business Line of Credit' | 'MCA' | 'SBA' | 'CBA' | 'Term Loans' | 'Line of Credit' | 'Equipment Financing' | 'MCA Debt Restructuring' | 'DSCR' | 'Fix & Flip' | 'New Construction' | 'Commercial Real Estate' | 'Conventional Term Loan / LOC';
+  lender_type: 'Business Line of Credit' | 'MCA' | 'SBA' | 'CBA' | 'Term Loans' | 'Line of Credit' | 'Equipment Financing' | 'MCA Debt Restructuring' | 'DSCR' | 'Fix & Flip' | 'New Construction' | 'Commercial Real Estate';
   lender_name: string;
   website: string | null;
   phone: string | null;
@@ -367,12 +367,12 @@ export function useAllLenders(filterType?: string) {
         });
       }
 
-      // Process Conventional TL/LOC lenders
+      // Process Conventional TL/LOC lenders (mapped to CBA filter)
       if (conventionalData.data) {
         conventionalData.data.forEach((lender: any) => {
           allLenders.push({
             id: lender.id,
-            lender_type: 'Conventional Term Loan / LOC',
+            lender_type: 'CBA',
             lender_name: lender.lender_name,
             website: lender.website || null,
             phone: lender.phone || null,
