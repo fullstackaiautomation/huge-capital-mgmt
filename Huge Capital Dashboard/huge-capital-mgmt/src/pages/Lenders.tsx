@@ -212,7 +212,7 @@ export default function Lenders() {
 
     const rawData = lender.raw_data as any;
     const isoPhone = rawData?.phone || null;
-    const isoEmail = rawData?.iso_email || null;
+    const isoEmail = lender.email || null;
     const minMonthlyRevenue = rawData?.minimum_monthly_revenue || rawData?.min_monthly_revenue_amount || null;
     const adbMin = rawData?.minimum_daily_balances || rawData?.min_avg_daily_balance || null;
     const stateRestrictions = rawData?.states_restrictions || rawData?.ineligible_states || lender.restricted_industries || null;
@@ -284,23 +284,6 @@ export default function Lenders() {
               </div>
             ) : (
               <div className="text-gray-500">—</div>
-            )}
-          </td>
-          <td className="text-left py-3 px-4">
-            {submissionEmail ? (
-              <button
-                onClick={() => handleCopyEmail(submissionEmail)}
-                className="text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
-                title="Click to copy email"
-              >
-                {copiedEmail === submissionEmail ? (
-                  <span className="text-green-400">Copied!</span>
-                ) : (
-                  submissionEmail
-                )}
-              </button>
-            ) : (
-              <span className="text-gray-500">—</span>
             )}
           </td>
           <td className="text-center py-3 px-4">{lender.credit_requirement || <span className="text-gray-500">—</span>}</td>
@@ -1089,7 +1072,6 @@ export default function Lenders() {
                   <th className="text-center py-3 px-2 font-semibold w-8">Drag</th>
                   <th className="text-left py-3 pr-2 pl-4 font-semibold w-32">Lender Name</th>
                   <th className="text-left py-3 px-4 font-semibold w-40">ISO Rep</th>
-                  <th className="text-left py-3 px-4 font-semibold w-40">ISO Email</th>
                   <th className="text-center py-3 px-4 font-semibold w-20">Credit Min</th>
                   <th className="text-center py-3 px-4 font-semibold w-20">Revenue Min</th>
                   <th className="text-center py-3 px-4 font-semibold w-20">ADB<br />Min</th>
