@@ -865,6 +865,10 @@ export default function Lenders() {
                         <div className="text-gray-300">{rawData?.states_available || '—'}</div>
                       </div>
                       <div>
+                        <div className="text-gray-500 text-xs uppercase mb-1 font-semibold">State Restrictions</div>
+                        <div className="text-gray-300">{rawData?.states_available || '—'}</div>
+                      </div>
+                      <div>
                         <div className="text-gray-500 text-xs uppercase mb-1 font-semibold">Timeline</div>
                         <div className="text-gray-300">{rawData?.timeline || '—'}</div>
                       </div>
