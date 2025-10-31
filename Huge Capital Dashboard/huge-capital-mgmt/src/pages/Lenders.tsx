@@ -57,7 +57,7 @@ export default function Lenders() {
     { id: 'MCA', label: 'MCA' },
     { id: 'SBA', label: 'SBA' },
     { id: 'Term Loans', label: 'Term Loans' },
-    { id: 'CBA', label: 'CBA' },
+    { id: 'CBA', label: 'Conventional Bank\n(TL/LOC)' },
     { id: 'Equipment Financing', label: 'Equipment\nFinancing' },
     { id: 'MCA Debt Restructuring', label: 'MCA Debt\nRestructuring' },
     { id: 'DSCR', label: 'DSCR' },
