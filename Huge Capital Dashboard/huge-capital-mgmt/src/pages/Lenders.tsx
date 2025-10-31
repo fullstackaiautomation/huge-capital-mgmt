@@ -235,9 +235,9 @@ export default function Lenders() {
           </td>
           <td className="text-left py-3 pr-2 pl-4 font-medium text-white">
             <div>
-              <div className="text-gray-300 text-sm">{lender.lender_name}</div>
+              <div className="text-gray-300 text-base font-semibold">{lender.lender_name}</div>
               {lender.lender_type === 'MCA' && (
-                <div className="text-gray-500 text-xs">
+                <div className="text-gray-500 text-sm">
                   {rawData?.paper || '—'}
                 </div>
               )}
@@ -246,8 +246,8 @@ export default function Lenders() {
           <td className="text-left py-3 px-4">
             {lender.iso_rep ? (
               <div>
-                <div className="text-gray-300">{lender.iso_rep}</div>
-                {isoPhone && <div className="text-gray-500 text-xs">{isoPhone}</div>}
+                <div className="text-gray-300 text-base font-semibold">{lender.iso_rep}</div>
+                {isoPhone && <div className="text-gray-500 text-sm">{isoPhone}</div>}
               </div>
             ) : (
               <div className="text-gray-500">—</div>
