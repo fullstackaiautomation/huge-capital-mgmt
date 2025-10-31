@@ -294,7 +294,7 @@ INSERT INTO lenders_mca (
   'Mantis',
   'C Paper / D Paper',
   'Link',
-  'New Rep assigned on each deal',
+  'New Rep Per Deal',
   'Deal by deal case',
   'submissions@mantisfunding.com',
   '3 Bank Statements and App',
