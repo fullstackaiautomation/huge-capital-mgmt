@@ -992,10 +992,38 @@ export default function Lenders() {
             bgColor = 'bg-green-500/10';
             borderColor = 'border-green-400/30';
             textColor = 'text-green-300';
-          } else if (filter.id === 'Line of Credit') {
+          } else if (filter.id === 'Term Loans') {
+            bgColor = 'bg-cyan-500/10';
+            borderColor = 'border-cyan-400/30';
+            textColor = 'text-cyan-300';
+          } else if (filter.id === 'CBA') {
+            bgColor = 'bg-teal-500/10';
+            borderColor = 'border-teal-400/30';
+            textColor = 'text-teal-300';
+          } else if (filter.id === 'Equipment Financing') {
+            bgColor = 'bg-indigo-500/10';
+            borderColor = 'border-indigo-400/30';
+            textColor = 'text-indigo-300';
+          } else if (filter.id === 'MCA Debt Restructuring') {
+            bgColor = 'bg-rose-500/10';
+            borderColor = 'border-rose-400/30';
+            textColor = 'text-rose-300';
+          } else if (filter.id === 'DSCR') {
+            bgColor = 'bg-amber-500/10';
+            borderColor = 'border-amber-400/30';
+            textColor = 'text-amber-300';
+          } else if (filter.id === 'Fix & Flip') {
             bgColor = 'bg-orange-500/10';
             borderColor = 'border-orange-400/30';
             textColor = 'text-orange-300';
+          } else if (filter.id === 'New Construction') {
+            bgColor = 'bg-lime-500/10';
+            borderColor = 'border-lime-400/30';
+            textColor = 'text-lime-300';
+          } else if (filter.id === 'Commercial Real Estate') {
+            bgColor = 'bg-pink-500/10';
+            borderColor = 'border-pink-400/30';
+            textColor = 'text-pink-300';
           }
 
           return (
