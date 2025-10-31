@@ -1138,7 +1138,7 @@ export default function Lenders() {
                   <th className="text-center py-3 px-4 font-semibold w-20">Revenue Min</th>
                   <th className="text-center py-3 px-4 font-semibold w-20">ADB<br />Min</th>
                   <th className="text-left py-3 px-4 font-semibold w-96">Restricted Industries</th>
-                  <th className="text-center py-3 px-4 font-semibold w-24">State Restriction</th>
+                  <th className="text-center py-3 px-4 font-semibold w-24">{activeFilter === 'SBA' ? 'States Available' : 'State Restriction'}</th>
                   <th className="text-center py-3 px-4 font-semibold w-32">Submission Type</th>
                 </tr>
               </thead>
