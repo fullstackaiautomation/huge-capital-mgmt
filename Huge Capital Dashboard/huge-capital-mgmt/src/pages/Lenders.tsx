@@ -212,6 +212,7 @@ export default function Lenders() {
 
     const rawData = lender.raw_data as any;
     const isoPhone = rawData?.phone || null;
+    const isoEmail = rawData?.iso_email || null;
     const minMonthlyRevenue = rawData?.minimum_monthly_revenue || rawData?.min_monthly_revenue_amount || null;
     const adbMin = rawData?.minimum_daily_balances || rawData?.min_avg_daily_balance || null;
     const stateRestrictions = rawData?.states_restrictions || rawData?.ineligible_states || lender.restricted_industries || null;
@@ -267,6 +268,19 @@ export default function Lenders() {
               <div>
                 <div className="text-gray-300 text-base font-semibold">{lender.iso_rep}</div>
                 {isoPhone && <div className="text-gray-500 text-sm">{isoPhone}</div>}
+                {isoEmail && (
+                  <button
+                    onClick={() => handleCopyEmail(isoEmail)}
+                    className="text-blue-400 hover:text-blue-300 transition-colors cursor-pointer text-sm"
+                    title="Click to copy ISO email"
+                  >
+                    {copiedEmail === isoEmail ? (
+                      <span className="text-green-400">Copied!</span>
+                    ) : (
+                      isoEmail
+                    )}
+                  </button>
+                )}
               </div>
             ) : (
               <div className="text-gray-500">—</div>
