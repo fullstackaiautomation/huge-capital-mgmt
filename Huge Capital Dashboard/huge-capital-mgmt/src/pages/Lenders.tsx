@@ -271,7 +271,7 @@ export default function Lenders() {
                 {isoEmail && (
                   <button
                     onClick={() => handleCopyEmail(isoEmail)}
-                    className="text-blue-400 hover:text-blue-300 transition-colors cursor-pointer text-sm"
+                    className="text-blue-400 hover:text-blue-300 transition-colors cursor-pointer text-sm block whitespace-nowrap truncate"
                     title="Click to copy ISO email"
                   >
                     {copiedEmail === isoEmail ? (
