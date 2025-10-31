@@ -261,6 +261,11 @@ export default function Lenders() {
                   {rawData?.paper || '—'}
                 </div>
               )}
+              {lender.lender_name?.includes('ARF Financial') && rawData?.deal_type && (
+                <div className="text-gray-500 text-sm">
+                  {rawData.deal_type}
+                </div>
+              )}
             </div>
           </td>
           <td className="text-left py-3 px-4">
