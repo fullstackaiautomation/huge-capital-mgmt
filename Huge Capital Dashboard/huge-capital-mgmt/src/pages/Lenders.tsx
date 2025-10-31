@@ -235,7 +235,7 @@ export default function Lenders() {
           </td>
           <td className="text-left py-3 pr-2 pl-4 font-medium text-white">
             <div>
-              <div className="text-gray-300">{lender.lender_name}</div>
+              <div className="text-gray-300 text-sm">{lender.lender_name}</div>
               {lender.lender_type === 'MCA' && (
                 <div className="text-gray-500 text-xs">
                   {rawData?.paper || '—'}
@@ -1026,13 +1026,13 @@ export default function Lenders() {
               <thead className="border-b border-gray-700 bg-gray-800/50">
                 <tr>
                   <th className="text-center py-3 px-2 font-semibold w-8">Drag</th>
-                  <th className="text-left py-3 pr-2 pl-4 font-semibold w-44">Lender Name</th>
-                  <th className="text-left py-3 px-4 font-semibold w-44">ISO Rep</th>
+                  <th className="text-left py-3 pr-2 pl-4 font-semibold w-32">Lender Name</th>
+                  <th className="text-left py-3 px-4 font-semibold w-40">ISO Rep</th>
                   <th className="text-left py-3 px-4 font-semibold w-40">ISO Email</th>
                   <th className="text-center py-3 px-4 font-semibold w-20">Credit Min</th>
                   <th className="text-center py-3 px-4 font-semibold w-20">Revenue Min</th>
                   <th className="text-center py-3 px-4 font-semibold w-20">ADB<br />Min</th>
-                  <th className="text-left py-3 px-4 font-semibold w-56">Restricted Industries</th>
+                  <th className="text-left py-3 px-4 font-semibold w-96">Restricted Industries</th>
                   <th className="text-center py-3 px-4 font-semibold w-24">State Restriction</th>
                   <th className="text-center py-3 px-4 font-semibold w-32">Submission Type</th>
                 </tr>
