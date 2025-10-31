@@ -293,6 +293,18 @@ Migration created: `20251101000004_add_doc_links_to_mca.sql`
 | Emmy Capital | https://emmycapitalgroup.com/ | https://drive.google.com/drive/folders/1MHEMLbeiwt09FSihXt2QZRwi3-Nwy5zw |
 | Kalamata | https://www.kalamatacapitalgroup.com/ | https://drive.google.com/drive/folders/1jlHhe0b7_Bk1FnACRiqIdig7GJLwhgXO |
 
+**Migration: `20251101000008_populate_mca_restricted_industries_links.sql` - Restricted Industries Doc Links**
+| Lender | Restricted Industries Link |
+|--------|---------------------------|
+| Credibly | https://drive.google.com/drive/folders/1M89s6eSRheha_O1VOvNPXc4oAnvbB7FJ?usp=drive_link |
+| Rapid | https://drive.google.com/file/d/1EEmFuZFY7Q0sdPcWSyGjnOcMbwqUodma/view |
+| TMRnow | https://drive.google.com/drive/folders/1RjZY6TuP_aN7izsQxjCntDQ5q0qgjgSs |
+| Fintegra | https://drive.google.com/drive/folders/1xE3W6ngg8X2fqKXrBUgN15ZpNjVE2aDI |
+| Fresh Funding | https://drive.google.com/drive/folders/1DOV5wbLF-VQ0HaOQcHduTKnH5NzUEoHG |
+| Fintap | https://drive.google.com/drive/folders/1s_VNKIcZgHGxhOD2vaK-p6ezkFML64jS |
+| Legend Advance | https://drive.google.com/drive/folders/1s_VNKIcZgHGxhOD2vaK-p6ezkFML64jS |
+| Mantis | https://drive.google.com/drive/folders/1oHLgjPmZOQmWnsjJUDXjFMJ4tJl8_m04?usp=sharing |
+
 #### MCA Columns NOT Used in Expandable Details
 These fields exist in the MCA schema but are not displayed in the expanded row details:
 1. `note` - Additional notes (available but not displayed)
