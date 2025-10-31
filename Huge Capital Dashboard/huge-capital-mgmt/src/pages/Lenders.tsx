@@ -239,7 +239,7 @@ export default function Lenders() {
     const isoEmail = lender.email || null;
     const minMonthlyRevenue = rawData?.minimum_monthly_revenue || rawData?.min_monthly_revenue_amount || null;
     const adbMin = rawData?.minimum_daily_balances || rawData?.min_avg_daily_balance || null;
-    const stateRestrictions = rawData?.states_restrictions || rawData?.ineligible_states || lender.restricted_industries || null;
+    const stateRestrictions = lender.lender_type === 'SBA' ? rawData?.states_available : rawData?.states_restrictions || rawData?.ineligible_states || null;
 
     const handleCopyEmail = (email: string) => {
       navigator.clipboard.writeText(email);
@@ -326,29 +326,29 @@ export default function Lenders() {
           <td className="text-center py-3 px-4">{minMonthlyRevenue || <span className="text-gray-500">—</span>}</td>
           <td className="text-center py-3 px-4">{adbMin || <span className="text-gray-500">—</span>}</td>
           <td className="text-left py-3 px-4 text-xs">
-            {lender.restricted_industries ? (
+            {rawData?.restricted_industries ? (
               rawData?.restricted_industries_doc_link ? (
                 <span>
-                  {lender.restricted_industries.includes('Industry List') ? (
+                  {rawData.restricted_industries.includes('Industry List') ? (
                     <>
-                      {lender.restricted_industries.replace(/Industry List/g, '')}
+                      {rawData.restricted_industries.replace(/Industry List/g, '')}
                       <a href={rawData.restricted_industries_doc_link} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">
                         Industry List
                       </a>
                     </>
-                  ) : lender.restricted_industries.includes('Full List') ? (
+                  ) : rawData.restricted_industries.includes('Full List') ? (
                     <>
-                      {lender.restricted_industries.replace(/Full List/g, '')}
+                      {rawData.restricted_industries.replace(/Full List/g, '')}
                       <a href={rawData.restricted_industries_doc_link} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">
                         Full List
                       </a>
                     </>
                   ) : (
-                    lender.restricted_industries
+                    rawData.restricted_industries
                   )}
                 </span>
               ) : (
-                lender.restricted_industries
+                rawData.restricted_industries
               )
             ) : (
               <span className="text-gray-500">—</span>
