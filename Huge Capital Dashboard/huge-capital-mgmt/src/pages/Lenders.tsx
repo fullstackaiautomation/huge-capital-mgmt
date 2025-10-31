@@ -795,10 +795,32 @@ export default function Lenders() {
                       <div>
                         <div className="text-gray-500 text-xs uppercase mb-1 font-semibold">Industry Restrictions</div>
                         <div className="text-gray-300 text-xs">
-                          {rawData?.restricted_industries_doc_link ? (
-                            <a href={rawData.restricted_industries_doc_link} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">
-                              Full List
-                            </a>
+                          {rawData?.restricted_industries ? (
+                            rawData?.restricted_industries_doc_link ? (
+                              <span>
+                                {rawData.restricted_industries.includes('Full List') ? (
+                                  <>
+                                    {rawData.restricted_industries.replace(/Full List/g, '')}
+                                    <a href={rawData.restricted_industries_doc_link} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">
+                                      Full List
+                                    </a>
+                                  </>
+                                ) : rawData.restricted_industries.includes('Industry List') ? (
+                                  <>
+                                    {rawData.restricted_industries.replace(/Industry List/g, '')}
+                                    <a href={rawData.restricted_industries_doc_link} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">
+                                      Industry List
+                                    </a>
+                                  </>
+                                ) : (
+                                  <>
+                                    {rawData.restricted_industries}
+                                  </>
+                                )}
+                              </span>
+                            ) : (
+                              rawData.restricted_industries
+                            )
                           ) : (
                             '—'
                           )}
