@@ -23,6 +23,7 @@ export interface UnifiedLender {
   status: 'active' | 'inactive' | 'pending' | 'archived';
   relationship: 'Huge Capital' | 'IFS';
   created_at: string;
+  sort_order: number;
   raw_data: BusinessLineOfCreditLender | McaLender | SbaLender;
 }
 
@@ -141,8 +142,13 @@ export function useAllLenders(filterType?: string) {
         filtered = allLenders.filter(l => l.lender_type === filterType);
       }
 
-      // Sort by lender name
-      filtered.sort((a, b) => a.lender_name.localeCompare(b.lender_name));
+      // Sort by sort_order (if set), then by lender name
+      filtered.sort((a, b) => {
+        if (a.sort_order !== 0 || b.sort_order !== 0) {
+          return a.sort_order - b.sort_order;
+        }
+        return a.lender_name.localeCompare(b.lender_name);
+      });
 
       setLenders(filtered);
     } catch (err) {

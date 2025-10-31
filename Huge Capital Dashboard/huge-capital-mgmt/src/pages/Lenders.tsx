@@ -953,7 +953,7 @@ export default function Lenders() {
 
       {/* Filter Buttons - Single Row with Counts */}
       <div className="overflow-x-auto">
-        <div className="flex gap-2 pb-2">
+        <div className="flex gap-1 pb-2">
           {filters.map(filter => {
           const isPrimary = ['Business Line of Credit', 'MCA', 'SBA'].includes(filter.id);
           let bgColor = 'bg-gray-500/10';
