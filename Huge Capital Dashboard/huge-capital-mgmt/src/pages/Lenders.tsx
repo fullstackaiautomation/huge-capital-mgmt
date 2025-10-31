@@ -2,7 +2,7 @@
 // Epic 2: Lenders Dashboard (LD-001)
 
 import { useState } from 'react';
-import { Building2, Edit, Plus, X, GripVertical, ChevronDown } from 'lucide-react';
+import { Building2, Plus, X, GripVertical, ChevronDown } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -24,6 +24,7 @@ import { useAllLenders, type UnifiedLender } from '../hooks/useAllLenders';
 import { useBusinessLineOfCreditLenders } from '../hooks/useBusinessLineOfCreditLenders';
 import { useMcaLenders } from '../hooks/useMcaLenders';
 import { useSbaLenders } from '../hooks/useSbaLenders';
+import { supabase } from '../lib/supabase';
 import type { BusinessLineOfCreditLenderFormData } from '../types/lenders/businessLineOfCredit';
 import type { McaLenderFormData } from '../types/lenders/mca';
 import type { SbaLenderFormData } from '../types/lenders/sba';
@@ -31,12 +32,10 @@ import type { SbaLenderFormData } from '../types/lenders/sba';
 export default function Lenders() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [relationshipFilter, setRelationshipFilter] = useState<'all' | 'Huge Capital' | 'IFS'>('Huge Capital');
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedLenderType, setSelectedLenderType] = useState<'Business Line of Credit' | 'MCA' | 'SBA' | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [displayLenders, setDisplayLenders] = useState<UnifiedLender[]>([]);
   const { lenders: allLenders, loading, error, fetchAllLenders } = useAllLenders();
   const { addLender: addBLCLender } = useBusinessLineOfCreditLenders();
   const { addLender: addMCALender } = useMcaLenders();
@@ -111,9 +110,6 @@ export default function Lenders() {
     if (over && active.id !== over.id) {
       const oldIndex = lenders.findIndex(lender => lender.id === active.id);
       const newIndex = lenders.findIndex(lender => lender.id === over.id);
-
-      const newLenders = arrayMove(lenders, oldIndex, newIndex);
-      setDisplayLenders(newLenders);
 
       // Save the new sort order to the database
       try {

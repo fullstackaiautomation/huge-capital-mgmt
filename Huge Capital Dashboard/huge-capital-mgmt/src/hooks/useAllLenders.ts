@@ -6,7 +6,7 @@ import type { SbaLender } from '../types/lenders/sba';
 
 export interface UnifiedLender {
   id: string;
-  lender_type: 'Business Line of Credit' | 'MCA' | 'SBA' | 'CBA' | 'Term Loans' | 'Line of Credit' | 'Equipment Financing' | 'MCA Debt Restructuring' | 'DSCR' | 'Fix & Flip' | 'New Construction' | 'Commercial Real Estate';
+  lender_type: 'Business Line of Credit' | 'MCA' | 'SBA' | 'CBA' | 'Term Loans' | 'Line of Credit' | 'Equipment Financing' | 'MCA Debt Restructuring' | 'DSCR' | 'Fix & Flip' | 'New Construction' | 'Commercial Real Estate' | 'Conventional Term Loan / LOC';
   lender_name: string;
   website: string | null;
   phone: string | null;
@@ -24,7 +24,7 @@ export interface UnifiedLender {
   relationship: 'Huge Capital' | 'IFS';
   created_at: string;
   sort_order: number;
-  raw_data: BusinessLineOfCreditLender | McaLender | SbaLender;
+  raw_data: BusinessLineOfCreditLender | McaLender | SbaLender | any;
 }
 
 export function useAllLenders(filterType?: string) {
@@ -37,8 +37,8 @@ export function useAllLenders(filterType?: string) {
       setLoading(true);
       setError(null);
 
-      // Fetch from all 3 tables in parallel
-      const [blcData, mcaData, sbaData] = await Promise.all([
+      // Fetch from all 11 tables in parallel (3 original + 8 new lender types)
+      const [blcData, mcaData, sbaData, termLoansData, dscrData, equipmentData, fixFlipData, newConstructionData, creData, mcaDebtData, conventionalData] = await Promise.all([
         supabase
           .from('lenders_business_line_of_credit')
           .select('*')
@@ -49,6 +49,38 @@ export function useAllLenders(filterType?: string) {
           .eq('status', 'active'),
         supabase
           .from('lenders_sba')
+          .select('*')
+          .eq('status', 'active'),
+        supabase
+          .from('lenders_term_loans')
+          .select('*')
+          .eq('status', 'active'),
+        supabase
+          .from('lenders_dscr')
+          .select('*')
+          .eq('status', 'active'),
+        supabase
+          .from('lenders_equipment_financing')
+          .select('*')
+          .eq('status', 'active'),
+        supabase
+          .from('lenders_fix_flip')
+          .select('*')
+          .eq('status', 'active'),
+        supabase
+          .from('lenders_new_construction')
+          .select('*')
+          .eq('status', 'active'),
+        supabase
+          .from('lenders_commercial_real_estate')
+          .select('*')
+          .eq('status', 'active'),
+        supabase
+          .from('lenders_mca_debt_restructuring')
+          .select('*')
+          .eq('status', 'active'),
+        supabase
+          .from('lenders_conventional_tl_loc')
           .select('*')
           .eq('status', 'active'),
       ]);
@@ -139,6 +171,230 @@ export function useAllLenders(filterType?: string) {
         });
       }
 
+      // Process Term Loans lenders
+      if (termLoansData.data) {
+        termLoansData.data.forEach((lender: any) => {
+          allLenders.push({
+            id: lender.id,
+            lender_type: 'Term Loans',
+            lender_name: lender.lender_name,
+            website: lender.website || null,
+            phone: lender.phone || null,
+            email: lender.email || null,
+            iso_rep: lender.contact_person || null,
+            credit_requirement: lender.credit_requirement || null,
+            minimum_loan_amount: lender.min_loan_amount || null,
+            max_loan_amount: lender.max_loan_amount || null,
+            products_offered: lender.products_offered || null,
+            preferred_industries: lender.preferred_industries || null,
+            restricted_industries: lender.restricted_industries || null,
+            submission_type: lender.submission_process || null,
+            google_drive: lender.drive_link || null,
+            status: lender.status,
+            relationship: lender.relationship,
+            created_at: lender.created_at,
+            sort_order: 0,
+            raw_data: lender,
+          });
+        });
+      }
+
+      // Process DSCR lenders
+      if (dscrData.data) {
+        dscrData.data.forEach((lender: any) => {
+          allLenders.push({
+            id: lender.id,
+            lender_type: 'DSCR',
+            lender_name: lender.lender_name,
+            website: null,
+            phone: lender.phone || null,
+            email: lender.email || null,
+            iso_rep: lender.contact_person || null,
+            credit_requirement: lender.credit_requirement || null,
+            minimum_loan_amount: lender.min_loan_amount || null,
+            max_loan_amount: lender.max_loan_amount || null,
+            products_offered: null,
+            preferred_industries: null,
+            restricted_industries: null,
+            submission_type: lender.submission_process || null,
+            google_drive: lender.drive_link || null,
+            status: lender.status,
+            relationship: lender.relationship,
+            created_at: lender.created_at,
+            sort_order: 0,
+            raw_data: lender,
+          });
+        });
+      }
+
+      // Process Equipment Financing lenders
+      if (equipmentData.data) {
+        equipmentData.data.forEach((lender: any) => {
+          allLenders.push({
+            id: lender.id,
+            lender_type: 'Equipment Financing',
+            lender_name: lender.lender_name,
+            website: lender.website || null,
+            phone: lender.phone || null,
+            email: lender.email || null,
+            iso_rep: lender.iso_rep || null,
+            credit_requirement: lender.minimum_credit_requirement || null,
+            minimum_loan_amount: lender.min_loan_amount || null,
+            max_loan_amount: lender.max_loan_amount || null,
+            products_offered: lender.financing_types || null,
+            preferred_industries: lender.preferred_equipment || null,
+            restricted_industries: lender.equipment_restrictions || null,
+            submission_type: lender.submission_process || null,
+            google_drive: null,
+            status: lender.status,
+            relationship: lender.relationship,
+            created_at: lender.created_at,
+            sort_order: 0,
+            raw_data: lender,
+          });
+        });
+      }
+
+      // Process Fix & Flip lenders
+      if (fixFlipData.data) {
+        fixFlipData.data.forEach((lender: any) => {
+          allLenders.push({
+            id: lender.id,
+            lender_type: 'Fix & Flip',
+            lender_name: lender.lender_name,
+            website: null,
+            phone: lender.phone || null,
+            email: lender.email || null,
+            iso_rep: lender.contact_person || null,
+            credit_requirement: lender.credit_requirement || null,
+            minimum_loan_amount: lender.min_loan_amount || null,
+            max_loan_amount: lender.max_loan_amount || null,
+            products_offered: null,
+            preferred_industries: null,
+            restricted_industries: null,
+            submission_type: lender.submission_process || null,
+            google_drive: lender.drive_link || null,
+            status: lender.status,
+            relationship: lender.relationship,
+            created_at: lender.created_at,
+            sort_order: 0,
+            raw_data: lender,
+          });
+        });
+      }
+
+      // Process New Construction lenders
+      if (newConstructionData.data) {
+        newConstructionData.data.forEach((lender: any) => {
+          allLenders.push({
+            id: lender.id,
+            lender_type: 'New Construction',
+            lender_name: lender.lender_name,
+            website: lender.website || null,
+            phone: lender.phone || null,
+            email: lender.email || null,
+            iso_rep: lender.contact_person || null,
+            credit_requirement: lender.credit_requirement || null,
+            minimum_loan_amount: lender.min_loan_amount || null,
+            max_loan_amount: lender.max_loan_amount || null,
+            products_offered: null,
+            preferred_industries: null,
+            restricted_industries: null,
+            submission_type: lender.submission_process || null,
+            google_drive: lender.drive_link || null,
+            status: lender.status,
+            relationship: lender.relationship,
+            created_at: lender.created_at,
+            sort_order: 0,
+            raw_data: lender,
+          });
+        });
+      }
+
+      // Process Commercial Real Estate lenders
+      if (creData.data) {
+        creData.data.forEach((lender: any) => {
+          allLenders.push({
+            id: lender.id,
+            lender_type: 'Commercial Real Estate',
+            lender_name: lender.lender_name,
+            website: lender.website || null,
+            phone: lender.phone || null,
+            email: lender.email || null,
+            iso_rep: lender.contact_person || null,
+            credit_requirement: lender.credit_requirement || null,
+            minimum_loan_amount: lender.min_loan_amount || null,
+            max_loan_amount: lender.max_loan_amount || null,
+            products_offered: lender.products_offered || null,
+            preferred_industries: null,
+            restricted_industries: null,
+            submission_type: null,
+            google_drive: null,
+            status: lender.status,
+            relationship: lender.relationship,
+            created_at: lender.created_at,
+            sort_order: 0,
+            raw_data: lender,
+          });
+        });
+      }
+
+      // Process MCA Debt Restructuring lenders
+      if (mcaDebtData.data) {
+        mcaDebtData.data.forEach((lender: any) => {
+          allLenders.push({
+            id: lender.id,
+            lender_type: 'MCA Debt Restructuring',
+            lender_name: lender.lender_name,
+            website: lender.website || null,
+            phone: lender.phone || null,
+            email: lender.email || null,
+            iso_rep: lender.contact_person || null,
+            credit_requirement: lender.credit_requirement || null,
+            minimum_loan_amount: lender.min_loan_amount || null,
+            max_loan_amount: lender.max_loan_amount || null,
+            products_offered: lender.products_offered || null,
+            preferred_industries: null,
+            restricted_industries: null,
+            submission_type: null,
+            google_drive: null,
+            status: lender.status,
+            relationship: lender.relationship,
+            created_at: lender.created_at,
+            sort_order: 0,
+            raw_data: lender,
+          });
+        });
+      }
+
+      // Process Conventional TL/LOC lenders
+      if (conventionalData.data) {
+        conventionalData.data.forEach((lender: any) => {
+          allLenders.push({
+            id: lender.id,
+            lender_type: 'Conventional Term Loan / LOC',
+            lender_name: lender.lender_name,
+            website: lender.website || null,
+            phone: lender.phone || null,
+            email: lender.email || null,
+            iso_rep: lender.contact_person || null,
+            credit_requirement: lender.credit_requirement || null,
+            minimum_loan_amount: lender.min_loan_amount || null,
+            max_loan_amount: lender.max_loan_amount || null,
+            products_offered: null,
+            preferred_industries: lender.preferred_industries || null,
+            restricted_industries: lender.restricted_industries || null,
+            submission_type: lender.submission_process || null,
+            google_drive: null,
+            status: lender.status,
+            relationship: lender.relationship,
+            created_at: lender.created_at,
+            sort_order: 0,
+            raw_data: lender,
+          });
+        });
+      }
+
       // Filter by type if specified
       let filtered = allLenders;
       if (filterType && filterType !== 'all') {
@@ -166,32 +422,78 @@ export function useAllLenders(filterType?: string) {
   useEffect(() => {
     fetchAllLenders();
 
-    // Subscribe to changes in all three tables
-    const blcSubscription = supabase
-      .channel('all_lenders_changes_blc')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'lenders_business_line_of_credit' }, () => {
-        fetchAllLenders();
-      })
-      .subscribe();
-
-    const mcaSubscription = supabase
-      .channel('all_lenders_changes_mca')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'lenders_mca' }, () => {
-        fetchAllLenders();
-      })
-      .subscribe();
-
-    const sbaSubscription = supabase
-      .channel('all_lenders_changes_sba')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'lenders_sba' }, () => {
-        fetchAllLenders();
-      })
-      .subscribe();
+    // Subscribe to changes in all 11 tables
+    const subscriptions = [
+      supabase
+        .channel('all_lenders_changes_blc')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'lenders_business_line_of_credit' }, () => {
+          fetchAllLenders();
+        })
+        .subscribe(),
+      supabase
+        .channel('all_lenders_changes_mca')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'lenders_mca' }, () => {
+          fetchAllLenders();
+        })
+        .subscribe(),
+      supabase
+        .channel('all_lenders_changes_sba')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'lenders_sba' }, () => {
+          fetchAllLenders();
+        })
+        .subscribe(),
+      supabase
+        .channel('all_lenders_changes_term_loans')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'lenders_term_loans' }, () => {
+          fetchAllLenders();
+        })
+        .subscribe(),
+      supabase
+        .channel('all_lenders_changes_dscr')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'lenders_dscr' }, () => {
+          fetchAllLenders();
+        })
+        .subscribe(),
+      supabase
+        .channel('all_lenders_changes_equipment')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'lenders_equipment_financing' }, () => {
+          fetchAllLenders();
+        })
+        .subscribe(),
+      supabase
+        .channel('all_lenders_changes_fix_flip')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'lenders_fix_flip' }, () => {
+          fetchAllLenders();
+        })
+        .subscribe(),
+      supabase
+        .channel('all_lenders_changes_new_construction')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'lenders_new_construction' }, () => {
+          fetchAllLenders();
+        })
+        .subscribe(),
+      supabase
+        .channel('all_lenders_changes_cre')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'lenders_commercial_real_estate' }, () => {
+          fetchAllLenders();
+        })
+        .subscribe(),
+      supabase
+        .channel('all_lenders_changes_mca_debt')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'lenders_mca_debt_restructuring' }, () => {
+          fetchAllLenders();
+        })
+        .subscribe(),
+      supabase
+        .channel('all_lenders_changes_conventional')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'lenders_conventional_tl_loc' }, () => {
+          fetchAllLenders();
+        })
+        .subscribe(),
+    ];
 
     return () => {
-      blcSubscription.unsubscribe();
-      mcaSubscription.unsubscribe();
-      sbaSubscription.unsubscribe();
+      subscriptions.forEach(sub => sub.unsubscribe());
     };
   }, [filterType]);
 
