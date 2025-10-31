@@ -24,6 +24,7 @@ export interface SbaLender {
   created_by: string | null;
   updated_by: string | null;
   status: 'active' | 'inactive' | 'pending' | 'archived';
+  relationship: 'Huge Capital' | 'IFS';
 }
 
 export interface SbaLenderFormData {
@@ -47,4 +48,5 @@ export interface SbaLenderFormData {
   google_drive?: string;
   note?: string;
   status: 'active' | 'inactive' | 'pending' | 'archived';
+  relationship?: 'Huge Capital' | 'IFS';
 }

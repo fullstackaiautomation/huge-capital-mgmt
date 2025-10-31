@@ -24,12 +24,16 @@ export interface McaLender {
   preferred_industries: string | null;
   restricted_industries: string | null;
   google_drive: string | null;
+  portal_url: string | null;
+  preferred_industries_doc_link: string | null;
+  restricted_industries_doc_link: string | null;
   note: string | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;
   updated_by: string | null;
   status: 'active' | 'inactive' | 'pending' | 'archived';
+  relationship: 'Huge Capital' | 'IFS';
 }
 
 export interface McaLenderFormData {
@@ -57,6 +61,10 @@ export interface McaLenderFormData {
   preferred_industries?: string;
   restricted_industries?: string;
   google_drive?: string;
+  portal_url?: string;
+  preferred_industries_doc_link?: string;
+  restricted_industries_doc_link?: string;
   note?: string;
   status: 'active' | 'inactive' | 'pending' | 'archived';
+  relationship?: 'Huge Capital' | 'IFS';
 }

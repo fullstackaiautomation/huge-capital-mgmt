@@ -6,11 +6,12 @@ import type { SbaLender } from '../types/lenders/sba';
 
 export interface UnifiedLender {
   id: string;
-  lender_type: 'Business Line of Credit' | 'MCA' | 'SBA';
+  lender_type: 'Business Line of Credit' | 'MCA' | 'SBA' | 'CBA' | 'Term Loans' | 'Line of Credit' | 'Equipment Financing' | 'MCA Debt Restructuring' | 'DSCR' | 'Fix & Flip' | 'New Construction' | 'Commercial Real Estate';
   lender_name: string;
   website: string | null;
   phone: string | null;
   email: string | null;
+  iso_rep: string | null;
   credit_requirement: number | null;
   minimum_loan_amount: string | null;
   max_loan_amount: string | null;
@@ -20,6 +21,7 @@ export interface UnifiedLender {
   submission_type: string | null;
   google_drive: string | null;
   status: 'active' | 'inactive' | 'pending' | 'archived';
+  relationship: 'Huge Capital' | 'IFS';
   created_at: string;
   raw_data: BusinessLineOfCreditLender | McaLender | SbaLender;
 }
@@ -62,6 +64,7 @@ export function useAllLenders(filterType?: string) {
             website: lender.website || null,
             phone: lender.phone || null,
             email: lender.email || null,
+            iso_rep: (lender as any).iso_contacts || (lender as any).iso_rep || null,
             credit_requirement: lender.credit_requirement || null,
             minimum_loan_amount: null,
             max_loan_amount: lender.max_loan || null,
@@ -71,6 +74,7 @@ export function useAllLenders(filterType?: string) {
             submission_type: lender.submission_type || null,
             google_drive: lender.drive_link || null,
             status: lender.status,
+            relationship: lender.relationship,
             created_at: lender.created_at,
             raw_data: lender,
           });
@@ -87,6 +91,7 @@ export function useAllLenders(filterType?: string) {
             website: lender.website,
             phone: lender.phone,
             email: lender.email,
+            iso_rep: lender.iso_rep,
             credit_requirement: lender.minimum_credit_requirement,
             minimum_loan_amount: lender.minimum_loan_amount,
             max_loan_amount: lender.max_loan_amount,
@@ -96,6 +101,7 @@ export function useAllLenders(filterType?: string) {
             submission_type: lender.submission_type,
             google_drive: lender.google_drive,
             status: lender.status,
+            relationship: lender.relationship,
             created_at: lender.created_at,
             raw_data: lender,
           });
@@ -112,6 +118,7 @@ export function useAllLenders(filterType?: string) {
             website: lender.website,
             phone: lender.phone,
             email: lender.email,
+            iso_rep: (lender as any).iso_rep || (lender as any).contact_person || null,
             credit_requirement: lender.credit_requirement,
             minimum_loan_amount: lender.minimum_loan_amount,
             max_loan_amount: lender.max_loan_amount,
@@ -121,6 +128,7 @@ export function useAllLenders(filterType?: string) {
             submission_type: lender.submission_type,
             google_drive: lender.google_drive,
             status: lender.status,
+            relationship: lender.relationship,
             created_at: lender.created_at,
             raw_data: lender,
           });

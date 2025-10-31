@@ -48,6 +48,7 @@ export interface BusinessLineOfCreditLender {
   created_by?: string;
   updated_by?: string;
   status: 'active' | 'inactive' | 'pending' | 'archived';
+  relationship: 'Huge Capital' | 'IFS';
 }
 
 export interface BusinessLineOfCreditLenderFormData {
@@ -78,4 +79,5 @@ export interface BusinessLineOfCreditLenderFormData {
   drive_link?: string;
   notes?: string;
   status: 'active' | 'inactive' | 'pending' | 'archived';
+  relationship?: 'Huge Capital' | 'IFS';
 }
