@@ -35,7 +35,7 @@ Always update .agent docs after implementing a feature to ensure they reflect up
 
 ### GitHub Actions
 The project uses `deploy.yml` workflow:
-- Triggers on push to `main` branch
+- Triggers on push to `master` branch
 - Builds with: `npm run build -- --mode production`
 - Deploys to GitHub Pages at https://hugecapital.fullstackaiautomation.com/
 - Custom domain configured via `public/CNAME`
