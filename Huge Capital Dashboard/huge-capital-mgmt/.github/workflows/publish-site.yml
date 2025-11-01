@@ -38,7 +38,7 @@ jobs:
           VITE_GOOGLE_SHEETS_API_KEY: ${{ secrets.VITE_GOOGLE_SHEETS_API_KEY }}
           VITE_GOOGLE_SHEETS_ID: ${{ secrets.VITE_GOOGLE_SHEETS_ID }}
           VITE_LENDERS_GOOGLE_SHEETS_ID: ${{ secrets.VITE_LENDERS_GOOGLE_SHEETS_ID }}
-        run: npm run build
+        run: npm run build -- --mode production
 
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
