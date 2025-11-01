@@ -150,7 +150,7 @@ git commit -m "Initial deployment"
 git push origin main
 \`\`\`
 
-Your app will be available at: \`https://[username].github.io/[repo-name]/\`
+Your app will be available at: \`https://hugecapital.fullstackaiautomation.com/\`
 
 ## Project Structure
 
