@@ -26,6 +26,22 @@ Always update .agent docs after implementing a feature to ensure they reflect up
 
 ---
 
+## Deployment & Git Workflow
+
+### Push Settings
+- Claude Code is configured to allow `git push -f` (force push) for deployment workflows
+- Force push is used when resetting to clean commits before deployment
+- Always verify the commit before using force push
+
+### GitHub Actions
+The project uses `deploy.yml` workflow (NOT "pages build and deployment"):
+- Triggers on push to `master` branch
+- Builds with: `npm run build -- --mode production`
+- Deploys to GitHub Pages at https://hugecapital.fullstackaiautomation.com/
+- Custom domain configured via `public/CNAME`
+
+---
+
 ## Tech Stack
 - **Frontend**: React 18 with TypeScript
 - **Styling**: Tailwind CSS with custom utilities
