@@ -36,10 +36,13 @@ Always update .agent docs after implementing a feature to ensure they reflect up
 ### GitHub Actions
 The project uses `deploy.yml` workflow:
 - Triggers on push to `master` branch
-- Builds with: `npm run build -- --mode production`
+- **CRITICAL:** Workflow must run inside `Huge Capital Dashboard/huge-capital-mgmt/` subdirectory (not repo root)
+- All npm commands (`npm ci`, `npm run build`) execute in the subdirectory where package.json lives
+- npm cache points to subdirectory's package-lock.json
+- Builds with: `npm run build` (production mode)
 - Deploys to GitHub Pages at https://hugecapital.fullstackaiautomation.com/
 - Custom domain configured via `public/CNAME`
-- GitHub Pages configured to deploy from GitHub Actions
+- GitHub Pages source MUST be set to "GitHub Actions" (not "Deploy from branch")
 
 ---
 

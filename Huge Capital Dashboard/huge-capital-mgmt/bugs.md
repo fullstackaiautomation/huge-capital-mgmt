@@ -3,6 +3,43 @@
 ## Active Bugs
 None currently reported.
 
+## Critical Post-Mortem: 10-Hour GitHub Pages Deployment Failure (November 1, 2025)
+
+### What Happened
+Deployment failed for 10+ hours due to GitHub Actions workflow running in wrong directory.
+
+### Root Cause
+- Repository structure has project nested in `Huge Capital Dashboard/huge-capital-mgmt/` subdirectory
+- GitHub Actions workflow ran at repo root where NO package.json/package-lock.json exists
+- `npm ci` failed immediately looking for package-lock.json in wrong location
+- Error message was clear but was not properly diagnosed for hours
+
+### What Was Tried (All Failed)
+1. ❌ Switching between master/main branches (not the issue)
+2. ❌ Fixing CNAME configuration (not the issue)
+3. ❌ Adding .nojekyll file (not the issue)
+4. ❌ Changing workflow trigger branches (not the issue)
+5. ❌ Manually setting GitHub secrets (needed but not the core issue)
+6. ❌ Trying to disable Jekyll workflow (not the issue)
+7. ❌ Attempting to change GitHub Pages settings via code (impossible without auth)
+
+### Actual Solution (Fixed by Codex in 5 minutes)
+Updated `.github/workflows/deploy.yml` to:
+- Set working directory to `Huge Capital Dashboard/huge-capital-mgmt/`
+- Point npm cache to correct subdirectory's package-lock.json
+- Run all build commands from correct location
+- Upload dist from correct path
+
+### Lessons Learned
+1. **Check directory structure FIRST** when npm commands fail in CI/CD
+2. **Read error messages carefully** - "Dependencies lock file not found" = wrong directory
+3. Repository nesting is unusual and breaks default workflow assumptions
+4. Don't waste hours trying complex solutions when error message points to simple issue
+
+### Prevention
+- CLAUDE.md now documents critical subdirectory requirement
+- Future deployments must verify working directory before troubleshooting other issues
+
 ## Fixed Bugs
 
 ### JSX Structure Error in Funded Deals Table (October 26, 2025)
