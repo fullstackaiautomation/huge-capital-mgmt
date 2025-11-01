@@ -34,11 +34,12 @@ Always update .agent docs after implementing a feature to ensure they reflect up
 - Always verify the commit before using force push
 
 ### GitHub Actions
-The project uses `deploy.yml` workflow (NOT "pages build and deployment"):
-- Triggers on push to `master` branch
+The project uses `deploy.yml` workflow:
+- Triggers on push to `main` branch
 - Builds with: `npm run build -- --mode production`
 - Deploys to GitHub Pages at https://hugecapital.fullstackaiautomation.com/
 - Custom domain configured via `public/CNAME`
+- GitHub Pages configured to deploy from GitHub Actions
 
 ---
 
