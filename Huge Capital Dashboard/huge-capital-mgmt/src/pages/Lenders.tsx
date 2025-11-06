@@ -239,6 +239,7 @@ export default function Lenders() {
     const isoEmail = lender.email || null;
     const minMonthlyRevenue = rawData?.minimum_monthly_revenue || rawData?.min_monthly_revenue_amount || null;
     const adbMin = rawData?.minimum_daily_balances || rawData?.min_avg_daily_balance || null;
+    const tib = rawData?.minimum_time_in_business || rawData?.min_time_in_business || null;
     const stateRestrictions = lender.lender_type === 'SBA' ? rawData?.states_available : rawData?.states_restrictions || rawData?.ineligible_states || null;
     const restrictedIndustries = lender.lender_type === 'SBA' ? rawData?.industry_restrictions : rawData?.restricted_industries;
 
@@ -326,6 +327,7 @@ export default function Lenders() {
           <td className="text-center py-3 px-4">{lender.credit_requirement || <span className="text-gray-500">—</span>}</td>
           <td className="text-center py-3 px-4">{minMonthlyRevenue || <span className="text-gray-500">—</span>}</td>
           <td className="text-center py-3 px-4">{adbMin || <span className="text-gray-500">—</span>}</td>
+          <td className="text-center py-3 px-4">{tib || <span className="text-gray-500">—</span>}</td>
           <td className="text-left py-3 px-4 text-xs">
             {restrictedIndustries ? (
               rawData?.restricted_industries_doc_link ? (
@@ -1137,7 +1139,8 @@ export default function Lenders() {
                   <th className="text-center py-3 px-4 font-semibold w-20">Credit Min</th>
                   <th className="text-center py-3 px-4 font-semibold w-20">Revenue Min</th>
                   <th className="text-center py-3 px-4 font-semibold w-20">ADB<br />Min</th>
-                  <th className="text-left py-3 px-4 font-semibold w-96">Restricted Industries</th>
+                  <th className="text-center py-3 px-4 font-semibold w-24">Time in<br />Business</th>
+                  <th className="text-left py-3 px-4 font-semibold w-64">Restricted Industries</th>
                   <th className="text-center py-3 px-4 font-semibold w-24">{activeFilter === 'SBA' ? 'States Available' : 'State Restriction'}</th>
                   <th className="text-center py-3 px-4 font-semibold w-32">Submission Type</th>
                 </tr>
