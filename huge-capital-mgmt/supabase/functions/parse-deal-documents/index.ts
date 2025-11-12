@@ -150,7 +150,7 @@ Return ONLY valid JSON matching this structure exactly.`;
             'anthropic-version': '2023-06-01',
           },
           body: JSON.stringify({
-            model: 'claude-3-5-sonnet-20250514',
+            model: 'claude-opus-4-1-20250805',
             max_tokens: 4096,
             system: systemPrompt,
             messages: [
