@@ -171,11 +171,21 @@ Return ONLY valid JSON matching this structure exactly.`;
         const data = await response.json();
         let content = data.content[0].text;
 
-        // Extract JSON from content (might be wrapped in markdown code blocks)
+        // Extract JSON from content (might be wrapped in markdown code blocks or have text before it)
         let jsonStr = content;
+
+        // First try to extract from markdown code blocks
         const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
         if (jsonMatch) {
           jsonStr = jsonMatch[1];
+        }
+
+        // If content starts with text, find where JSON starts (look for { or [)
+        if (!jsonStr.trim().startsWith('{') && !jsonStr.trim().startsWith('[')) {
+          const jsonStart = jsonStr.search(/[\{\[]/);
+          if (jsonStart !== -1) {
+            jsonStr = jsonStr.substring(jsonStart);
+          }
         }
 
         // Parse the API response
