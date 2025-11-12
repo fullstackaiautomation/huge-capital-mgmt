@@ -169,10 +169,17 @@ Return ONLY valid JSON matching this structure exactly.`;
         }
 
         const data = await response.json();
-        const content = data.content[0].text;
+        let content = data.content[0].text;
+
+        // Extract JSON from content (might be wrapped in markdown code blocks)
+        let jsonStr = content;
+        const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (jsonMatch) {
+          jsonStr = jsonMatch[1];
+        }
 
         // Parse and return the extracted data
-        const extracted: ExtractedDealData = JSON.parse(content);
+        const extracted: ExtractedDealData = JSON.parse(jsonStr);
 
         return new Response(JSON.stringify(extracted), {
           status: 200,

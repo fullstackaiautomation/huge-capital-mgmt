@@ -340,14 +340,21 @@ MATCHING STRATEGY:
     }
 
     const data = await response.json();
-    const content = data.content[0].text;
+    let content = data.content[0].text;
+
+    // Extract JSON from content (might be wrapped in markdown code blocks)
+    let jsonStr = content;
+    const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (jsonMatch) {
+      jsonStr = jsonMatch[1];
+    }
 
     // Parse Claude's response
     let recommendations: RecommendationsResponse;
     try {
-      recommendations = JSON.parse(content);
+      recommendations = JSON.parse(jsonStr);
     } catch (e) {
-      console.error("Failed to parse Claude response:", content);
+      console.error("Failed to parse Claude response:", jsonStr);
       throw new Error("Failed to parse lender recommendations");
     }
 
