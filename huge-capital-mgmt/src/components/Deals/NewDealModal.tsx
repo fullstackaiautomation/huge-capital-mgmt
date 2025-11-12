@@ -175,6 +175,70 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
         if (ownerError) throw ownerError;
       }
 
+      // Create deal bank statements if available
+      if (extractedData.statements && extractedData.statements.length > 0) {
+        for (const statement of extractedData.statements) {
+          const { error: stmtError } = await supabase.from('deal_bank_statements').insert({
+            deal_id: dealData.id,
+            bank_name: statement.bank_name,
+            statement_month: statement.statement_month,
+            credits: statement.credits,
+            debits: statement.debits,
+            nsfs: statement.nsfs || 0,
+            overdrafts: statement.overdrafts || 0,
+            average_daily_balance: statement.average_daily_balance,
+            deposit_count: statement.deposit_count,
+          });
+
+          if (stmtError) throw stmtError;
+        }
+      }
+
+      // Create deal funding positions if available
+      if (extractedData.fundingPositions && extractedData.fundingPositions.length > 0) {
+        for (const funding of extractedData.fundingPositions) {
+          const { error: fundError } = await supabase.from('deal_funding_positions').insert({
+            deal_id: dealData.id,
+            lender_name: funding.lender_name,
+            amount: funding.amount,
+            frequency: funding.frequency,
+          });
+
+          if (fundError) throw fundError;
+        }
+      }
+
+      // Automatically get lender recommendations using Lending Expert Agent
+      setParsingProgress('Getting lender recommendations...');
+      const { data: recommendations, error: recError } = await supabase.functions.invoke(
+        'match-deal-to-lenders',
+        {
+          body: {
+            dealId: dealData.id,
+            deal: extractedData,
+            loanType: extractedData.deal.loan_type,
+            brokerPreferences: {},
+          },
+        }
+      );
+
+      if (recError) {
+        console.error('Error getting recommendations:', recError);
+        // Don't fail the deal save if recommendations fail
+      }
+
+      // Update deal status to "Matched" if recommendations exist
+      if (recommendations?.recommendations?.length > 0) {
+        const { error: updateError } = await supabase
+          .from('deals')
+          .update({ status: 'Matched' })
+          .eq('id', dealData.id);
+
+        if (updateError) {
+          console.error('Error updating deal status:', updateError);
+        }
+      }
+
       setStep('success');
       setTimeout(() => {
         onClose();

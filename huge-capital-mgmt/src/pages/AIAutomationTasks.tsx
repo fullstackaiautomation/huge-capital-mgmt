@@ -140,7 +140,7 @@ function SortableRow({ task, index, updateTask, getStatusColor, getEffortInputCo
           max="10"
           className={`bg-transparent w-12 rounded px-1 font-bold text-center focus:outline-none focus:bg-purple-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${zacColor}`}
           placeholder="-"
-          value={task.zac_score !== undefined ? task.zac_score : ''}
+          value={task.zac_score ?? ''}
           onChange={(e) => updateTask(task.id, 'zac_score', e.target.value ? parseInt(e.target.value) : undefined)}
         />
       </td>

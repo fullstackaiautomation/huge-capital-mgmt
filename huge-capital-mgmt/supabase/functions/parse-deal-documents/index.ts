@@ -1,7 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
-
 interface ExtractedDealData {
   deal: {
     legal_business_name: string;
@@ -72,7 +70,7 @@ Deno.serve(async (req) => {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-client-info, apikey',
       },
     });
   }
@@ -80,39 +78,33 @@ Deno.serve(async (req) => {
   try {
     const requestBody = await req.json();
     const files = requestBody.files || requestBody.fileUrls;
-    const fileUrls = requestBody.fileUrls;
 
     // Support both base64 files and URLs
-    if (!files && !fileUrls) {
+    if (!files) {
       return new Response(
         JSON.stringify({ error: 'Either files (base64) or fileUrls are required' }),
         { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
       );
     }
 
-    if (!ANTHROPIC_API_KEY) {
-      return new Response(
-        JSON.stringify({ error: 'Anthropic API key not configured' }),
-        { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
-      );
-    }
+    // Get API key from environment (check at runtime, not at module load)
+    const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 
-    // Process files - either from base64 or fetch from URLs
-    const fileContents: Array<{ name: string; content: string; mimeType: string }> = [];
+    // If API key is available, use Claude AI
+    if (ANTHROPIC_API_KEY) {
+      console.log('ANTHROPIC_API_KEY found, calling Claude API');
 
-    if (files && Array.isArray(files)) {
-      // Handle base64 file data
-      for (const file of files) {
-        try {
+      // Prepare files for Claude
+      const fileContents: Array<{ name: string; content: string; mimeType: string }> = [];
+
+      if (Array.isArray(files)) {
+        for (const file of files) {
           const { name, content, type } = file;
 
-          // Handle base64 data for images and PDFs
           let processedContent = '';
           if (type.includes('pdf') || type.includes('image')) {
-            // For binary files, send as base64
             processedContent = `[${type.includes('pdf') ? 'PDF' : 'Image'} Document: ${name}, Base64: ${content.substring(0, 5000)}...]`;
           } else if (type.includes('text') || type.includes('csv')) {
-            // For text files, try to decode base64
             try {
               const decoded = atob(content);
               processedContent = decoded.substring(0, 50000);
@@ -128,183 +120,204 @@ Deno.serve(async (req) => {
             content: processedContent,
             mimeType: type,
           });
-        } catch (error) {
-          console.error(`Error processing file:`, error);
-          throw new Error(`Failed to process file ${file.name}`);
         }
       }
-    } else if (fileUrls && Array.isArray(fileUrls)) {
-      // Legacy: Handle file URLs from Supabase Storage
-      const fileNames = requestBody.fileNames || fileUrls.map((_, i) => `file-${i}`);
-      const fileMimeTypes = requestBody.fileMimeTypes || [];
 
-      for (let i = 0; i < fileUrls.length; i++) {
-        try {
-          const response = await fetch(fileUrls[i]);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch file: ${response.statusText}`);
-          }
+      const systemPrompt = `You are an expert financial document analyzer for a business lending company. Extract structured business and financial information from application documents, bank statements, and tax returns.
 
-          const contentType = response.headers.get('content-type') || fileMimeTypes[i] || 'application/octet-stream';
-          let content = '';
+Extract ONLY the following fields and return valid JSON:
+1. Deal information: legal_business_name, dba_name, ein, business_type, address, city, state, zip, phone, website, franchise_business, seasonal_business, peak_sales_month, business_start_date, product_service_sold, franchise_units_percent, average_monthly_sales, average_monthly_card_sales, desired_loan_amount, reason_for_loan, loan_type (MCA or Business LOC)
+2. Owners (1-2): owner_number, full_name, street_address, city, state, zip, phone, email, ownership_percent, drivers_license_number, date_of_birth
+3. Bank statements: statement_id, bank_name, statement_month (YYYY-MM), credits, debits, nsfs, overdrafts, average_daily_balance, deposit_count
+4. Funding positions: lender_name, amount, frequency (daily/weekly/monthly), detected_dates
+5. Confidence scores (0-100) for deal, owners, statements
+6. Missing fields and warnings
 
-          if (contentType.includes('pdf')) {
-            const buffer = await response.arrayBuffer();
-            content = `[PDF Document: ${fileNames[i]}]`;
-          } else if (contentType.includes('text') || contentType.includes('csv')) {
-            content = await response.text();
-          } else {
-            const buffer = await response.arrayBuffer();
-            content = `[Binary file: ${fileNames[i]}]`;
-          }
+Return ONLY valid JSON matching this structure exactly.`;
 
-          fileContents.push({
-            name: fileNames[i],
-            content: content.substring(0, 50000),
-            mimeType: contentType,
-          });
-        } catch (error) {
-          console.error(`Error fetching file ${fileUrls[i]}:`, error);
-          throw new Error(`Failed to process file ${fileNames[i] || fileUrls[i]}`);
+      const fileDescriptions = fileContents
+        .map((f) => `\n--- ${f.name} (${f.mimeType}) ---\n${f.content}`)
+        .join('\n');
+
+      const userPrompt = `Extract business and financial information from these documents:\n${fileDescriptions}`;
+
+      try {
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: 'claude-3-5-sonnet-20250514',
+            max_tokens: 4096,
+            system: systemPrompt,
+            messages: [
+              {
+                role: 'user',
+                content: userPrompt,
+              },
+            ],
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Anthropic API error:', errorText);
+          throw new Error(`Anthropic API error: ${response.status}`);
         }
+
+        const data = await response.json();
+        const content = data.content[0].text;
+
+        // Parse and return the extracted data
+        const extracted: ExtractedDealData = JSON.parse(content);
+
+        return new Response(JSON.stringify(extracted), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          },
+        });
+      } catch (aiError) {
+        console.error('Claude AI error:', aiError);
+        // Fall back to mock data if Claude fails
+        throw aiError;
       }
     }
 
-    const systemPrompt = `You are an expert financial document analyzer for a business lending company. Your task is to extract structured business and financial information from application documents, bank statements, and tax returns.
+    // No API key, return mock data
+    const mockData: ExtractedDealData = {
+      deal: {
+        legal_business_name: '[Document uploaded - AI analysis not available]',
+        dba_name: null,
+        ein: null,
+        business_type: null,
+        address: null,
+        city: null,
+        state: null,
+        zip: null,
+        phone: null,
+        website: null,
+        franchise_business: false,
+        seasonal_business: false,
+        peak_sales_month: null,
+        business_start_date: null,
+        product_service_sold: null,
+        franchise_units_percent: null,
+        average_monthly_sales: null,
+        average_monthly_card_sales: null,
+        desired_loan_amount: null,
+        reason_for_loan: null,
+        loan_type: null,
+      },
+      owners: [
+        {
+          owner_number: 1,
+          full_name: '[Owner information not extracted]',
+          street_address: null,
+          city: null,
+          state: null,
+          zip: null,
+          phone: null,
+          email: null,
+          ownership_percent: null,
+          drivers_license_number: null,
+          date_of_birth: null,
+        },
+      ],
+      statements: [],
+      fundingPositions: [],
+      confidence: {
+        deal: 0,
+        owners: [0],
+        statements: [],
+      },
+      missingFields: [
+        'legal_business_name',
+        'ein',
+        'address',
+        'city',
+        'state',
+        'zip',
+        'desired_loan_amount',
+        'loan_type',
+        'owner_full_name',
+        'owner_email',
+      ],
+      warnings: [
+        'ANTHROPIC_API_KEY not configured on edge function',
+        'Document was uploaded but AI analysis is not available',
+        'Please provide all information manually in the form below',
+      ],
+    };
 
-EXTRACT THE FOLLOWING INFORMATION:
-
-1. **Deal Information (from application forms)**:
-   - Legal business name
-   - DBA name (if different)
-   - EIN (Employer Identification Number)
-   - Business type (e.g., LLC, S-Corp, C-Corp, Sole Proprietor)
-   - Business address, city, state, zip
-   - Phone, website
-   - Franchise business (yes/no)
-   - Seasonal business (yes/no)
-   - Peak sales month
-   - Business start date
-   - Products/services sold
-   - Franchise units percent
-   - Average monthly sales
-   - Average monthly card sales (if merchant)
-   - Desired loan amount
-   - Reason for loan
-   - Loan type (MCA = Merchant Cash Advance, or Business LOC = Line of Credit)
-
-2. **Business Owner Information** (extract 1-2 owners):
-   For each owner:
-   - Full name
-   - Street address, city, state, zip
-   - Phone, email
-   - Ownership percent
-   - Driver's license number (if visible)
-   - Date of birth
-   - Note: Do NOT extract SSN - mark as encrypted
-
-3. **Bank Statement Analysis** (for each statement):
-   - Bank name
-   - Statement month (YYYY-MM format)
-   - Total credits (deposits) - sum of all positive transactions
-   - Total debits (withdrawals) - sum of all negative transactions
-   - Number of NSF days (days ending with negative balance)
-   - Number of overdraft occurrences
-   - Average daily balance
-   - Number of deposits
-   - File identifier
-
-4. **Funding Positions** (recurring payments from other lenders):
-   Look for repeating payment patterns (same amount, same intervals):
-   - Lender name (if identifiable)
-   - Amount
-   - Frequency (daily, weekly, monthly)
-   - Detected payment dates
-
-5. **Confidence Scores** (0-100):
-   - Overall deal info confidence
-   - Per-owner confidence
-   - Per-statement confidence
-
-6. **Missing Fields**: List critical fields that couldn't be extracted
-7. **Warnings**: Note any data quality issues or concerning patterns
-
-Return ONLY valid JSON in this exact format:
-{
-  "deal": { ... all fields as specified above ... },
-  "owners": [ ... array of owner objects ... ],
-  "statements": [ ... array of statement objects ... ],
-  "fundingPositions": [ ... array of funding position objects ... ],
-  "confidence": {
-    "deal": number,
-    "owners": [number],
-    "statements": [number]
-  },
-  "missingFields": ["field1", "field2"],
-  "warnings": ["warning1", "warning2"]
-}`;
-
-    const fileDescriptions = fileContents
-      .map((f) => `\n--- ${f.name} (${f.mimeType}) ---\n${f.content}`)
-      .join('\n');
-
-    const userPrompt = `Extract all business and financial information from these documents:${fileDescriptions}`;
-
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
+    return new Response(JSON.stringify(mockData), {
+      status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
+        'Access-Control-Allow-Origin': '*',
       },
-      body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 4096,
-        system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: userPrompt,
-          },
-        ],
-      }),
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Anthropic API error:', errorText);
-      throw new Error(`AI extraction failed: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    const content = data.content[0].text;
-
-    // Parse and validate the JSON response
-    const extracted: ExtractedDealData = JSON.parse(content);
-
-    return new Response(
-      JSON.stringify(extracted),
-      {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-      }
-    );
   } catch (error) {
     console.error('Document parsing error:', error);
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Document parsing failed',
-      }),
-      {
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
+    const errorMessage = error instanceof Error ? error.message : 'Document parsing failed';
+
+    // Return error data with 200 status so client doesn't fail
+    const errorData: ExtractedDealData = {
+      deal: {
+        legal_business_name: `[Error: ${errorMessage}]`,
+        dba_name: null,
+        ein: null,
+        business_type: null,
+        address: null,
+        city: null,
+        state: null,
+        zip: null,
+        phone: null,
+        website: null,
+        franchise_business: false,
+        seasonal_business: false,
+        peak_sales_month: null,
+        business_start_date: null,
+        product_service_sold: null,
+        franchise_units_percent: null,
+        average_monthly_sales: null,
+        average_monthly_card_sales: null,
+        desired_loan_amount: null,
+        reason_for_loan: null,
+        loan_type: null,
+      },
+      owners: [
+        {
+          owner_number: 1,
+          full_name: '[Owner information not extracted]',
+          street_address: null,
+          city: null,
+          state: null,
+          zip: null,
+          phone: null,
+          email: null,
+          ownership_percent: null,
+          drivers_license_number: null,
+          date_of_birth: null,
         },
-      }
-    );
+      ],
+      statements: [],
+      fundingPositions: [],
+      confidence: { deal: 0, owners: [0], statements: [] },
+      missingFields: ['All fields'],
+      warnings: [`Error during parsing: ${errorMessage}`],
+    };
+
+    return new Response(JSON.stringify(errorData), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
   }
 });

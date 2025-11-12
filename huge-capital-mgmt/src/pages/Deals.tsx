@@ -14,6 +14,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import NewDealModal from '../components/Deals/NewDealModal';
 import type { Deal, DealStatus } from '../types/deals';
 
 interface DealWithOwners extends Deal {
@@ -362,22 +363,11 @@ export default function Deals() {
       </div>
 
       {/* New Deal Modal */}
-      {showNewDealModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 max-w-md w-full mx-4">
-            <h2 className="text-xl font-bold text-white mb-4">New Deal</h2>
-            <p className="text-gray-400 text-sm mb-6">
-              This feature will open a multi-step deal submission form. Currently under development.
-            </p>
-            <button
-              onClick={() => setShowNewDealModal(false)}
-              className="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-all"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+      <NewDealModal
+        isOpen={showNewDealModal}
+        onClose={() => setShowNewDealModal(false)}
+        onSuccess={fetchDeals}
+      />
     </div>
   );
 }
