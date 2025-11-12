@@ -178,8 +178,24 @@ Return ONLY valid JSON matching this structure exactly.`;
           jsonStr = jsonMatch[1];
         }
 
-        // Parse and return the extracted data
-        const extracted: ExtractedDealData = JSON.parse(jsonStr);
+        // Parse the API response
+        const parsed = JSON.parse(jsonStr);
+
+        // Normalize the response format to match ExtractedDealData interface
+        // API may return deal_information, bank_statements, etc.
+        const extracted: ExtractedDealData = {
+          deal: parsed.deal || parsed.deal_information || {},
+          owners: parsed.owners || [],
+          statements: parsed.statements || parsed.bank_statements || [],
+          fundingPositions: parsed.fundingPositions || parsed.funding_positions || [],
+          confidence: parsed.confidence || parsed.confidence_scores || {
+            deal: 0,
+            owners: [],
+            statements: []
+          },
+          missingFields: parsed.missingFields || parsed.missing_fields || [],
+          warnings: parsed.warnings || []
+        };
 
         return new Response(JSON.stringify(extracted), {
           status: 200,
