@@ -48,38 +48,43 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
         throw new Error('User not authenticated');
       }
 
-      // Upload files to Supabase Storage
-      const fileUrls: string[] = [];
+      // Convert files to base64 for edge function processing
+      const fileData: Array<{ name: string; content: string; type: string }> = [];
       for (let i = 0; i < uploadedFiles.length; i++) {
         const file = uploadedFiles[i];
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}_${i}.${fileExt}`;
-        const filePath = `${user.id}/${fileName}`;
+        setParsingProgress(`Reading file ${i + 1} of ${uploadedFiles.length}...`);
 
-        setParsingProgress(`Uploading file ${i + 1} of ${uploadedFiles.length}...`);
+        const content = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result;
+            if (typeof result === 'string') {
+              // Extract base64 content (remove data:*;base64, prefix)
+              const base64 = result.split(',')[1] || result;
+              resolve(base64);
+            } else {
+              reject(new Error('Failed to read file'));
+            }
+          };
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(file);
+        });
 
-        const { error: uploadError } = await supabase.storage
-          .from('deal-documents')
-          .upload(filePath, file);
-
-        if (uploadError) throw uploadError;
-
-        // Get public URL
-        const { data: urlData } = supabase.storage
-          .from('deal-documents')
-          .getPublicUrl(filePath);
-
-        fileUrls.push(urlData.publicUrl);
+        fileData.push({
+          name: file.name,
+          content,
+          type: file.type,
+        });
       }
 
-      // Call parse-deal-documents edge function
+      // Call parse-deal-documents edge function with base64 file data
       setParsingProgress('AI is analyzing documents...');
 
       const { data: parseResult, error: parseError } = await supabase.functions.invoke(
         'parse-deal-documents',
         {
           body: {
-            fileUrls,
+            files: fileData,
           },
         }
       );

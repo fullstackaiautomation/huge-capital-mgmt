@@ -78,11 +78,14 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { fileUrls, fileNames, fileMimeTypes } = await req.json();
+    const requestBody = await req.json();
+    const files = requestBody.files || requestBody.fileUrls;
+    const fileUrls = requestBody.fileUrls;
 
-    if (!fileUrls || !Array.isArray(fileUrls) || fileUrls.length === 0) {
+    // Support both base64 files and URLs
+    if (!files && !fileUrls) {
       return new Response(
-        JSON.stringify({ error: 'At least one file URL is required' }),
+        JSON.stringify({ error: 'Either files (base64) or fileUrls are required' }),
         { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
       );
     }
@@ -94,39 +97,76 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch and process files from Supabase Storage
+    // Process files - either from base64 or fetch from URLs
     const fileContents: Array<{ name: string; content: string; mimeType: string }> = [];
 
-    for (let i = 0; i < fileUrls.length; i++) {
-      try {
-        const response = await fetch(fileUrls[i]);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch file: ${response.statusText}`);
+    if (files && Array.isArray(files)) {
+      // Handle base64 file data
+      for (const file of files) {
+        try {
+          const { name, content, type } = file;
+
+          // Handle base64 data for images and PDFs
+          let processedContent = '';
+          if (type.includes('pdf') || type.includes('image')) {
+            // For binary files, send as base64
+            processedContent = `[${type.includes('pdf') ? 'PDF' : 'Image'} Document: ${name}, Base64: ${content.substring(0, 5000)}...]`;
+          } else if (type.includes('text') || type.includes('csv')) {
+            // For text files, try to decode base64
+            try {
+              const decoded = atob(content);
+              processedContent = decoded.substring(0, 50000);
+            } catch {
+              processedContent = content.substring(0, 50000);
+            }
+          } else {
+            processedContent = `[File: ${name}, Type: ${type}]`;
+          }
+
+          fileContents.push({
+            name,
+            content: processedContent,
+            mimeType: type,
+          });
+        } catch (error) {
+          console.error(`Error processing file:`, error);
+          throw new Error(`Failed to process file ${file.name}`);
         }
+      }
+    } else if (fileUrls && Array.isArray(fileUrls)) {
+      // Legacy: Handle file URLs from Supabase Storage
+      const fileNames = requestBody.fileNames || fileUrls.map((_, i) => `file-${i}`);
+      const fileMimeTypes = requestBody.fileMimeTypes || [];
 
-        const contentType = response.headers.get('content-type') || fileMimeTypes[i] || 'application/octet-stream';
-        let content = '';
+      for (let i = 0; i < fileUrls.length; i++) {
+        try {
+          const response = await fetch(fileUrls[i]);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch file: ${response.statusText}`);
+          }
 
-        if (contentType.includes('pdf')) {
-          // For PDFs, we'll need to send binary data to Claude
-          // This is a simplified version - in production would need proper PDF handling
-          const buffer = await response.arrayBuffer();
-          content = `[PDF Document: ${fileNames[i]}]`;
-        } else if (contentType.includes('text') || contentType.includes('csv')) {
-          content = await response.text();
-        } else {
-          const buffer = await response.arrayBuffer();
-          content = `[Binary file: ${fileNames[i]}]`;
+          const contentType = response.headers.get('content-type') || fileMimeTypes[i] || 'application/octet-stream';
+          let content = '';
+
+          if (contentType.includes('pdf')) {
+            const buffer = await response.arrayBuffer();
+            content = `[PDF Document: ${fileNames[i]}]`;
+          } else if (contentType.includes('text') || contentType.includes('csv')) {
+            content = await response.text();
+          } else {
+            const buffer = await response.arrayBuffer();
+            content = `[Binary file: ${fileNames[i]}]`;
+          }
+
+          fileContents.push({
+            name: fileNames[i],
+            content: content.substring(0, 50000),
+            mimeType: contentType,
+          });
+        } catch (error) {
+          console.error(`Error fetching file ${fileUrls[i]}:`, error);
+          throw new Error(`Failed to process file ${fileNames[i] || fileUrls[i]}`);
         }
-
-        fileContents.push({
-          name: fileNames[i],
-          content: content.substring(0, 50000), // Limit to avoid token overflow
-          mimeType: contentType,
-        });
-      } catch (error) {
-        console.error(`Error fetching file ${fileUrls[i]}:`, error);
-        throw new Error(`Failed to process file ${fileNames[i]}`);
       }
     }
 
