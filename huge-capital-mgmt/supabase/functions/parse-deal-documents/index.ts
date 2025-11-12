@@ -150,7 +150,7 @@ Return ONLY valid JSON matching this structure exactly.`;
             'anthropic-version': '2023-06-01',
           },
           body: JSON.stringify({
-            model: 'claude-opus-4-1-20250805',
+            model: 'claude-3-haiku-20240307',
             max_tokens: 4096,
             system: systemPrompt,
             messages: [
@@ -211,10 +211,10 @@ Return ONLY valid JSON matching this structure exactly.`;
       }
     }
 
-    // No API key, return mock data
-    const mockData: ExtractedDealData = {
+    // No API key, return error response
+    const errorData: ExtractedDealData = {
       deal: {
-        legal_business_name: '[Document uploaded - AI analysis not available]',
+        legal_business_name: 'ERROR: Could not extract data',
         dba_name: null,
         ein: null,
         business_type: null,
@@ -236,26 +236,12 @@ Return ONLY valid JSON matching this structure exactly.`;
         reason_for_loan: null,
         loan_type: null,
       },
-      owners: [
-        {
-          owner_number: 1,
-          full_name: '[Owner information not extracted]',
-          street_address: null,
-          city: null,
-          state: null,
-          zip: null,
-          phone: null,
-          email: null,
-          ownership_percent: null,
-          drivers_license_number: null,
-          date_of_birth: null,
-        },
-      ],
+      owners: [],
       statements: [],
       fundingPositions: [],
       confidence: {
         deal: 0,
-        owners: [0],
+        owners: [],
         statements: [],
       },
       missingFields: [
@@ -271,13 +257,13 @@ Return ONLY valid JSON matching this structure exactly.`;
         'owner_email',
       ],
       warnings: [
-        'ANTHROPIC_API_KEY not configured on edge function',
-        'Document was uploaded but AI analysis is not available',
-        'Please provide all information manually in the form below',
+        'AI extraction failed - API key not configured',
+        'Could not extract data from documents',
+        'Please try uploading again or enter data manually',
       ],
     };
 
-    return new Response(JSON.stringify(mockData), {
+    return new Response(JSON.stringify(errorData), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
