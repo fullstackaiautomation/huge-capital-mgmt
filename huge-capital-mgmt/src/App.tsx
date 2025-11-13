@@ -13,6 +13,7 @@ import { BugsIdeas } from './pages/BugsIdeas';
 import { Logins } from './pages/Logins';
 import Lenders from './pages/Lenders';
 import Deals from './pages/Deals';
+import DealDetails from './pages/DealDetails';
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
             <Route path="content" element={<ContentManagement />} />
             <Route path="lenders" element={<Lenders />} />
             <Route path="deals" element={<Deals />} />
+            <Route path="deals/:id" element={<DealDetails />} />
             <Route path="tracker" element={<TaskTracker />} />
             <Route path="tracker/dillon-daily" element={<DillonDaily />} />
             <Route path="bugs" element={<BugsIdeas />} />
