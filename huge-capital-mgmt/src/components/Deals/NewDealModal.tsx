@@ -25,6 +25,7 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [parsingProgress, setParsingProgress] = useState('');
+  const [progressPercent, setProgressPercent] = useState(0);
   const [parseLogId, setParseLogId] = useState<string | null>(null);
   const [matchLogId, setMatchLogId] = useState<string | null>(null);
   const [matchWarning, setMatchWarning] = useState<string | null>(null);
@@ -49,7 +50,8 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
       setIsLoading(true);
       setError(null);
       setStep('parsing');
-      setParsingProgress('Uploading documents...');
+      setProgressPercent(0);
+      setParsingProgress('Preparing documents...');
       setParseLogId(null);
       setMatchLogId(null);
       setMatchWarning(null);
@@ -61,9 +63,13 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
 
       // Convert files to base64 for edge function processing
       const fileData: Array<{ name: string; content: string; type: string; category: string }> = [];
-      for (let i = 0; i < uploadedFiles.length; i++) {
+      const totalFiles = uploadedFiles.length;
+
+      for (let i = 0; i < totalFiles; i++) {
         const { file, category } = uploadedFiles[i];
-        setParsingProgress(`Reading file ${i + 1} of ${uploadedFiles.length}...`);
+        const fileProgress = Math.round((i / totalFiles) * 30); // 0-30% for file reading
+        setProgressPercent(fileProgress);
+        setParsingProgress(`Reading file ${i + 1} of ${totalFiles}: ${file.name}`);
 
         const content = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
@@ -90,9 +96,10 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
       }
 
       // Call parse-deal-documents edge function with base64 file data
-      setParsingProgress('AI is analyzing documents...');
+      setProgressPercent(40);
+      setParsingProgress('AI is extracting business information...');
 
-      const { data: parseResult, error: parseError } = await supabase.functions.invoke(
+      const { data: parseResult, error: parseError} = await supabase.functions.invoke(
         'parse-deal-documents',
         {
           body: {
@@ -101,11 +108,24 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
         }
       );
 
+      setProgressPercent(70);
+      setParsingProgress('Processing bank statements...');
+
       if (parseError) throw parseError;
       if (!parseResult) throw new Error('No data returned from parsing function');
 
+      setProgressPercent(90);
+      setParsingProgress('Finalizing results...');
+
       setParseLogId(parseResult.logId ?? null);
       setExtractedData(parseResult);
+
+      setProgressPercent(100);
+      setParsingProgress('Complete!');
+
+      // Small delay to show 100% before transitioning
+      await new Promise(resolve => setTimeout(resolve, 300));
+
       setStep('review');
     } catch (err) {
       console.error('Error parsing documents:', err);
@@ -406,8 +426,22 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
             <div className="text-center py-12">
               <Loader className="w-12 h-12 text-indigo-400 animate-spin mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-white mb-2">Analyzing Documents</h3>
-              <p className="text-gray-400">{parsingProgress}</p>
-              <p className="text-sm text-gray-500 mt-4">This may take a moment...</p>
+              <p className="text-gray-400 mb-4">{parsingProgress}</p>
+
+              {/* Progress Bar */}
+              <div className="max-w-md mx-auto">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-indigo-300">{progressPercent}% Complete</span>
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-2.5 overflow-hidden">
+                  <div
+                    className="bg-indigo-500 h-2.5 rounded-full transition-all duration-300 ease-out"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+              </div>
+
+              <p className="text-sm text-gray-500 mt-6">This may take a moment...</p>
             </div>
           )}
 
