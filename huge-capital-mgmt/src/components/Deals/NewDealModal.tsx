@@ -1,12 +1,16 @@
 /**
  * New Deal Modal Component
- * Multi-step workflow: Upload Documents → AI Parse → Review Extracted Data → Save
+ * Revised workflow with per-file upload progress and staged processing:
+ * 1. Upload to Drive (per-file progress)
+ * 2. Parse application → save deal record
+ * 3. Parse bank statements → save financial data
+ * Note: Lender matching step has been disabled
  */
 
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { X, Loader, AlertCircle, CheckCircle } from 'lucide-react';
-import DocumentUpload from './DocumentUpload';
+import { X, Loader, AlertCircle, CheckCircle, Info, ChevronRight } from 'lucide-react';
+import DocumentUpload, { type DealUploadFileDisplay, type DealUploadStatus } from './DocumentUpload';
 import { supabase } from '../../lib/supabase';
 import type { ExtractedDealData } from '../../types/deals';
 
@@ -16,653 +20,894 @@ interface NewDealModalProps {
   onSuccess?: () => void;
 }
 
-type WorkflowStep = 'upload' | 'parsing' | 'review' | 'success' | 'error';
+type StageStatus = 'pending' | 'in_progress' | 'success' | 'error';
+type StageKey = 'upload' | 'parseApplication' | 'saveDeal' | 'parseStatements' | 'saveFinancials' | 'match';
 
-export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModalProps) {
-  const [step, setStep] = useState<WorkflowStep>('upload');
-  const [uploadedFiles, setUploadedFiles] = useState<{ file: File; category: 'application' | 'statements' }[]>([]);
-  const [extractedData, setExtractedData] = useState<ExtractedDealData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [parsingProgress, setParsingProgress] = useState('');
-  const [progressPercent, setProgressPercent] = useState(0);
-  const [parseLogId, setParseLogId] = useState<string | null>(null);
-  const [matchLogId, setMatchLogId] = useState<string | null>(null);
-  const [matchWarning, setMatchWarning] = useState<string | null>(null);
+interface WorkflowStage {
+  key: StageKey;
+  label: string;
+  status: StageStatus;
+  detail?: string;
+}
 
-  if (!isOpen) return null;
+interface DriveFileMeta {
+  id: string;
+  name: string;
+  mimeType: string;
+  webViewLink: string;
+}
 
-  const handleFilesReady = (files: { file: File; category: 'application' | 'statements' }[]) => {
-    setUploadedFiles(files);
-    setExtractedData(null);
-    setParseLogId(null);
-    setMatchLogId(null);
-    setMatchWarning(null);
+interface UploadFile extends DealUploadFileDisplay {
+  file: File;
+  driveFile?: DriveFileMeta | null;
+}
+
+const STAGE_DEFINITIONS: Array<{ key: StageKey; label: string }> = [
+  { key: 'upload', label: 'Upload documents to Drive' },
+  { key: 'parseApplication', label: 'Analyze application documents' },
+  { key: 'saveDeal', label: 'Create deal record' },
+  { key: 'parseStatements', label: 'Analyze bank statements' },
+  { key: 'saveFinancials', label: 'Store financial metrics' },
+  // { key: 'match', label: 'Generate lender matches' }, // Disabled for now
+];
+
+const createId = () => (
+  typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2)
+);
+
+const numberOrNull = (value: unknown): number | null => {
+  if (typeof value === 'number' && !Number.isNaN(value)) return value;
+  if (typeof value === 'string' && value.trim().length) {
+    const parsed = Number(value.replace(/[^0-9.-]+/g, ''));
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+  return null;
+};
+
+const buildInitialStages = (): WorkflowStage[] =>
+  STAGE_DEFINITIONS.map((def) => ({ ...def, status: 'pending' as StageStatus, detail: undefined }));
+
+const loanTypeFallback = (value: unknown): 'MCA' | 'Business LOC' =>
+  value === 'Business LOC' ? 'Business LOC' : 'MCA';
+
+const fileToBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === 'string') {
+        const base64 = result.split(',')[1] || result;
+        resolve(base64);
+      } else {
+        reject(new Error('Failed to read file'));
+      }
+    };
+    reader.onerror = () => reject(reader.error ?? new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
+
+const describeFunctionsError = (error: unknown): string => {
+  if (!error) return 'Unknown error.';
+
+  const serializeValue = (value: unknown): string => {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string') return value;
+    try {
+      return JSON.stringify(value);
+    } catch (jsonError) {
+      return String(value);
+    }
   };
 
-  const handleStartParsing = async () => {
-    if (uploadedFiles.length === 0) {
-      setError('Please upload at least one document');
+  if (typeof error === 'object') {
+    const parts: string[] = [];
+    const anyError = error as any;
+
+    if (Object.prototype.hasOwnProperty.call(anyError, 'status')) {
+      parts.push(`Status ${serializeValue(anyError.status)}`);
+    }
+
+    if (anyError.message) {
+      parts.push(serializeValue(anyError.message));
+    }
+
+    if (anyError.context) {
+      const context = anyError.context;
+      if (context.response) {
+        parts.push(`Response: ${serializeValue(context.response)}`);
+      }
+      if (context.body) {
+        parts.push(`Body: ${serializeValue(context.body)}`);
+      }
+    }
+
+    if (anyError.error) {
+      parts.push(`Error: ${serializeValue(anyError.error)}`);
+    }
+
+    if (parts.length > 0) {
+      return parts.join(' | ');
+    }
+
+    return serializeValue(error);
+  }
+
+  return serializeValue(error);
+};
+
+export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModalProps) {
+  const [mode, setMode] = useState<'upload' | 'processing' | 'review' | 'error'>('upload');
+  const [stages, setStages] = useState<WorkflowStage[]>(() => buildInitialStages());
+  const [files, setFiles] = useState<UploadFile[]>([]);
+  const [isWorking, setIsWorking] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [dealRecord, setDealRecord] = useState<any>(null);
+  const [driveFolder, setDriveFolder] = useState<{ id: string; name: string; webViewLink: string } | null>(null);
+  const [driveFiles, setDriveFiles] = useState<DriveFileMeta[]>([]);
+  const [extractedData, setExtractedData] = useState<ExtractedDealData | null>(null);
+  const [globalWarnings, setGlobalWarnings] = useState<string[]>([]);
+  const [matchWarning, setMatchWarning] = useState<string | null>(null);
+  const [matchLogId, setMatchLogId] = useState<string | null>(null);
+
+  const displayFiles = useMemo<DealUploadFileDisplay[]>(
+    () => files.map(({ file, driveFile, ...rest }) => ({ ...rest })),
+    [files],
+  );
+
+  const resetWorkflow = useCallback(() => {
+    setStages(buildInitialStages());
+    setMode('upload');
+    setIsWorking(false);
+    setErrorMessage(null);
+    setGlobalWarnings([]);
+    setMatchWarning(null);
+    setMatchLogId(null);
+    setDealRecord(null);
+    setDriveFolder(null);
+    setDriveFiles([]);
+    setExtractedData(null);
+    setFiles((prev) => prev.map((file) => ({ ...file, status: 'pending', progress: 0, error: undefined })));
+  }, []);
+
+  const handleClose = useCallback(() => {
+    if (isWorking) return;
+    resetWorkflow();
+    setFiles([]);
+    setUploadError(null);
+    onClose();
+  }, [isWorking, onClose, resetWorkflow]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      resetWorkflow();
+      setFiles([]);
+      setUploadError(null);
+      setErrorMessage(null);
+    }
+  }, [isOpen, resetWorkflow]);
+
+  const updateStage = useCallback((key: StageKey, updates: Partial<WorkflowStage>) => {
+    setStages((prev) => prev.map((stage) => (stage.key === key ? { ...stage, ...updates } : stage)));
+  }, []);
+
+  const setFileStatus = useCallback((id: string, updates: Partial<UploadFile>) => {
+    setFiles((prev) => prev.map((file) => (file.id === id ? { ...file, ...updates } : file)));
+  }, []);
+
+  const handleAddFiles = useCallback((incoming: File[], category: 'application' | 'statements') => {
+    if (!incoming.length) return;
+    setFiles((prev) => ([
+      ...prev,
+      ...incoming.map((file) => ({
+        id: createId(),
+        file,
+        name: file.name,
+        size: file.size,
+        status: 'pending' as DealUploadStatus,
+        progress: 0,
+        category,
+      })),
+    ]));
+    setUploadError(null);
+  }, []);
+
+  const handleRemoveFile = useCallback((id: string) => {
+    if (isWorking) return;
+    setFiles((prev) => prev.filter((file) => file.id !== id));
+  }, [isWorking]);
+
+  const combinedHelperText = uploadError ? uploadError : null;
+
+  const handleSubmitDeal = useCallback(async () => {
+    if (files.length === 0) {
+      setUploadError('Please upload at least one document to continue.');
       return;
     }
 
+    setIsWorking(true);
+    setUploadError(null);
+    setErrorMessage(null);
+    setGlobalWarnings([]);
+    setDealRecord(null);
+    setDriveFolder(null);
+    setDriveFiles([]);
+    setMatchWarning(null);
+    setMatchLogId(null);
+    setExtractedData(null);
+    setStages(() => buildInitialStages().map((stage) => (
+      stage.key === 'upload' ? { ...stage, status: 'in_progress' as StageStatus, detail: 'Starting document uploads...' } : stage
+    )));
+    setMode('processing');
+
+    const warningSet = new Set<string>();
+    let currentStage: StageKey = 'upload';
+    let currentFileId: string | null = null;
+
     try {
-      setIsLoading(true);
-      setError(null);
-      setStep('parsing');
-      setProgressPercent(0);
-      setParsingProgress('Preparing documents...');
-      setParseLogId(null);
-      setMatchLogId(null);
-      setMatchWarning(null);
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
-        throw new Error('User not authenticated');
+        throw new Error('Please sign in before submitting a deal.');
       }
 
-      // Convert files to base64 for edge function processing
-      const fileData: Array<{ name: string; content: string; type: string; category: string }> = [];
-      const totalFiles = uploadedFiles.length;
+      let folder = driveFolder;
+      const accumulatedDriveFiles: DriveFileMeta[] = [];
 
-      for (let i = 0; i < totalFiles; i++) {
-        const { file, category } = uploadedFiles[i];
-        const fileProgress = Math.round((i / totalFiles) * 30); // 0-30% for file reading
-        setProgressPercent(fileProgress);
-        setParsingProgress(`Reading file ${i + 1} of ${totalFiles}: ${file.name}`);
+      for (let index = 0; index < files.length; index += 1) {
+        const file = files[index];
+        currentStage = 'upload';
+        currentFileId = file.id;
 
-        const content = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const result = reader.result;
-            if (typeof result === 'string') {
-              // Extract base64 content (remove data:*;base64, prefix)
-              const base64 = result.split(',')[1] || result;
-              resolve(base64);
-            } else {
-              reject(new Error('Failed to read file'));
-            }
-          };
-          reader.onerror = () => reject(reader.error);
-          reader.readAsDataURL(file);
-        });
+        setFileStatus(file.id, { status: 'uploading', progress: 10, error: undefined });
+        const base64 = await fileToBase64(file.file);
 
-        fileData.push({
-          name: file.name,
-          content,
-          type: file.type,
-          category, // Include category so AI knows what type of document this is
-        });
-      }
-
-      // Call parse-deal-documents edge function with base64 file data
-      setProgressPercent(40);
-      setParsingProgress('AI is extracting business information...');
-
-      const { data: parseResult, error: parseError} = await supabase.functions.invoke(
-        'parse-deal-documents',
-        {
+        const { data, error } = await supabase.functions.invoke('parse-deal-documents', {
           body: {
-            files: fileData,
+            files: [{
+              name: file.name,
+              type: file.file.type,
+              content: base64,
+              category: file.category,
+            }],
+            skipParsing: true,
+            existingFolderId: folder?.id,
+            existingFolderName: folder?.name,
+            existingFolderWebViewLink: folder?.webViewLink,
           },
+        });
+
+        if (error) {
+          throw new Error(`Failed to upload ${file.name} to Google Drive.`);
         }
-      );
 
-      setProgressPercent(70);
-      setParsingProgress('Processing bank statements...');
+        if (Array.isArray(data?.warnings)) {
+          data.warnings.forEach((w: string) => warningSet.add(w));
+        }
 
-      if (parseError) throw parseError;
-      if (!parseResult) throw new Error('No data returned from parsing function');
+        const uploaded: DriveFileMeta | null = Array.isArray(data?.uploadedFiles) && data.uploadedFiles.length
+          ? data.uploadedFiles[0]
+          : null;
 
-      setProgressPercent(90);
-      setParsingProgress('Finalizing results...');
+        if (uploaded) {
+          accumulatedDriveFiles.push(uploaded);
+        }
 
-      setParseLogId(parseResult.logId ?? null);
-      setExtractedData(parseResult);
+        folder = data?.documentsFolder ?? folder;
 
-      setProgressPercent(100);
-      setParsingProgress('Complete!');
+        setFileStatus(file.id, {
+          status: 'success',
+          progress: 100,
+          driveFile: uploaded ?? null,
+        });
 
-      // Small delay to show 100% before transitioning
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      setStep('review');
-    } catch (err) {
-      console.error('Error parsing documents:', err);
-      setParseLogId(null);
-      setError(err instanceof Error ? err.message : 'Failed to parse documents');
-      setStep('error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleConfirmAndSave = async () => {
-    if (!extractedData) return;
-
-    try {
-      setIsLoading(true);
-      setError(null);
-      setMatchLogId(null);
-      setMatchWarning(null);
-
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        throw new Error('User not authenticated');
+        updateStage('upload', {
+          status: index + 1 === files.length ? 'success' : 'in_progress',
+          detail: `Uploaded ${index + 1} of ${files.length} document${files.length === 1 ? '' : 's'}`,
+        });
       }
 
-      // Create deal from extracted data
-      const legalBusinessName = extractedData.deal.legal_business_name || 'Unknown Business';
-      const einValue = extractedData.deal.ein || '000000000';
-      const addressValue = extractedData.deal.address || 'Unknown';
-      const cityValue = extractedData.deal.city || 'Unknown';
-      const stateValue = extractedData.deal.state || 'NA';
-      const zipValue = extractedData.deal.zip || '00000';
-      const loanTypeValue = extractedData.deal.loan_type || 'MCA';
+      if (!folder) {
+        throw new Error('Documents uploaded but Drive folder could not be created.');
+      }
 
-      const desiredLoanAmount = typeof extractedData.deal.desired_loan_amount === 'number'
-        ? extractedData.deal.desired_loan_amount
-        : (extractedData.deal.desired_loan_amount ? parseFloat(String(extractedData.deal.desired_loan_amount)) : 0);
+      setDriveFolder(folder);
+      setDriveFiles(accumulatedDriveFiles);
 
-      const averageMonthlySales = typeof extractedData.deal.average_monthly_sales === 'number'
-        ? extractedData.deal.average_monthly_sales
-        : (extractedData.deal.average_monthly_sales ? parseFloat(String(extractedData.deal.average_monthly_sales)) : null);
+      // Parse application documents
+      currentStage = 'parseApplication';
+      const applicationFiles = files.filter((file) => file.category === 'application');
+      let applicationResult: any = null;
 
-      const averageMonthlyCardSales = typeof extractedData.deal.average_monthly_card_sales === 'number'
-        ? extractedData.deal.average_monthly_card_sales
-        : (extractedData.deal.average_monthly_card_sales ? parseFloat(String(extractedData.deal.average_monthly_card_sales)) : null);
+      if (applicationFiles.length > 0) {
+        updateStage('parseApplication', {
+          status: 'in_progress',
+          detail: 'Analyzing application documents...',
+        });
 
-      const { data: dealData, error: dealError } = await supabase
+        const payload = await Promise.all(applicationFiles.map(async (file) => ({
+          name: file.name,
+          type: file.file.type,
+          content: await fileToBase64(file.file),
+        })));
+
+        const { data, error } = await supabase.functions.invoke('parse-application', {
+          body: { files: payload },
+        });
+
+        if (error) {
+          throw new Error('Failed to parse application documents.');
+        }
+
+        applicationResult = data;
+
+        if (Array.isArray(data?.warnings)) {
+          data.warnings.forEach((w: string) => warningSet.add(w));
+        }
+
+        updateStage('parseApplication', {
+          status: 'success',
+          detail: 'Application data extracted successfully.',
+        });
+      } else {
+        updateStage('parseApplication', {
+          status: 'success',
+          detail: 'No application documents provided.',
+        });
+      }
+
+      // Save deal record & owners
+      currentStage = 'saveDeal';
+      updateStage('saveDeal', {
+        status: 'in_progress',
+        detail: 'Saving deal record...',
+      });
+
+      const dealData = applicationResult?.deal ?? {};
+      const owners = Array.isArray(applicationResult?.owners) ? applicationResult.owners : [];
+
+      const legalBusinessName = (dealData.legal_business_name || '').toString().trim() || 'Untitled Deal';
+      const einValue = (dealData.ein || '').toString().trim() || '000000000';
+      const addressValue = dealData.address || 'Unknown';
+      const cityValue = dealData.city || 'Unknown';
+      const stateValue = dealData.state || 'NA';
+      const zipValue = dealData.zip || '00000';
+      const loanType = loanTypeFallback(dealData.loan_type);
+
+      const desiredLoanAmount = numberOrNull(dealData.desired_loan_amount) ?? 0;
+      const averageMonthlySales = numberOrNull(dealData.average_monthly_sales);
+      const averageMonthlyCardSales = numberOrNull(dealData.average_monthly_card_sales);
+      const franchiseUnits = numberOrNull(dealData.franchise_units);
+
+      const businessStartDate = dealData.business_start_date || null;
+      const timeInBusinessMonths = businessStartDate
+        ? Math.round((Date.now() - new Date(businessStartDate).getTime()) / (1000 * 60 * 60 * 24 * 30))
+        : null;
+
+      const { data: insertedDeal, error: dealInsertError } = await supabase
         .from('deals')
         .insert({
           user_id: user.id,
           legal_business_name: legalBusinessName,
-          dba_name: extractedData.deal.dba_name || null,
+          dba_name: dealData.dba_name || null,
           ein: einValue,
-          business_type: extractedData.deal.business_type || null,
+          business_type: dealData.business_type || null,
           address: addressValue,
           city: cityValue,
           state: stateValue,
           zip: zipValue,
-          phone: extractedData.deal.phone || null,
-          website: extractedData.deal.website || null,
-          franchise_business: extractedData.deal.franchise_business || false,
-          seasonal_business: extractedData.deal.seasonal_business || false,
-          peak_sales_month: extractedData.deal.peak_sales_month || null,
-          business_start_date: extractedData.deal.business_start_date || null,
-          time_in_business_months: extractedData.deal.business_start_date
-            ? Math.round(
-                (new Date().getTime() - new Date(extractedData.deal.business_start_date).getTime()) /
-                  (1000 * 60 * 60 * 24 * 30)
-              )
-            : null,
-          product_service_sold: extractedData.deal.product_service_sold || null,
-          franchise_units_percent: extractedData.deal.franchise_units_percent || null,
+          phone: dealData.phone || null,
+          website: dealData.website || null,
+          franchise_business: Boolean(dealData.franchise_business),
+          seasonal_business: Boolean(dealData.seasonal_business),
+          peak_sales_month: dealData.peak_sales_month || null,
+          business_start_date: businessStartDate,
+          time_in_business_months: timeInBusinessMonths,
+          product_service_sold: dealData.product_service_sold || null,
+          franchise_units: franchiseUnits,
           average_monthly_sales: averageMonthlySales,
           average_monthly_card_sales: averageMonthlyCardSales,
-          desired_loan_amount: Number.isNaN(desiredLoanAmount) ? 0 : desiredLoanAmount,
-          reason_for_loan: extractedData.deal.reason_for_loan || null,
-          loan_type: loanTypeValue,
-          application_google_drive_link: extractedData.documentsFolder?.webViewLink ?? null,
-          statements_google_drive_link: extractedData.documentsFolder?.webViewLink ?? null,
+          desired_loan_amount: desiredLoanAmount,
+          reason_for_loan: dealData.reason_for_loan || null,
+          loan_type: loanType,
           status: 'New',
+          application_google_drive_link: folder.webViewLink,
+          statements_google_drive_link: folder.webViewLink,
         })
         .select()
         .single();
 
-      if (dealError) {
-        console.error('Supabase deal insert failed:', dealError);
-        throw dealError;
+      if (dealInsertError) {
+        throw dealInsertError;
       }
 
-      const createdStatementIds: string[] = [];
+      setDealRecord(insertedDeal);
 
-      // Create deal owners (skip empty owners)
-      for (const owner of extractedData.owners) {
-        // Skip owners with no name (they're empty)
-        if (!owner.full_name || owner.full_name.trim() === '') {
-          continue;
+      if (owners.length > 0) {
+        for (const owner of owners) {
+          if (!owner?.full_name || !owner.street_address || !owner.city || !owner.state || !owner.zip) {
+            continue;
+          }
+
+          const { error: ownerError } = await supabase.from('deal_owners').insert({
+            deal_id: insertedDeal.id,
+            owner_number: owner.owner_number ?? 1,
+            full_name: owner.full_name,
+            street_address: owner.street_address,
+            city: owner.city,
+            state: owner.state,
+            zip: owner.zip,
+            phone: owner.phone || null,
+            email: owner.email || null,
+            ownership_percent: numberOrNull(owner.ownership_percent),
+            drivers_license_number: owner.drivers_license_number || null,
+            date_of_birth: owner.date_of_birth || null,
+            ssn_encrypted: null,
+          });
+
+          if (ownerError) {
+            throw ownerError;
+          }
         }
+      }
 
-        if (!owner.street_address || !owner.city || !owner.state || !owner.zip) {
-          console.warn('Skipping owner with incomplete address information:', owner.full_name);
-          continue;
-        }
+      updateStage('saveDeal', {
+        status: 'success',
+        detail: `Deal saved${owners.length ? ` with ${owners.length} owner${owners.length === 1 ? '' : 's'}` : ''}.`,
+      });
 
-        const { error: ownerError } = await supabase.from('deal_owners').insert({
-          deal_id: dealData.id,
-          owner_number: owner.owner_number,
-          full_name: owner.full_name,
-          street_address: owner.street_address,
-          city: owner.city,
-          state: owner.state,
-          zip: owner.zip,
-          phone: owner.phone || null,
-          email: owner.email,
-          ownership_percent: typeof owner.ownership_percent === 'number'
-            ? owner.ownership_percent
-            : (owner.ownership_percent ? parseFloat(String(owner.ownership_percent)) : null),
-          drivers_license_number: owner.drivers_license_number || null,
-          date_of_birth: owner.date_of_birth || null,
-          ssn_encrypted: null, // TODO: Implement SSN encryption
+      // Parse bank statements
+      currentStage = 'parseStatements';
+      const statementFiles = files.filter((file) => file.category === 'statements');
+      let statementsResult: any = null;
+
+      if (statementFiles.length > 0) {
+        updateStage('parseStatements', {
+          status: 'in_progress',
+          detail: 'Analyzing bank statements...',
         });
 
-        if (ownerError) {
-          console.error('Supabase owner insert failed:', ownerError);
-          throw ownerError;
+        const payload = await Promise.all(statementFiles.map(async (file) => ({
+          name: file.name,
+          type: file.file.type,
+          content: await fileToBase64(file.file),
+        })));
+
+        const response = await supabase.functions.invoke('parse-bank-statements', {
+          body: { files: payload },
+        });
+
+        if (response.error) {
+          const details = describeFunctionsError(response.error);
+          console.error('parse-bank-statements invocation error:', response.error);
+          updateStage('parseStatements', {
+            status: 'error',
+            detail: details,
+          });
+          warningSet.add(`Bank statement parsing failed: ${details}`);
+          throw new Error(`Failed to parse bank statements. ${details}`);
         }
+
+        if (!response.data) {
+          const detail = 'Edge function returned no data.';
+          console.error('parse-bank-statements returned empty data payload.', response);
+          updateStage('parseStatements', {
+            status: 'error',
+            detail,
+          });
+          warningSet.add(`Bank statement parsing failed: ${detail}`);
+          throw new Error(`Failed to parse bank statements. ${detail}`);
+        }
+
+        statementsResult = response.data;
+
+        if (Array.isArray(response.data?.warnings)) {
+          response.data.warnings.forEach((w: string) => warningSet.add(w));
+        }
+
+        updateStage('parseStatements', {
+          status: 'success',
+          detail: 'Bank statements processed.',
+        });
+      } else {
+        updateStage('parseStatements', {
+          status: 'success',
+          detail: 'No bank statements provided.',
+        });
       }
 
-      // Create deal bank statements if available
-      if (extractedData.statements && extractedData.statements.length > 0) {
-        for (let i = 0; i < extractedData.statements.length; i++) {
-          const statement = extractedData.statements[i];
+      // Save statements and funding positions
+      currentStage = 'saveFinancials';
+      updateStage('saveFinancials', {
+        status: 'in_progress',
+        detail: 'Saving financial data...',
+      });
+
+      const statementIds: string[] = [];
+      const statements = Array.isArray(statementsResult?.statements) ? statementsResult.statements : [];
+      const fundingPositions = Array.isArray(statementsResult?.fundingPositions) ? statementsResult.fundingPositions : [];
+
+      if (statements.length > 0) {
+        for (let idx = 0; idx < statements.length; idx += 1) {
+          const statement = statements[idx];
           const bankName = statement.bank_name || 'Unknown Bank';
           const statementMonth = statement.statement_month || 'Unknown';
-          const statementIdentifier = statement.statement_id
-            || (typeof crypto !== 'undefined' && 'randomUUID' in crypto && typeof crypto.randomUUID === 'function'
-              ? crypto.randomUUID()
-              : `${dealData.id}-statement-${i}`);
+          const statementIdentifier = statement.statement_id || `${insertedDeal.id}-statement-${idx}`;
 
           const { data: stmtData, error: stmtError } = await supabase
             .from('deal_bank_statements')
             .insert({
-            deal_id: dealData.id,
+              deal_id: insertedDeal.id,
               bank_name: bankName,
               statement_month: statementMonth,
-            credits: statement.credits,
-            debits: statement.debits,
-            nsfs: statement.nsfs || 0,
-            overdrafts: statement.overdrafts || 0,
-            average_daily_balance: statement.average_daily_balance,
-              deposit_count: statement.deposit_count,
               statement_id: statementIdentifier,
-              statement_file_url: statement.statement_file_url
-                || extractedData.documentsFolder?.webViewLink
-                || null,
+              statement_file_url: folder.webViewLink,
+              credits: numberOrNull(statement.credits),
+              debits: numberOrNull(statement.debits),
+              nsfs: numberOrNull(statement.nsfs) ?? 0,
+              overdrafts: numberOrNull(statement.overdrafts) ?? 0,
+              average_daily_balance: numberOrNull(statement.average_daily_balance),
+              deposit_count: numberOrNull(statement.deposit_count),
             })
             .select('id')
             .single();
 
           if (stmtError) {
-            console.error('Supabase bank statement insert failed:', stmtError);
             throw stmtError;
           }
+
           if (stmtData?.id) {
-            createdStatementIds.push(stmtData.id);
+            statementIds.push(stmtData.id);
           }
         }
       }
 
-      // Create deal funding positions if available
-      if (
-        extractedData.fundingPositions &&
-        extractedData.fundingPositions.length > 0 &&
-        createdStatementIds.length > 0
-      ) {
-        for (let i = 0; i < extractedData.fundingPositions.length; i++) {
-          const funding = extractedData.fundingPositions[i];
-          const targetStatementId = createdStatementIds[Math.min(i, createdStatementIds.length - 1)];
+      if (fundingPositions.length > 0 && statementIds.length > 0) {
+        for (let idx = 0; idx < fundingPositions.length; idx += 1) {
+          const funding = fundingPositions[idx];
+          const amountValue = numberOrNull(funding.amount) ?? 0;
+          const targetStatementId = statementIds[Math.min(idx, statementIds.length - 1)];
 
-          const fundingAmount = typeof funding.amount === 'number'
-            ? funding.amount
-            : (funding.amount ? parseFloat(String(funding.amount)) : 0);
-
-          const { error: fundError } = await supabase.from('deal_funding_positions').insert({
+          const { error: fundingError } = await supabase.from('deal_funding_positions').insert({
             statement_id: targetStatementId,
-            lender_name: funding.lender_name,
-            amount: Number.isNaN(fundingAmount) ? 0 : fundingAmount,
-            frequency: funding.frequency,
-            detected_dates: funding.detected_dates ?? [],
+            lender_name: funding.lender_name || 'Unknown Lender',
+            amount: amountValue,
+            frequency: funding.frequency || 'daily',
+            detected_dates: Array.isArray(funding.detected_dates) ? funding.detected_dates : [],
           });
 
-          if (fundError) {
-            console.error('Supabase funding position insert failed:', fundError);
-            throw fundError;
+          if (fundingError) {
+            throw fundingError;
           }
         }
-      } else if (extractedData.fundingPositions && extractedData.fundingPositions.length > 0) {
-        console.warn('Skipping funding positions insert: no bank statements created to attach positions.');
       }
 
-      // Automatically get lender recommendations using Lending Expert Agent
-      setParsingProgress('Getting lender recommendations...');
-      try {
-        const { data: recommendations, error: recError } = await supabase.functions.invoke(
-          'match-deal-to-lenders',
-          {
-            body: {
-              dealId: dealData.id,
-              deal: extractedData,
-              loanType: extractedData.deal.loan_type,
-              brokerPreferences: {},
-            },
-          }
-        );
+      updateStage('saveFinancials', {
+        status: 'success',
+        detail: statementIds.length
+          ? `Saved ${statementIds.length} statement${statementIds.length === 1 ? '' : 's'}.`
+          : 'No financial data to store.',
+      });
 
-        if (recError) {
-          console.error('Error getting recommendations:', recError);
-          setMatchWarning('Lender recommendations are temporarily unavailable. The deal was saved successfully.');
-        } else if (recommendations) {
-          setMatchLogId(recommendations.logId ?? null);
+      // Lender matching disabled for now
+      // currentStage = 'match';
+      // Skip the lender matching step entirely
 
-          if (Array.isArray(recommendations.recommendations) && recommendations.recommendations.length > 0) {
-            const { error: updateError } = await supabase
-              .from('deals')
-              .update({ status: 'Matched' })
-              .eq('id', dealData.id);
+      const warningsArray = Array.from(warningSet);
+      setGlobalWarnings(warningsArray);
 
-            if (updateError) {
-              console.error('Error updating deal status:', updateError);
+      const mergedExtractedData: ExtractedDealData = {
+        deal: dealData,
+        owners,
+        statements,
+        fundingPositions,
+        confidence: {
+          deal: applicationResult?.confidence?.deal ?? 0,
+          owners: applicationResult?.confidence?.owners ?? [],
+          statements: statementsResult?.confidence?.statements ?? [],
+        },
+        missingFields: [
+          ...(applicationResult?.missingFields ?? []),
+          ...(statementsResult?.missingFields ?? []),
+        ],
+        warnings: warningsArray,
+        documentsFolder: folder
+          ? {
+              id: folder.id,
+              name: folder.name,
+              webViewLink: folder.webViewLink,
+              files: accumulatedDriveFiles,
             }
-          }
-        }
-      } catch (invokeError) {
-        console.error('Failed to invoke match-deal-to-lenders:', invokeError);
-        setMatchWarning('Lender recommendations could not be generated. The deal was saved successfully.');
+          : undefined,
+      };
+
+      setExtractedData(mergedExtractedData);
+      setIsWorking(false);
+      setMode('review');
+      onSuccess?.();
+    } catch (error) {
+      console.error('Deal submission error:', error);
+      const message = error instanceof Error ? error.message : 'An unexpected error occurred during deal submission.';
+      setErrorMessage(message);
+      setIsWorking(false);
+      setMode('error');
+      setGlobalWarnings((prev) => Array.from(new Set(prev)));
+
+      if (currentStage) {
+        updateStage(currentStage, {
+          status: 'error',
+          detail: message,
+        });
       }
 
-      setStep('success');
-      setTimeout(() => {
-        onClose();
-        onSuccess?.();
-      }, 2000);
-    } catch (err) {
-      console.error('Error saving deal:', err);
-      setError(err instanceof Error ? err.message : 'Failed to save deal');
-      setStep('error');
-    } finally {
-      setIsLoading(false);
+      if (currentFileId) {
+        setFileStatus(currentFileId, {
+          status: 'error',
+          progress: 100,
+          error: message,
+        });
+      }
     }
+  }, [files, driveFolder, onSuccess, setFileStatus, updateStage]);
+
+  const renderStageStatus = (stage: WorkflowStage) => {
+    let icon = <Info className="w-4 h-4 text-gray-500" />;
+    let badgeClass = 'text-gray-400 border-gray-600';
+
+    if (stage.status === 'success') {
+      icon = <CheckCircle className="w-4 h-4 text-green-400" />;
+      badgeClass = 'text-green-300 border-green-400/40';
+    } else if (stage.status === 'error') {
+      icon = <AlertCircle className="w-4 h-4 text-red-400" />;
+      badgeClass = 'text-red-300 border-red-400/40';
+    } else if (stage.status === 'in_progress') {
+      icon = <Loader className="w-4 h-4 text-indigo-300 animate-spin" />;
+      badgeClass = 'text-indigo-300 border-indigo-400/40';
+    }
+
+    return (
+      <div key={stage.key} className="flex flex-col gap-1 border border-gray-700/40 bg-gray-800/30 rounded-lg p-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm font-medium text-white">
+            {icon}
+            {stage.label}
+          </div>
+          <span className={`text-xs px-2 py-0.5 border rounded-full ${badgeClass}`}>
+            {stage.status === 'pending' && 'Pending'}
+            {stage.status === 'in_progress' && 'In progress'}
+            {stage.status === 'success' && 'Completed'}
+            {stage.status === 'error' && 'Needs attention'}
+          </span>
+        </div>
+        {stage.detail && <p className="text-xs text-gray-400 leading-snug">{stage.detail}</p>}
+      </div>
+    );
   };
 
+  if (!isOpen) {
+    return null;
+  }
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 border border-gray-700 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 flex items-center justify-between bg-gray-800 border-b border-gray-700 p-6">
-          <h2 className="text-xl font-bold text-white">
-            {step === 'upload' && 'Upload Deal Documents'}
-            {step === 'parsing' && 'Analyzing Documents'}
-            {step === 'review' && 'Review Extracted Data'}
-            {step === 'success' && 'Deal Created'}
-            {step === 'error' && 'Error'}
-          </h2>
-          {step !== 'success' && (
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-300 transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
-          )}
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-900 border border-gray-700 rounded-lg max-w-4xl w-full max-h-[92vh] overflow-y-auto shadow-2xl">
+        <div className="sticky top-0 flex items-center justify-between bg-gray-900 border-b border-gray-800 px-6 py-5">
+          <div>
+            <h2 className="text-xl font-semibold text-white">New Deal Submission</h2>
+            <p className="text-sm text-gray-400">Upload documents, verify extracted data, and save the deal.</p>
+          </div>
+          <button
+            onClick={handleClose}
+            disabled={isWorking}
+            className={`text-gray-400 hover:text-gray-200 transition-colors ${isWorking ? 'cursor-not-allowed opacity-50' : ''}`}
+            aria-label="Close deal submission"
+          >
+            <X className="w-6 h-6" />
+          </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
-          {/* Upload Step */}
-          {step === 'upload' && (
-            <div className="space-y-4">
-              <DocumentUpload onFilesReady={handleFilesReady} />
-              {error && (
-                <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3 flex gap-2">
-                  <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-red-300 text-sm">{error}</p>
-                </div>
-              )}
-              <button
-                onClick={handleStartParsing}
-                disabled={uploadedFiles.length === 0 || isLoading}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-all font-medium flex items-center justify-center gap-2"
-              >
-                {isLoading && <Loader className="w-4 h-4 animate-spin" />}
-                {isLoading ? 'Processing...' : 'Continue to Analysis'}
-              </button>
-            </div>
-          )}
-
-          {/* Parsing Step */}
-          {step === 'parsing' && (
-            <div className="text-center py-12">
-              <Loader className="w-12 h-12 text-indigo-400 animate-spin mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-white mb-2">Analyzing Documents</h3>
-              <p className="text-gray-400 mb-4">{parsingProgress}</p>
-
-              {/* Progress Bar */}
-              <div className="max-w-md mx-auto">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-indigo-300">{progressPercent}% Complete</span>
-                </div>
-                <div className="w-full bg-gray-700 rounded-full h-2.5 overflow-hidden">
-                  <div
-                    className="bg-indigo-500 h-2.5 rounded-full transition-all duration-300 ease-out"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-              </div>
-
-              <p className="text-sm text-gray-500 mt-6">This may take a moment...</p>
-            </div>
-          )}
-
-          {/* Review Step */}
-          {step === 'review' && extractedData && (
-            <div className="space-y-6">
-              {/* Confidence Score */}
-              {extractedData.confidence && (
-                <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-3">
-                  <p className="text-sm text-indigo-300">
-                    AI Confidence: <span className="font-semibold">{Math.min(100, Math.round(extractedData.confidence.deal))}%</span>
-                  </p>
-                </div>
-              )}
-
-              {parseLogId && (
-                <div className="bg-gray-900/50 border border-gray-700/40 rounded-lg p-3 text-xs text-gray-300 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <span>
-                    Parse log ID: <span className="font-mono text-gray-100">{parseLogId}</span>
-                  </span>
-                  <Link to="/agent-logs" className="text-indigo-300 hover:text-indigo-200 font-medium">
-                    Open Agent Logs
-                  </Link>
-                </div>
-              )}
-
-              {extractedData.documentsFolder && (
-                <div className="bg-gray-900/40 border border-gray-700/40 rounded-lg p-4 space-y-2 text-sm text-gray-300">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <p className="font-semibold text-white">Documents uploaded to Drive</p>
-                    <a
-                      href={extractedData.documentsFolder.webViewLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-indigo-300 hover:text-indigo-200 font-medium"
-                    >
-                      Open folder
-                    </a>
-                  </div>
-                  {(extractedData.documentsFolder?.files?.length ?? 0) > 0 ? (
-                    <ul className="list-disc list-inside space-y-1 text-xs text-gray-400">
-                      {extractedData.documentsFolder?.files?.map((file) => (
-                        <li key={file.id}>
-                          <span className="text-gray-300">{file.name}</span>
-                          <span className="text-gray-500"> • {file.mimeType}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-xs text-gray-500">No files were stored for this upload.</p>
-                  )}
-                </div>
-              )}
-
-              {/* Warnings */}
-              {extractedData.warnings && extractedData.warnings.length > 0 && (
-                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 space-y-1">
-                  <p className="text-sm text-yellow-300 font-semibold">Warnings:</p>
-                  {extractedData.warnings.map((warning, i) => (
-                    <p key={i} className="text-sm text-yellow-300/80">{warning}</p>
-                  ))}
-                </div>
-              )}
-
-              {/* Missing Fields */}
-              {extractedData.missingFields && extractedData.missingFields.length > 0 && (
-                <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3 space-y-1">
-                  <p className="text-sm text-orange-300 font-semibold">Missing Fields (Please fill manually):</p>
-                  {extractedData.missingFields.map((field, i) => (
-                    <p key={i} className="text-sm text-orange-300/80">{field}</p>
-                  ))}
-                </div>
-              )}
-
-              {/* Deal Summary */}
-              <div>
-                <h3 className="text-lg font-semibold text-white mb-4">Deal Information</h3>
-                <div className="grid grid-cols-2 gap-4 bg-gray-800/30 rounded-lg p-4 space-y-3">
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase">Business Name</p>
-                    <p className="text-white font-medium">{extractedData.deal.legal_business_name}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase">EIN</p>
-                    <p className="text-white font-medium">{extractedData.deal.ein || 'Not extracted'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase">Loan Type</p>
-                    <p className="text-white font-medium">{extractedData.deal.loan_type || 'Not extracted'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase">Loan Amount</p>
-                    <p className="text-white font-medium">
-                      ${extractedData.deal.desired_loan_amount ? parseFloat(extractedData.deal.desired_loan_amount).toLocaleString() : 'Not extracted'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase">Address</p>
-                    <p className="text-white font-medium text-sm">{extractedData.deal.address || 'Not extracted'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase">Monthly Sales</p>
-                    <p className="text-white font-medium">
-                      ${extractedData.deal.average_monthly_sales ? parseFloat(extractedData.deal.average_monthly_sales).toLocaleString() : 'Not extracted'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Owners */}
-              <div>
-                <h3 className="text-lg font-semibold text-white mb-4">Business Owners ({extractedData.owners.length})</h3>
-                <div className="space-y-3">
-                  {extractedData.owners.map((owner, i) => (
-                    <div key={i} className="bg-gray-800/30 rounded-lg p-3">
-                      <p className="text-white font-medium">{owner.full_name}</p>
-                      <p className="text-sm text-gray-400">{owner.email || 'No email'}</p>
-                      <p className="text-xs text-gray-500 mt-1">{owner.ownership_percent ? `${owner.ownership_percent}% ownership` : 'Ownership % not specified'}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {error && (
-                <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3 flex gap-2">
-                  <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-red-300 text-sm">{error}</p>
-                </div>
-              )}
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setStep('upload')}
-                  disabled={isLoading}
-                  className="flex-1 bg-gray-700/30 hover:bg-gray-700/50 disabled:opacity-50 text-gray-300 px-4 py-2 rounded-lg transition-all"
-                >
-                  Back to Upload
-                </button>
-                <button
-                  onClick={handleConfirmAndSave}
-                  disabled={isLoading}
-                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-all font-medium flex items-center justify-center gap-2"
-                >
-                  {isLoading && <Loader className="w-4 h-4 animate-spin" />}
-                  {isLoading ? 'Saving...' : 'Confirm & Save Deal'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Success Step */}
-          {step === 'success' && (
-            <div className="text-center py-8">
-              <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-white mb-2">Deal Created Successfully!</h3>
-              <p className="text-gray-400">Your deal has been saved and is ready for lender matching.</p>
-              {extractedData?.documentsFolder && (
-                <div className="mt-4 bg-gray-900/60 border border-gray-700/40 rounded-lg px-4 py-3 text-sm text-gray-200">
-                  <p className="font-medium text-white">Documents stored in Google Drive</p>
-                  <a
-                    href={extractedData.documentsFolder.webViewLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-indigo-300 hover:text-indigo-200"
+        <div className="px-6 py-5 space-y-6">
+          {(mode === 'upload' || mode === 'processing') && (
+            <div className="space-y-5">
+              <DocumentUpload
+                files={displayFiles}
+                onAddFiles={handleAddFiles}
+                onRemoveFile={handleRemoveFile}
+                disabled={mode !== 'upload' || isWorking}
+                helperText={combinedHelperText}
+                maxFiles={20}
+              />
+              {mode === 'upload' && (
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleSubmitDeal}
+                    disabled={isWorking}
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-all font-medium flex items-center justify-center gap-2"
                   >
-                    Open folder
-                  </a>
+                    {isWorking && <Loader className="w-4 h-4 animate-spin" />}
+                    Start Deal Intake
+                  </button>
                 </div>
               )}
-              {(parseLogId || matchLogId) && (
-                <div className="mt-6 bg-gray-900/60 border border-gray-700/40 rounded-lg px-4 py-3 text-sm text-gray-200 space-y-2 text-left">
-                  {parseLogId && (
-                    <div className="flex items-center justify-between gap-2">
-                      <span>Document parse log ID:</span>
-                      <span className="font-mono text-gray-100">{parseLogId}</span>
-                    </div>
-                  )}
-                  {matchLogId && (
-                    <div className="flex items-center justify-between gap-2">
-                      <span>Lender match log ID:</span>
-                      <span className="font-mono text-gray-100">{matchLogId}</span>
-                    </div>
-                  )}
-                  <div className="text-right">
-                    <Link to="/agent-logs" className="text-indigo-300 hover:text-indigo-200 font-medium">
-                      Review in Agent Logs
-                    </Link>
-                  </div>
-                </div>
-              )}
-              {matchWarning && (
-                <div className="mt-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-4 py-3 text-sm text-yellow-200">
-                  {matchWarning}
-                </div>
-              )}
-              <p className="text-sm text-gray-500 mt-4">Closing in a moment...</p>
             </div>
           )}
 
-          {/* Error Step */}
-          {step === 'error' && (
+          {mode === 'processing' && (
             <div className="space-y-4">
-              <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 flex gap-3">
-                <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="flex items-center gap-2 text-sm text-indigo-300">
+                <Loader className="w-4 h-4 animate-spin" />
+                Processing deal submission...
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                {stages.map(renderStageStatus)}
+              </div>
+            </div>
+          )}
+
+          {mode === 'review' && extractedData && (
+            <div className="space-y-6">
+              <div className="flex items-start gap-3 p-4 border border-green-500/30 bg-green-500/10 rounded-lg">
+                <CheckCircle className="w-6 h-6 text-green-300 mt-0.5" />
                 <div>
-                  <h3 className="text-red-400 font-semibold">Error Saving Deal</h3>
-                  <p className="text-red-300 text-sm mt-1">{error}</p>
+                  <h3 className="text-lg font-semibold text-white">Deal saved successfully</h3>
+                  <p className="text-sm text-gray-300">Review the extracted data below or click into the deal record to edit details.</p>
                 </div>
               </div>
-              <div className="flex gap-3">
+
+              <div className="grid gap-3 md:grid-cols-2">
+                {stages.map(renderStageStatus)}
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="border border-gray-800 rounded-lg bg-gray-800/40 p-4 space-y-2">
+                  <h4 className="text-sm font-semibold text-white uppercase tracking-wide">Deal snapshot</h4>
+                  <div className="space-y-2 text-sm text-gray-300">
+                    <div>
+                      <span className="text-gray-500">Business:</span>
+                      <span className="ml-2 text-white font-medium">{extractedData.deal.legal_business_name || 'Untitled Deal'}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Loan type:</span>
+                      <span className="ml-2">{extractedData.deal.loan_type || 'Unknown'}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Requested amount:</span>
+                      <span className="ml-2">${numberOrNull(extractedData.deal.desired_loan_amount)?.toLocaleString() ?? 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Average monthly sales:</span>
+                      <span className="ml-2">${numberOrNull(extractedData.deal.average_monthly_sales)?.toLocaleString() ?? 'N/A'}</span>
+                    </div>
+                  </div>
+                  {dealRecord?.id && (
+                    <Link
+                      to={`/deals/${dealRecord.id}`}
+                      className="inline-flex items-center gap-2 text-sm text-indigo-300 hover:text-indigo-200 font-medium"
+                    >
+                      View full customer deal details
+                      <ChevronRight className="w-4 h-4" />
+                    </Link>
+                  )}
+                </div>
+
+                <div className="border border-gray-800 rounded-lg bg-gray-800/40 p-4 space-y-2">
+                  <h4 className="text-sm font-semibold text-white uppercase tracking-wide">Documents</h4>
+                  {driveFolder ? (
+                    <div className="text-sm text-gray-300 space-y-2">
+                      <div>
+                        <span className="text-gray-500">Drive folder:</span>
+                        <a
+                          href={driveFolder.webViewLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-2 text-indigo-300 hover:text-indigo-200"
+                        >
+                          {driveFolder.name}
+                        </a>
+                      </div>
+                      {driveFiles.length > 0 && (
+                        <ul className="text-xs text-gray-400 space-y-1 max-h-32 overflow-y-auto border border-gray-700/40 rounded-md p-2">
+                          {driveFiles.map((doc) => (
+                            <li key={doc.id} className="flex items-center gap-2">
+                              <span className="text-gray-300">{doc.name}</span>
+                              <span className="text-gray-600 text-[11px]">{doc.mimeType}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {matchLogId && (
+                        <div className="text-xs text-gray-500 border-t border-gray-700/40 pt-2 mt-2">
+                          Match log ID:
+                          <span className="ml-2 font-mono text-gray-300">{matchLogId}</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400">No Drive folder metadata available.</p>
+                  )}
+                </div>
+              </div>
+
+              {(globalWarnings.length > 0 || matchWarning) && (
+                <div className="space-y-3">
+                  {globalWarnings.length > 0 && (
+                    <div className="border border-yellow-500/40 bg-yellow-500/10 rounded-lg p-3 space-y-1">
+                      <p className="text-sm font-semibold text-yellow-100">Warnings</p>
+                      {globalWarnings.map((warning) => (
+                        <p className="text-xs text-yellow-100/90" key={warning}>{warning}</p>
+                      ))}
+                    </div>
+                  )}
+                  {matchWarning && (
+                    <div className="border border-orange-500/40 bg-orange-500/10 rounded-lg p-3 text-xs text-orange-100">
+                      {matchWarning}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
-                  onClick={() => setStep('review')}
-                  className="flex-1 bg-gray-700/30 hover:bg-gray-700/50 text-gray-300 px-4 py-2 rounded-lg transition-all"
+                  onClick={() => {
+                    resetWorkflow();
+                    setFiles([]);
+                    setUploadError(null);
+                    setMode('upload');
+                  }}
+                  className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-200 px-4 py-2 rounded-lg transition-all"
                 >
-                  Back to Review
+                  Start another deal
                 </button>
                 <button
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-all"
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          )}
+
+          {mode === 'error' && (
+            <div className="space-y-5">
+              <div className="border border-red-500/40 bg-red-500/10 rounded-lg p-4 flex items-start gap-3">
+                <AlertCircle className="w-6 h-6 text-red-300 mt-0.5" />
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Deal submission interrupted</h3>
+                  <p className="text-sm text-red-100">{errorMessage}</p>
+                </div>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                {stages.map(renderStageStatus)}
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => {
+                    setMode('upload');
+                    setErrorMessage(null);
+                    setIsWorking(false);
+                    setStages(buildInitialStages());
+                    setFiles((prev) => prev.map((file) => ({
+                      ...file,
+                      status: 'pending',
+                      progress: 0,
+                      error: undefined,
+                    })));
+                  }}
+                  className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-200 px-4 py-2 rounded-lg transition-all"
+                >
+                  Fix issues & retry
+                </button>
+                <button
+                  onClick={handleClose}
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-all"
+                >
+                  Cancel
                 </button>
               </div>
             </div>

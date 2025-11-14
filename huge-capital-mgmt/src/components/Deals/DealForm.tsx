@@ -35,7 +35,7 @@ export default function DealForm({
     peak_sales_month: initialData?.peak_sales_month || '',
     business_start_date: initialData?.business_start_date || '',
     product_service_sold: initialData?.product_service_sold || '',
-    franchise_units_percent: initialData?.franchise_units_percent || '',
+    franchise_units: initialData?.franchise_units || '',
     average_monthly_sales: initialData?.average_monthly_sales || '',
     average_monthly_card_sales: initialData?.average_monthly_card_sales || '',
     desired_loan_amount: initialData?.desired_loan_amount || '',

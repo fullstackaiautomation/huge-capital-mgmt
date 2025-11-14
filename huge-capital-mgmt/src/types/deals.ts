@@ -34,7 +34,7 @@ export interface Deal {
 
   // Products & Services
   product_service_sold: string | null;
-  franchise_units_percent: number | null;
+  franchise_units: number | null; // Count of franchise units owned (integer)
 
   // Financial Information
   average_monthly_sales: number | null;
@@ -159,7 +159,7 @@ export interface DealFormData {
   peak_sales_month: string;
   business_start_date: string;
   product_service_sold: string;
-  franchise_units_percent: string;
+  franchise_units: string;
   average_monthly_sales: string;
   average_monthly_card_sales: string;
   desired_loan_amount: string;
@@ -195,6 +195,18 @@ export interface ExtractedDealData {
   };
   missingFields: string[];
   warnings: string[];
+  logId?: string;
+  documentsFolder?: {
+    id: string;
+    name: string;
+    webViewLink: string;
+    files: Array<{
+      id: string;
+      name: string;
+      mimeType: string;
+      webViewLink: string;
+    }>;
+  };
 }
 
 // Lender match result

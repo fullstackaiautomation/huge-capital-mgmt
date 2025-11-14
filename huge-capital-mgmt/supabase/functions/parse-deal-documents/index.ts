@@ -18,7 +18,7 @@ interface ExtractedDealData {
     peak_sales_month: string | null;
     business_start_date: string | null;
     product_service_sold: string | null;
-    franchise_units_percent: number | null;
+    franchise_units: number | null; // Count of franchise units owned (integer)
     average_monthly_sales: number | null;
     average_monthly_card_sales: number | null;
     desired_loan_amount: number | null;
@@ -284,6 +284,31 @@ async function createDriveFolder(
   }
 }
 
+async function getDriveItem(
+  token: string,
+  fileId: string,
+): Promise<{ id: string; name: string; webViewLink: string } | null> {
+  try {
+    const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=id,name,webViewLink`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Failed to fetch Google Drive item metadata:', errorText);
+      return null;
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to fetch Google Drive item metadata:', error);
+    return null;
+  }
+}
+
 async function extractTextFromPdf(
   fileName: string,
   bytes: Uint8Array,
@@ -394,12 +419,16 @@ async function logAgentRun(
       .select('id')
       .single();
     if (error) {
+      // Silently fail if table doesn't exist - logging is optional
+      if (error.code === 'PGRST205' || error.code === 'PGRST204') {
+        return null;
+      }
       console.error('Failed to log agent run:', error);
       return null;
     }
     return data?.id ?? null;
   } catch (err) {
-    console.error('Failed to log agent run:', err);
+    console.error('Failed to log agent run (non-critical):', err);
     return null;
   }
 }
@@ -422,7 +451,7 @@ Deno.serve(async (req) => {
   let requestPayload: Record<string, any> | null = null;
   let requestSummary = '';
   let logId: string | null = null;
-  const originalDocuments: Array<{ name: string; type: string; base64: string; bytes: Uint8Array }>
+  const originalDocuments: Array<{ name: string; type: string; base64: string; bytes: Uint8Array; category?: string }>
     = [];
   const documentWarnings: string[] = [];
 
@@ -484,9 +513,22 @@ Deno.serve(async (req) => {
       : 'No files provided';
 
     // Helper to persist documents to Google Drive after extraction
-    const persistDocumentsToDrive = async (extracted: ExtractedDealData) => {
+    interface PersistOptions {
+      existingFolderId?: string | null;
+      existingFolderName?: string | null;
+      existingFolderWebViewLink?: string | null;
+      overrideFolderName?: string | null;
+    }
+
+    const persistDocumentsToDrive = async (
+      extracted: ExtractedDealData | null,
+      options: PersistOptions = {},
+    ): Promise<{
+      folder: { id: string; name: string; webViewLink: string } | null;
+      uploadedFiles: Array<{ id: string; name: string; mimeType: string; webViewLink: string }>;
+    }> => {
       if (!GOOGLE_SERVICE_ACCOUNT_JSON || !GOOGLE_DRIVE_PARENT_FOLDER_ID || originalDocuments.length === 0) {
-        return;
+        return { folder: null, uploadedFiles: [] };
       }
 
       try {
@@ -501,47 +543,182 @@ Deno.serve(async (req) => {
           GOOGLE_DRIVE_IMPERSONATED_USER,
         );
 
-        const folderName = formatFolderName(
-          (extracted.deal && 'legal_business_name' in extracted.deal)
-            ? extracted.deal.legal_business_name
-            : null,
-          new Date(),
-        );
+        let folder: { id: string; name: string; webViewLink: string } | null = null;
 
-        const folder = await createDriveFolder(token, GOOGLE_DRIVE_PARENT_FOLDER_ID, folderName);
+        if (options.existingFolderId) {
+          folder = await getDriveItem(token, options.existingFolderId);
+          if (!folder) {
+            folder = {
+              id: options.existingFolderId,
+              name: sanitizeDriveName(options.existingFolderName ?? 'Deal Upload'),
+              webViewLink: options.existingFolderWebViewLink ?? '',
+            };
+          }
+        } else {
+          const folderName = options.overrideFolderName
+            ?? formatFolderName(
+              extracted && extracted.deal && 'legal_business_name' in extracted.deal
+                ? extracted.deal.legal_business_name
+                : null,
+              new Date(),
+            );
+
+          folder = await createDriveFolder(token, GOOGLE_DRIVE_PARENT_FOLDER_ID, folderName);
+        }
+
         if (!folder) {
-          extracted.warnings = Array.from(new Set([
-            ...(extracted.warnings || []),
-            'Unable to create Google Drive folder for uploaded documents.',
-          ]));
-          return;
+          if (extracted) {
+            extracted.warnings = Array.from(new Set([
+              ...(extracted.warnings || []),
+              'Unable to create Google Drive folder for uploaded documents.',
+            ]));
+          }
+          return { folder: null, uploadedFiles: [] };
         }
 
         const uploadedFiles: Array<{ id: string; name: string; mimeType: string; webViewLink: string }> = [];
+        console.log(`Starting upload of ${originalDocuments.length} documents to Google Drive folder ${folder.id}`);
         for (const doc of originalDocuments) {
+          console.log(`Uploading: ${doc.name}, type: ${doc.type}, category: ${doc.category}, bytes: ${doc.bytes.length}`);
           if (!doc || doc.bytes.length === 0) {
+            console.warn(`Skipping ${doc?.name || 'unknown'}: empty or null document`);
             continue;
           }
           const uploaded = await uploadFileToDrive(token, folder.id, doc.name, doc.type, doc.bytes);
           if (uploaded) {
+            console.log(`Successfully uploaded: ${uploaded.name} (${uploaded.id})`);
             uploadedFiles.push(uploaded);
+          } else {
+            console.error(`Failed to upload: ${doc.name}`);
           }
         }
+        console.log(`Upload complete: ${uploadedFiles.length} of ${originalDocuments.length} files uploaded`);
 
-        extracted.documentsFolder = {
-          id: folder.id,
-          name: folder.name,
-          webViewLink: folder.webViewLink,
-          files: uploadedFiles,
-        };
+        if (extracted) {
+          const existingFiles = extracted.documentsFolder?.files ?? [];
+          extracted.documentsFolder = {
+            id: folder.id,
+            name: folder.name,
+            webViewLink: folder.webViewLink,
+            files: [...existingFiles, ...uploadedFiles],
+          };
+        }
+
+        return { folder, uploadedFiles };
       } catch (driveError) {
         console.error('Google Drive integration error:', driveError);
-        extracted.warnings = Array.from(new Set([
-          ...(extracted.warnings || []),
-          'Failed to store documents in Google Drive. Please upload manually.',
-        ]));
+        if (extracted) {
+          extracted.warnings = Array.from(new Set([
+            ...(extracted.warnings || []),
+            'Failed to store documents in Google Drive. Please upload manually.',
+          ]));
+        }
+        return { folder: null, uploadedFiles: [] };
       }
     };
+
+    const existingFolderId = typeof requestBody.existingFolderId === 'string' ? requestBody.existingFolderId : null;
+    const existingFolderName = typeof requestBody.existingFolderName === 'string' ? requestBody.existingFolderName : null;
+    const existingFolderWebViewLink = typeof requestBody.existingFolderWebViewLink === 'string'
+      ? requestBody.existingFolderWebViewLink
+      : null;
+
+    // Support skipParsing parameter for upload-only mode
+    const SKIP_PARSING = requestBody.skipParsing === true;
+
+    if (SKIP_PARSING) {
+      console.log('SKIP_PARSING mode enabled - uploading files without parsing');
+
+      // Process files to get bytes for upload
+      if (Array.isArray(files)) {
+        for (const file of files) {
+          if (typeof file === 'string') {
+            continue;
+          }
+
+          const { name, content, type, category } = file;
+          const fileName = name || 'Document';
+          const mimeType = typeof type === 'string' ? type : 'application/octet-stream';
+          const base64Content = typeof content === 'string' ? content : '';
+          const bytes = base64Content ? base64ToUint8Array(base64Content) : new Uint8Array();
+          const fileCategory = typeof category === 'string' ? category : undefined;
+
+          console.log(`[SKIP_PARSING] Processing file: ${fileName}, type: ${mimeType}, category: ${fileCategory}, bytes: ${bytes.length}`);
+
+          originalDocuments.push({
+            name: fileName,
+            type: mimeType,
+            base64: base64Content,
+            bytes,
+            category: fileCategory,
+          });
+        }
+      }
+
+      // Create mock extracted data
+      const extracted: ExtractedDealData = {
+        deal: {
+          legal_business_name: 'Test Business Upload',
+          dba_name: null,
+          ein: null,
+          business_type: null,
+          address: null,
+          city: null,
+          state: null,
+          zip: null,
+          phone: null,
+          website: null,
+          franchise_business: false,
+          seasonal_business: false,
+          peak_sales_month: null,
+          business_start_date: null,
+          product_service_sold: null,
+          franchise_units: null,
+          average_monthly_sales: null,
+          average_monthly_card_sales: null,
+          desired_loan_amount: null,
+          reason_for_loan: null,
+          loan_type: null,
+        },
+        owners: [],
+        statements: [],
+        fundingPositions: [],
+        confidence: {
+          deal: 0,
+          owners: [],
+          statements: []
+        },
+        missingFields: [],
+        warnings: ['SKIP_PARSING mode - files uploaded but not parsed']
+      };
+
+      if (documentWarnings.length > 0) {
+        extracted.warnings = Array.from(new Set([...(extracted.warnings || []), ...documentWarnings]));
+      }
+
+      const { folder, uploadedFiles } = await persistDocumentsToDrive(extracted, {
+        existingFolderId,
+        existingFolderName,
+        existingFolderWebViewLink,
+      });
+
+      const combinedWarnings = Array.from(new Set([
+        ...(extracted.warnings || []),
+        ...documentWarnings,
+      ]));
+
+      return new Response(JSON.stringify({
+        documentsFolder: folder,
+        uploadedFiles,
+        warnings: combinedWarnings,
+      }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      });
+    }
 
     // Get API keys from environment (check at runtime, not at module load)
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
@@ -554,7 +731,7 @@ Deno.serve(async (req) => {
       const systemPrompt = `You are an expert financial document analyzer for a business lending company. Extract structured business and financial information from application documents, bank statements, and tax returns.
 
 Extract ONLY the following fields and return valid JSON:
-1. Deal information: legal_business_name, dba_name, ein, business_type, address, city, state, zip, phone, website, franchise_business, seasonal_business, peak_sales_month, business_start_date, product_service_sold, franchise_units_percent, average_monthly_sales, average_monthly_card_sales, desired_loan_amount, reason_for_loan, loan_type (MCA or Business LOC)
+1. Deal information: legal_business_name, dba_name, ein, business_type, address, city, state, zip, phone, website, franchise_business, seasonal_business, peak_sales_month, business_start_date, product_service_sold, franchise_units (count of franchise units as integer, NOT percentage), average_monthly_sales, average_monthly_card_sales, desired_loan_amount, reason_for_loan, loan_type (MCA or Business LOC)
 2. Owners (1-2): owner_number, full_name, street_address, city, state, zip, phone, email, ownership_percent, drivers_license_number, date_of_birth
 3. Bank statements: statement_id, bank_name, statement_month (YYYY-MM), credits, debits, nsfs, overdrafts, average_daily_balance, deposit_count
 4. Funding positions: lender_name, amount, frequency (daily/weekly/monthly), detected_dates
@@ -573,17 +750,21 @@ Return ONLY valid JSON matching this structure exactly.`;
             continue;
           }
 
-          const { name, content, type } = file;
+          const { name, content, type, category } = file;
           const fileName = name || 'Document';
           const mimeType = typeof type === 'string' ? type : 'application/octet-stream';
           const base64Content = typeof content === 'string' ? content : '';
           const bytes = base64Content ? base64ToUint8Array(base64Content) : new Uint8Array();
+          const fileCategory = typeof category === 'string' ? category : undefined;
+
+          console.log(`Processing file: ${fileName}, type: ${mimeType}, category: ${fileCategory}, bytes: ${bytes.length}`);
 
           originalDocuments.push({
             name: fileName,
             type: mimeType,
             base64: base64Content,
             bytes,
+            category: fileCategory,
           });
 
           if (mimeType.toLowerCase().includes('pdf')) {
@@ -755,7 +936,7 @@ Return ONLY valid JSON matching this structure exactly.`;
       const systemPrompt = `You are an expert financial document analyzer for a business lending company. Extract structured business and financial information from application documents, bank statements, and tax returns.
 
 Extract ONLY the following fields and return valid JSON:
-1. Deal information: legal_business_name, dba_name, ein, business_type, address, city, state, zip, phone, website, franchise_business, seasonal_business, peak_sales_month, business_start_date, product_service_sold, franchise_units_percent, average_monthly_sales, average_monthly_card_sales, desired_loan_amount, reason_for_loan, loan_type (MCA or Business LOC)
+1. Deal information: legal_business_name, dba_name, ein, business_type, address, city, state, zip, phone, website, franchise_business, seasonal_business, peak_sales_month, business_start_date, product_service_sold, franchise_units (count of franchise units as integer, NOT percentage), average_monthly_sales, average_monthly_card_sales, desired_loan_amount, reason_for_loan, loan_type (MCA or Business LOC)
 2. Owners (1-2): owner_number, full_name, street_address, city, state, zip, phone, email, ownership_percent, drivers_license_number, date_of_birth
 3. Bank statements: statement_id, bank_name, statement_month (YYYY-MM), credits, debits, nsfs, overdrafts, average_daily_balance, deposit_count
 4. Funding positions: lender_name, amount, frequency (daily/weekly/monthly), detected_dates
@@ -776,17 +957,21 @@ Return ONLY valid JSON matching this structure exactly.`;
       // Process each file
       if (Array.isArray(files)) {
         for (const file of files) {
-          const { name, content, type } = file;
+          const { name, content, type, category } = file;
           const fileName = name || 'Document';
           const mimeType = typeof type === 'string' ? type : 'application/octet-stream';
           const base64Content = typeof content === 'string' ? content : '';
           const bytes = base64Content ? base64ToUint8Array(base64Content) : new Uint8Array();
+          const fileCategory = typeof category === 'string' ? category : undefined;
+
+          console.log(`[Claude Path] Processing file: ${fileName}, type: ${mimeType}, category: ${fileCategory}, bytes: ${bytes.length}`);
 
           originalDocuments.push({
             name: fileName,
             type: mimeType,
             base64: base64Content,
             bytes,
+            category: fileCategory,
           });
 
           if (mimeType.includes('image')) {
@@ -952,7 +1137,7 @@ Return ONLY valid JSON matching this structure exactly.`;
         peak_sales_month: null,
         business_start_date: null,
         product_service_sold: null,
-        franchise_units_percent: null,
+        franchise_units: null,
         average_monthly_sales: null,
         average_monthly_card_sales: null,
         desired_loan_amount: null,
@@ -1031,7 +1216,7 @@ Return ONLY valid JSON matching this structure exactly.`;
         peak_sales_month: null,
         business_start_date: null,
         product_service_sold: null,
-        franchise_units_percent: null,
+        franchise_units: null,
         average_monthly_sales: null,
         average_monthly_card_sales: null,
         desired_loan_amount: null,

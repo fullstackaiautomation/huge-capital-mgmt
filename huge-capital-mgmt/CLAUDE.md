@@ -175,6 +175,19 @@ huge-capital-mgmt/
 
 ---
 
+## Document Processing & Storage
+
+- Deal uploads create a Google Drive subfolder (`{YYYY-MM-DD}_{BusinessName}`) under the parent folder ID `1Y_DKpj6FrZ0y1LqCRv1Rd83qB9H7vCQE` using the service account.
+- Supabase secrets required by `parse-deal-documents` edge function:
+  - `GOOGLE_SERVICE_ACCOUNT_JSON` – rotated service account key (JSON string or base64).
+  - `GOOGLE_DRIVE_PARENT_FOLDER_ID` – parent folder ID above.
+  - Optional `GOOGLE_DRIVE_IMPERSONATED_USER` if domain-wide delegation is needed.
+- After updating secrets, run `supabase functions deploy parse-deal-documents` to refresh the edge function environment.
+- The function extracts PDF text via OpenAI Responses API before parsing, and writes the Drive folder metadata (`documentsFolder`) back to the deal for UI display.
+- Share the parent Drive folder with the service account email whenever credentials are rotated to preserve access.
+
+---
+
 ## Visual Consistency Rules
 
 ### Color Palette

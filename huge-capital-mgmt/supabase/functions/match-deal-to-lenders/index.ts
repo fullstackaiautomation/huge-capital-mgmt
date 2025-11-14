@@ -94,6 +94,28 @@ interface RecommendationsResponse {
   };
 }
 
+async function logAgentRun(
+  supabase: any,
+  entry: Record<string, any>
+): Promise<string | null> {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from('agent_run_logs')
+      .insert(entry)
+      .select('id')
+      .single();
+    if (error) {
+      console.error('Failed to log agent run:', error);
+      return null;
+    }
+    return data?.id ?? null;
+  } catch (err) {
+    console.error('Failed to log agent run:', err);
+    return null;
+  }
+}
+
 const LENDER_TABLES = [
   { type: "MCA", table: "lenders_mca", isIfs: false },
   { type: "Business LOC", table: "lenders_business_line_of_credit", isIfs: false },
@@ -119,9 +141,20 @@ Deno.serve(async (req) => {
     });
   }
 
+  const startTime = performance.now();
+  let logId: string | null = null;
+  let supabaseAdmin: any = null;
+  let userId: string | null = null;
+  let requestPayload: Record<string, any> | null = null;
+  let requestSummary = "";
+  let dealIdForLog: string | null = null;
+  let responsePayload: RecommendationsResponse | null = null;
+
   try {
     const requestBody = await req.json();
     const { dealId, deal, loanType, brokerPreferences } = requestBody;
+
+    dealIdForLog = dealId ?? null;
 
     if (!dealId || !deal || !loanType) {
       return new Response(
@@ -133,6 +166,29 @@ Deno.serve(async (req) => {
       );
     }
 
+    const business = deal.deal || {};
+
+    requestPayload = {
+      dealId,
+      loanType,
+      business: {
+        legal_business_name: business.legal_business_name,
+        desired_loan_amount: business.desired_loan_amount,
+        average_monthly_sales: business.average_monthly_sales,
+        state: business.state,
+        business_type: business.business_type,
+      },
+      owners: (deal.owners || []).map((owner: any) => ({
+        full_name: owner.full_name,
+        ownership_percent: owner.ownership_percent,
+      })),
+      statements_count: Array.isArray(deal.statements) ? deal.statements.length : 0,
+      funding_positions_count: Array.isArray(deal.fundingPositions) ? deal.fundingPositions.length : 0,
+      brokerPreferences,
+    };
+
+    requestSummary = `${business.legal_business_name || dealId} (${loanType})`;
+
     const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -142,7 +198,21 @@ Deno.serve(async (req) => {
     }
 
     // Initialize Supabase client
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const supabase = supabaseAdmin;
+
+    const authHeader = req.headers.get("authorization") || req.headers.get("Authorization");
+    if (supabaseAdmin && authHeader?.toLowerCase().startsWith("bearer ")) {
+      try {
+        const token = authHeader.replace(/^Bearer\s+/i, "");
+        const {
+          data: { user },
+        } = await supabaseAdmin.auth.getUser(token);
+        userId = user?.id ?? null;
+      } catch (authError) {
+        console.error("Failed to resolve auth user for logging:", authError);
+      }
+    }
 
     // Query lenders based on loan type
     const lenderTableConfig = LENDER_TABLES.find(
@@ -371,6 +441,28 @@ MATCHING STRATEGY:
     // Add dealId to response
     recommendations.dealId = dealId;
 
+    responsePayload = recommendations;
+
+    const duration = Math.round(performance.now() - startTime);
+    const responseSummary = recommendations.summary?.topChoice
+      ? `Top lender: ${recommendations.summary.topChoice}`
+      : 'No lenders matched';
+
+    logId =
+      (await logAgentRun(supabaseAdmin, {
+        agent_name: 'lending-expert-agent',
+        agent_stage: 'lender_match',
+        invocation_source: 'edge_function',
+        user_id: userId,
+        deal_id: dealId,
+        request_payload: requestPayload,
+        request_summary: requestSummary,
+        response_payload: recommendations,
+        response_summary: responseSummary,
+        success: true,
+        duration_ms: duration,
+      })) ?? logId;
+
     // Store recommendations in database
     if (recommendations.recommendations && recommendations.recommendations.length > 0) {
       const matchRecords = recommendations.recommendations.map((match: MatchResult) => ({
@@ -393,7 +485,7 @@ MATCHING STRATEGY:
       }
     }
 
-    return new Response(JSON.stringify(recommendations), {
+    return new Response(JSON.stringify({ ...recommendations, logId }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
@@ -402,9 +494,28 @@ MATCHING STRATEGY:
     });
   } catch (error) {
     console.error("Error matching deal to lenders:", error);
+
+    const duration = Math.round(performance.now() - startTime);
+    logId =
+      (await logAgentRun(supabaseAdmin, {
+        agent_name: 'lending-expert-agent',
+        agent_stage: 'lender_match',
+        invocation_source: 'edge_function',
+        user_id: userId,
+        deal_id: dealIdForLog,
+        request_payload: requestPayload,
+        request_summary: requestSummary,
+        response_payload: responsePayload,
+        response_summary: 'Error during lender matching',
+        success: false,
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+        duration_ms: duration,
+      })) ?? logId;
+
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : "Unknown error",
+        logId,
         recommendations: [],
         summary: {
           totalLendersMatched: 0,

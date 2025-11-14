@@ -2,6 +2,158 @@
 
 ## Latest Updates
 
+### Session 7: November 13, 2025 - Bank Statement Parsing Timeout Fix
+
+#### Completed Tasks
+- ✅ **Fixed Critical 504 Timeout Bug**: Bank statement parsing now completes successfully within time limits
+  - Root cause: Sequential file processing caused 150+ second execution time (exceeded Supabase's 150s hard limit)
+  - With 3 PDFs × 60s each = 180s sequential processing > 150s timeout
+  - Solution: Converted to parallel processing using `Promise.all()` with timeout protection
+
+- ✅ **Performance Optimization**: Reduced processing time from 150+ seconds to ~30-40 seconds
+  - Changed from sequential `for` loop to parallel execution with `Promise.all()`
+  - All bank statement files now process simultaneously
+  - 3 files × 30s in parallel = 30s total (vs 180s sequential)
+
+- ✅ **Timeout Configuration Improvements**:
+  - Reduced `REQUEST_TIMEOUT_MS` from 60s → 30s for faster failure detection
+  - Reduced `TIME_BUDGET_MS` from 120s → 100s to stay well under 150s hard limit
+  - Reduced Anthropic Haiku `max_tokens` from 1500 → 800 for faster AI responses
+
+- ✅ **Enhanced Error Handling**:
+  - Added try-catch per file to prevent one bad file from blocking others
+  - Added timeout protection with `Promise.race()`
+  - Implemented graceful degradation using `Promise.allSettled()` for partial results
+  - Individual file failures no longer crash entire pipeline
+
+- ✅ **Disabled Lender Matching Step**: Removed from deal submission workflow
+  - Commented out lender matching logic in `NewDealModal.tsx`
+  - Removed "Generate lender matches" stage from UI progress indicator
+  - Workflow now ends after "Store financial metrics" step
+
+#### Technical Details
+- **Files Modified**:
+  - `supabase/functions/parse-bank-statements/index.ts` - Parallel processing implementation
+  - `src/components/Deals/NewDealModal.tsx` - Removed lender matching step
+
+- **Code Pattern Change**:
+  ```typescript
+  // BEFORE (sequential - times out):
+  for (const file of files) {
+    const result = await analyzeBankDocument(...); // 60s per file
+    aggregatedResult.statements.push(...result.statements);
+  }
+
+  // AFTER (parallel - completes in ~30s):
+  const filePromises = files.map(async (file) => {
+    return await analyzeBankDocument(...); // All files processed simultaneously
+  });
+
+  const results = await Promise.race([
+    Promise.all(filePromises),
+    timeoutPromise
+  ]);
+  ```
+
+- **Performance Metrics**:
+  - Before: 150+ seconds timeout for 3 files (504 error)
+  - After: ~30-40 seconds for 3 files processed in parallel ✅
+  - Improvement: ~75% faster processing time
+
+#### Testing Results
+- ✅ Bank statement parsing completes without timeout
+- ✅ All 3 PDFs (July, August, September) processed successfully
+- ✅ Financial data extracted and saved to database
+- ✅ Deal submission workflow completes end-to-end
+- ✅ Edge function deployed and working in production
+
+#### Architecture Notes
+- Parallel processing strategy allows horizontal scaling
+- Timeout protection prevents cascading failures
+- Graceful degradation ensures partial results if some files fail
+- Per-file error handling isolates failures
+
+#### Next Steps
+- Monitor production performance with real user uploads
+- Consider implementing background job pattern for very large file batches (>5 files)
+- Re-enable lender matching step when ready
+
+---
+
+### Session 6: November 13, 2025 - Bank Statement Upload Fix & Google Drive Integration
+
+#### Completed Tasks
+- ✅ **Fixed Critical Bug**: Bank statement PDFs now uploading to Google Drive successfully
+  - Root cause: React state timing issue in `DocumentUpload.tsx`
+  - Files were being lost due to async state updates before parent callback
+  - Solution: Pass computed file arrays directly to `onFilesReady()` instead of relying on `setTimeout()` with stale state
+
+- ✅ **Separated Upload Zones**: Split document upload into two distinct areas
+  - Left zone: Application documents
+  - Right zone: Bank statements
+  - Each file tagged with category metadata for better AI parsing
+
+- ✅ **Enhanced Edge Function Logging**: Added comprehensive debug logging to track file processing
+  - Logs file name, type, category, and byte size for each upload
+  - Tracks upload success/failure for each document
+  - Reports final count of uploaded vs total files
+
+- ✅ **Implemented Test Mode**: Created SKIP_PARSING mode to isolate upload from parsing
+  - Allowed verification that all files reach edge function
+  - Confirmed Google Drive upload works for all file types
+  - Proved parsing was not the issue
+
+- ✅ **Fixed Agent Logging**: Made agent_run_logs table creation non-blocking
+  - Edge function now handles missing table gracefully
+  - Logging is optional and won't crash the upload process
+
+#### Technical Details
+- **Files Modified**:
+  - `src/components/Deals/DocumentUpload.tsx` - Fixed state synchronization bug
+  - `supabase/functions/parse-deal-documents/index.ts` - Added SKIP_PARSING mode and enhanced logging
+
+- **Code Pattern Change**:
+  ```typescript
+  // BEFORE (broken):
+  setApplicationFiles([...files, ...newFiles]);
+  setTimeout(() => notifyParent(), 0); // Reads stale state!
+
+  // AFTER (working):
+  let updatedAppFiles = [...applicationFiles, ...newFiles];
+  setApplicationFiles(updatedAppFiles);
+  onFilesReady([
+    ...updatedAppFiles.map(f => ({ file: f.file, category: 'application' })),
+    ...statementFiles.map(f => ({ file: f.file, category: 'statements' }))
+  ]);
+  ```
+
+#### Testing Results
+- ✅ Application files (PNG, PDF) upload successfully
+- ✅ Bank statement PDFs upload successfully
+- ✅ All files appear in Google Drive with correct names
+- ✅ Category metadata preserved throughout pipeline
+- ✅ Multiple files from both zones processed correctly
+
+#### Next Steps
+- Re-enable AI parsing (set SKIP_PARSING = false)
+- Test end-to-end deal submission with parsing
+- Verify parsed data quality with both file types
+
+---
+
+### Session 5: November 12, 2025 - Agent Logging & QA Dashboard
+
+#### Completed Tasks
+- ✅ Added Supabase migration `20251112071503_create_agent_run_logs.sql` to store agent executions with flagging metadata and RLS policies
+- ✅ Instrumented `parse-deal-documents`, `match-deal-to-lenders`, and `prepare-submissions` edge functions to log request/response payloads, duration, success state, and user context, returning log IDs to the UI
+- ✅ Built new `/agent-logs` page with filtering, search, expansion, and flag/unflag workflow so brokers can review and annotate agent runs
+- ✅ Surfaced parse/match log IDs within `NewDealModal` to link the workflow to the QA view
+- ❗ `npm run lint` still fails because the repository already contains numerous legacy lint/type issues outside the touched files (documented for follow-up)
+
+#### Next Steps
+- Fix existing project-wide lint/type violations so automated checks can pass
+- Extend logging to cover any remaining agent scripts or background jobs once stabilized
+
 ### Session 4: October 26, 2025 - Build Error Resolution & TypeScript Fixes
 
 #### Completed Tasks

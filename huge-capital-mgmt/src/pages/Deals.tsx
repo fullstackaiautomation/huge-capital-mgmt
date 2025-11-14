@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Plus,
   Search,
@@ -47,6 +48,7 @@ export default function Deals() {
   const [filterLoanType, setFilterLoanType] = useState<'All' | 'MCA' | 'Business LOC'>('All');
   const [showNewDealModal, setShowNewDealModal] = useState(false);
   const [sortBy, setSortBy] = useState<'created' | 'amount' | 'status'>('created');
+  const navigate = useNavigate();
 
   // Fetch deals on mount
   useEffect(() => {
@@ -309,9 +311,7 @@ export default function Deals() {
                 {/* Action Buttons */}
                 <div className="flex gap-2 pt-4 border-t border-gray-700/30">
                   <button
-                    onClick={() => {
-                      /* Navigate to detail page */
-                    }}
+                    onClick={() => navigate(`/deals/${deal.id}`)}
                     className="flex-1 flex items-center justify-center gap-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 px-3 py-2 rounded-lg transition-all text-sm font-medium"
                   >
                     View Details

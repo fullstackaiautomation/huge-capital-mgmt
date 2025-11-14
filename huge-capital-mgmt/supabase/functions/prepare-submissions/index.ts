@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 
@@ -27,6 +28,28 @@ interface PrepareSubmissionsResponse {
   warnings: string[];
 }
 
+async function logAgentRun(
+  supabase: any,
+  entry: Record<string, any>
+): Promise<string | null> {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from('agent_run_logs')
+      .insert(entry)
+      .select('id')
+      .single();
+    if (error) {
+      console.error('Failed to log agent run:', error);
+      return null;
+    }
+    return data?.id ?? null;
+  } catch (err) {
+    console.error('Failed to log agent run:', err);
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   // Handle CORS
   if (req.method === 'OPTIONS') {
@@ -38,6 +61,13 @@ Deno.serve(async (req) => {
       },
     });
   }
+
+  const startTime = performance.now();
+  let supabaseAdmin: any = null;
+  let userId: string | null = null;
+  let requestPayload: Record<string, any> | null = null;
+  let requestSummary = '';
+  let logId: string | null = null;
 
   try {
     const { dealData, selectedLenders, dealDocumentLinks } = await req.json();
@@ -51,9 +81,59 @@ Deno.serve(async (req) => {
       );
     }
 
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    supabaseAdmin =
+      SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
+        ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+        : null;
+
+    const authHeader = req.headers.get('authorization') || req.headers.get('Authorization');
+    if (supabaseAdmin && authHeader?.toLowerCase().startsWith('bearer ')) {
+      try {
+        const token = authHeader.replace(/^Bearer\s+/i, '');
+        const {
+          data: { user },
+        } = await supabaseAdmin.auth.getUser(token);
+        userId = user?.id ?? null;
+      } catch (authError) {
+        console.error('Failed to resolve auth user for logging:', authError);
+      }
+    }
+
+    requestPayload = {
+      deal: {
+        legal_business_name: dealData?.legal_business_name,
+        loan_type: dealData?.loan_type,
+        desired_loan_amount: dealData?.desired_loan_amount,
+      },
+      selectedLenders: selectedLenders.map((l: any) => ({ id: l.id, name: l.name })),
+      documentLinksCount: Array.isArray(dealDocumentLinks) ? dealDocumentLinks.length : 0,
+    };
+
+    requestSummary = `${dealData?.legal_business_name || 'Unknown deal'} (${selectedLenders.length} ${
+      selectedLenders.length === 1 ? 'lender' : 'lenders'
+    })`;
+
     if (!ANTHROPIC_API_KEY) {
+      const duration = Math.round(performance.now() - startTime);
+      logId =
+        (await logAgentRun(supabaseAdmin, {
+          agent_name: 'submission-agent',
+          agent_stage: 'submission_package',
+          invocation_source: 'edge_function',
+          user_id: userId,
+          request_payload: requestPayload,
+          request_summary: requestSummary,
+          response_payload: null,
+          response_summary: 'Anthropic API key not configured',
+          success: false,
+          error_message: 'Anthropic API key not configured',
+          duration_ms: duration,
+        })) ?? logId;
+
       return new Response(
-        JSON.stringify({ error: 'Anthropic API key not configured' }),
+        JSON.stringify({ error: 'Anthropic API key not configured', logId }),
         { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
       );
     }
@@ -74,12 +154,33 @@ Deno.serve(async (req) => {
       }
     }
 
+    const responseBody: PrepareSubmissionsResponse = {
+      packages,
+      totalPackages: packages.length,
+      warnings: packages.length < selectedLenders.length ? ['Some submission packages failed to generate'] : [],
+    };
+
+    const duration = Math.round(performance.now() - startTime);
+    const responseSummary = `Generated ${responseBody.totalPackages} submission package${
+      responseBody.totalPackages === 1 ? '' : 's'
+    }`;
+
+    logId =
+      (await logAgentRun(supabaseAdmin, {
+        agent_name: 'submission-agent',
+        agent_stage: 'submission_package',
+        invocation_source: 'edge_function',
+        user_id: userId,
+        request_payload: requestPayload,
+        request_summary: requestSummary,
+        response_payload: responseBody,
+        response_summary: responseSummary,
+        success: true,
+        duration_ms: duration,
+      })) ?? logId;
+
     return new Response(
-      JSON.stringify({
-        packages,
-        totalPackages: packages.length,
-        warnings: packages.length < selectedLenders.length ? ['Some submission packages failed to generate'] : [],
-      }),
+      JSON.stringify({ ...responseBody, logId }),
       {
         status: 200,
         headers: {
@@ -90,9 +191,27 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error('Submission preparation error:', error);
+
+    const duration = Math.round(performance.now() - startTime);
+    logId =
+      (await logAgentRun(supabaseAdmin, {
+        agent_name: 'submission-agent',
+        agent_stage: 'submission_package',
+        invocation_source: 'edge_function',
+        user_id: userId,
+        request_payload: requestPayload,
+        request_summary: requestSummary,
+        response_payload: null,
+        response_summary: 'Error during submission package generation',
+        success: false,
+        error_message: error instanceof Error ? error.message : 'Submission preparation failed',
+        duration_ms: duration,
+      })) ?? logId;
+
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : 'Submission preparation failed',
+        logId,
       }),
       {
         status: 500,
