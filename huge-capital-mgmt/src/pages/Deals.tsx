@@ -12,7 +12,6 @@ import {
   Building2,
   AlertCircle,
   Loader,
-  ChevronRight,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
@@ -348,7 +347,7 @@ export default function Deals() {
                         </div>
                         <div className="space-y-3">
                           {deal.owners && deal.owners.length > 0 ? (
-                            deal.owners.map((owner, index) => (
+                            deal.owners.map((owner) => (
                               <div
                                 key={owner.id}
                                 className="bg-gray-700/20 rounded-lg p-3 border border-gray-700/30"
