@@ -13,13 +13,17 @@ import {
   AlertCircle,
   Loader,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import NewDealModal from '../components/Deals/NewDealModal';
-import type { Deal, DealStatus } from '../types/deals';
+import type { Deal, DealStatus, DealOwner, DealBankStatement } from '../types/deals';
 
 interface DealWithOwners extends Deal {
   owner_count?: number;
+  owners?: DealOwner[];
+  statements?: DealBankStatement[];
 }
 
 interface StatusSummary {
@@ -48,6 +52,7 @@ export default function Deals() {
   const [filterLoanType, setFilterLoanType] = useState<'All' | 'MCA' | 'Business LOC'>('All');
   const [showNewDealModal, setShowNewDealModal] = useState(false);
   const [sortBy, setSortBy] = useState<'created' | 'amount' | 'status'>('created');
+  const [expandedDealId, setExpandedDealId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   // Fetch deals on mount
@@ -67,17 +72,31 @@ export default function Deals() {
 
       if (dealsError) throw dealsError;
 
-      // Fetch owner counts for each deal
+      // Fetch owner counts, owners, and statements for each deal
       const dealsWithOwners = await Promise.all(
         (dealsData || []).map(async (deal) => {
-          const { count } = await supabase
-            .from('deal_owners')
-            .select('*', { count: 'exact', head: true })
-            .eq('deal_id', deal.id);
+          const [{ count }, { data: owners }, { data: statements }] = await Promise.all([
+            supabase
+              .from('deal_owners')
+              .select('*', { count: 'exact', head: true })
+              .eq('deal_id', deal.id),
+            supabase
+              .from('deal_owners')
+              .select('*')
+              .eq('deal_id', deal.id)
+              .order('owner_number', { ascending: true }),
+            supabase
+              .from('deal_bank_statements')
+              .select('*')
+              .eq('deal_id', deal.id)
+              .order('statement_month', { ascending: false }),
+          ]);
 
           return {
             ...deal,
             owner_count: count || 0,
+            owners: owners || [],
+            statements: statements || [],
           };
         })
       );
@@ -166,7 +185,8 @@ export default function Deals() {
       {/* Header */}
       <div className="border-b border-gray-700/30 bg-gray-800/50 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between gap-6">
+            {/* Title */}
             <div>
               <h1 className="text-3xl font-bold text-white flex items-center gap-2">
                 <TrendingUp className="w-8 h-8 text-indigo-400" />
@@ -174,29 +194,31 @@ export default function Deals() {
               </h1>
               <p className="text-gray-400 mt-1">Manage and track deal submissions</p>
             </div>
+
+            {/* Status Cards */}
+            <div className="flex gap-3">
+              {statusSummary.slice(0, 2).map((item) => (
+                <button
+                  key={item.status}
+                  onClick={() => setFilterStatus(filterStatus === item.status ? 'All' : item.status)}
+                  className={`p-3 rounded-lg text-center transition-all min-w-[100px] ${
+                    filterStatus === item.status ? item.color : 'bg-gray-700/30 text-gray-400'
+                  }`}
+                >
+                  <div className="text-2xl font-bold">{item.count}</div>
+                  <div className="text-sm">{item.status}</div>
+                </button>
+              ))}
+            </div>
+
+            {/* New Deal Button */}
             <button
               onClick={() => setShowNewDealModal(true)}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-all font-medium"
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg transition-all font-bold text-lg"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-8 h-8" />
               New Deal
             </button>
-          </div>
-
-          {/* Status Pipeline */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2">
-            {statusSummary.map((item) => (
-              <button
-                key={item.status}
-                onClick={() => setFilterStatus(filterStatus === item.status ? 'All' : item.status)}
-                className={`p-3 rounded-lg text-center transition-all ${
-                  filterStatus === item.status ? item.color : 'bg-gray-700/30 text-gray-400'
-                }`}
-              >
-                <div className="text-lg font-bold">{item.count}</div>
-                <div className="text-xs">{item.status}</div>
-              </button>
-            ))}
           </div>
         </div>
       </div>
@@ -270,58 +292,225 @@ export default function Deals() {
                 className="bg-gray-800/30 backdrop-blur-sm border border-gray-700/30 rounded-lg p-5 hover:border-gray-700/50 transition-all group"
               >
                 <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-white group-hover:text-indigo-400 transition-colors">
-                      {deal.legal_business_name}
-                    </h3>
-                    {deal.dba_name && <p className="text-sm text-gray-400">DBA: {deal.dba_name}</p>}
+                  <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-4">
+                    {/* Business Name Column */}
+                    <div>
+                      <p className="text-sm text-gray-400 mb-1">BUSINESS NAME</p>
+                      <h3 className="text-lg font-semibold text-white group-hover:text-indigo-400 transition-colors">
+                        {deal.legal_business_name}
+                      </h3>
+                      {deal.dba_name && <p className="text-sm text-gray-400">{deal.dba_name}</p>}
+                    </div>
+
+                    {/* Loan Amount */}
+                    <div>
+                      <p className="text-sm text-gray-400 mb-1">LOAN AMOUNT</p>
+                      <h3 className="text-lg font-semibold text-white">
+                        ${(deal.desired_loan_amount || 0).toLocaleString()}
+                      </h3>
+                    </div>
+
+                    {/* Loan Type */}
+                    <div>
+                      <p className="text-sm text-gray-400 mb-1">LOAN TYPE</p>
+                      <h3 className="text-lg font-semibold text-white">{deal.loan_type}</h3>
+                    </div>
+
+                    {/* EIN */}
+                    <div>
+                      <p className="text-sm text-gray-400 mb-1">EIN</p>
+                      <h3 className="text-lg font-semibold text-white">{deal.ein || 'N/A'}</h3>
+                    </div>
+
+                    {/* Created */}
+                    <div>
+                      <p className="text-sm text-gray-400 mb-1">CREATED</p>
+                      <h3 className="text-lg font-semibold text-white">
+                        {new Date(deal.created_at).toLocaleDateString()}
+                      </h3>
+                    </div>
                   </div>
+
                   <div className={`px-3 py-1 rounded-full text-sm font-medium ${STATUS_COLORS[deal.status]}`}>
                     {deal.status}
                   </div>
                 </div>
 
-                {/* Deal Details Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Loan Amount</p>
-                    <p className="text-base font-semibold text-white">
-                      ${(deal.desired_loan_amount || 0).toLocaleString()}
-                    </p>
-                  </div>
+                {/* Expanded Details */}
+                {expandedDealId === deal.id && (
+                  <div className="mt-4 pt-4 border-t border-gray-700/30">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Left Column - Owners */}
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <Building2 className="w-5 h-5 text-indigo-400" />
+                          <h4 className="text-lg font-semibold text-white">Owners</h4>
+                        </div>
+                        <div className="space-y-3">
+                          {deal.owners && deal.owners.length > 0 ? (
+                            deal.owners.map((owner, index) => (
+                              <div
+                                key={owner.id}
+                                className="bg-gray-700/20 rounded-lg p-3 border border-gray-700/30"
+                              >
+                                <div className="flex items-start justify-between mb-2">
+                                  <h5 className="font-semibold text-white">{owner.full_name}</h5>
+                                  {owner.ownership_percent && (
+                                    <span className="text-sm text-indigo-400 font-medium">
+                                      {owner.ownership_percent}%
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="space-y-1 text-sm text-gray-400">
+                                  <p>
+                                    {owner.street_address}, {owner.city}, {owner.state} {owner.zip}
+                                  </p>
+                                  {owner.email && (
+                                    <p>
+                                      <span className="text-gray-500">Email:</span> {owner.email}
+                                    </p>
+                                  )}
+                                  {owner.phone && (
+                                    <p>
+                                      <span className="text-gray-500">Phone:</span> {owner.phone}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-sm text-gray-500 italic">No owners recorded</p>
+                          )}
+                        </div>
+                      </div>
 
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Loan Type</p>
-                    <p className="text-sm text-gray-300">{deal.loan_type}</p>
-                  </div>
+                      {/* Right Column - Financial Overview */}
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <TrendingUp className="w-5 h-5 text-emerald-400" />
+                          <h4 className="text-lg font-semibold text-white">Financial Overview</h4>
+                        </div>
+                        <div className="space-y-3">
+                          {/* Key Financial Metrics */}
+                          <div className="bg-gray-700/20 rounded-lg p-3 border border-gray-700/30 space-y-2">
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-400">Avg Monthly Sales</span>
+                              <span className="text-sm font-semibold text-white">
+                                {deal.average_monthly_sales
+                                  ? `$${deal.average_monthly_sales.toLocaleString()}`
+                                  : 'N/A'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-400">Avg Monthly Card Sales</span>
+                              <span className="text-sm font-semibold text-white">
+                                {deal.average_monthly_card_sales
+                                  ? `$${deal.average_monthly_card_sales.toLocaleString()}`
+                                  : 'N/A'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-400">Time in Business</span>
+                              <span className="text-sm font-semibold text-white">
+                                {deal.time_in_business_months
+                                  ? `${Math.floor(deal.time_in_business_months / 12)} years, ${
+                                      deal.time_in_business_months % 12
+                                    } months`
+                                  : 'N/A'}
+                              </span>
+                            </div>
+                          </div>
 
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">EIN</p>
-                    <p className="text-sm text-gray-300">{deal.ein || 'N/A'}</p>
-                  </div>
+                          {/* Bank Statements Summary */}
+                          {deal.statements && deal.statements.length > 0 && (
+                            <div className="bg-gray-700/20 rounded-lg p-3 border border-gray-700/30">
+                              <h5 className="text-sm font-semibold text-gray-300 mb-3">
+                                Bank Statements ({deal.statements.length})
+                              </h5>
+                              <div className="space-y-3 max-h-64 overflow-y-auto">
+                                {deal.statements.map((stmt) => (
+                                  <div key={stmt.id} className="border-b border-gray-700/30 pb-3 last:border-0 last:pb-0">
+                                    <div className="font-medium text-white text-xs mb-2">
+                                      {stmt.bank_name} - {stmt.statement_month}
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-500">Deposit Count:</span>
+                                        <span className="text-gray-300 font-medium">{stmt.deposit_count || 'N/A'}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-500">Avg Daily Balance:</span>
+                                        <span className="text-emerald-400 font-medium">
+                                          {stmt.average_daily_balance
+                                            ? `$${stmt.average_daily_balance.toLocaleString()}`
+                                            : 'N/A'}
+                                        </span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-500">Overdrafts:</span>
+                                        <span className="text-orange-400 font-medium">{stmt.overdrafts || 0}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-500">Credits:</span>
+                                        <span className="text-green-400 font-medium">
+                                          {stmt.credits ? `$${stmt.credits.toLocaleString()}` : 'N/A'}
+                                        </span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-500">NSFs:</span>
+                                        <span className="text-orange-400 font-medium">{stmt.nsfs || 0}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-500">Debits:</span>
+                                        <span className="text-red-400 font-medium">
+                                          {stmt.debits ? `$${stmt.debits.toLocaleString()}` : 'N/A'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
 
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Created</p>
-                    <p className="text-sm text-gray-300">
-                      {new Date(deal.created_at).toLocaleDateString()}
-                    </p>
+                          {/* Documents Link */}
+                          {deal.application_google_drive_link && (
+                            <a
+                              href={deal.application_google_drive_link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block text-center text-sm text-indigo-400 hover:text-indigo-300 transition-colors py-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20"
+                            >
+                              View Documents Folder →
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Action Buttons */}
                 <div className="flex gap-2 pt-4 border-t border-gray-700/30">
                   <button
-                    onClick={() => navigate(`/deals/${deal.id}`)}
+                    onClick={() => setExpandedDealId(expandedDealId === deal.id ? null : deal.id)}
                     className="flex-1 flex items-center justify-center gap-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 px-3 py-2 rounded-lg transition-all text-sm font-medium"
                   >
-                    View Details
-                    <ChevronRight className="w-4 h-4" />
+                    {expandedDealId === deal.id ? (
+                      <>
+                        Hide Details
+                        <ChevronUp className="w-4 h-4" />
+                      </>
+                    ) : (
+                      <>
+                        View Details
+                        <ChevronDown className="w-4 h-4" />
+                      </>
+                    )}
                   </button>
 
                   <button
-                    onClick={() => {
-                      /* Edit deal */
-                    }}
+                    onClick={() => navigate(`/deals/${deal.id}`)}
                     className="px-3 py-2 bg-gray-700/20 hover:bg-gray-700/40 text-gray-400 hover:text-gray-300 rounded-lg transition-all text-sm font-medium"
                   >
                     Edit
