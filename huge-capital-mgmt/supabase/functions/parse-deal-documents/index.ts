@@ -98,7 +98,17 @@ function sanitizeDriveName(input: string): string {
 }
 
 function formatFolderName(businessName: string | null | undefined, uploadedAt: Date): string {
-  const datePart = uploadedAt.toISOString().split('T')[0];
+  // Format: "Business Name - MM/DD/YY H:MMAM/PM"
+  const month = String(uploadedAt.getMonth() + 1).padStart(2, '0');
+  const day = String(uploadedAt.getDate()).padStart(2, '0');
+  const year = String(uploadedAt.getFullYear()).slice(-2);
+
+  let hours = uploadedAt.getHours();
+  const minutes = String(uploadedAt.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12;
+
+  const datePart = `${month}/${day}/${year} ${hours}:${minutes}${ampm}`;
   const namePart = sanitizeDriveName(businessName ?? 'Deal Upload');
   return `${namePart} - ${datePart}`;
 }
@@ -563,6 +573,12 @@ Deno.serve(async (req) => {
               new Date(),
             );
 
+          console.log('[PERSIST-DRIVE] Creating new folder:', {
+            overrideFolderName: options.overrideFolderName,
+            extractedBusinessName: extracted?.deal?.legal_business_name,
+            finalFolderName: folderName
+          });
+
           folder = await createDriveFolder(token, GOOGLE_DRIVE_PARENT_FOLDER_ID, folderName);
         }
 
@@ -622,6 +638,14 @@ Deno.serve(async (req) => {
     const existingFolderWebViewLink = typeof requestBody.existingFolderWebViewLink === 'string'
       ? requestBody.existingFolderWebViewLink
       : null;
+    const overrideBusinessName = typeof requestBody.overrideBusinessName === 'string' ? requestBody.overrideBusinessName : null;
+
+    console.log('[PARSE-DEAL-DOCS] Request params:', {
+      existingFolderId,
+      existingFolderName,
+      overrideBusinessName,
+      skipParsing: requestBody.skipParsing
+    });
 
     // Support skipParsing parameter for upload-only mode
     const SKIP_PARSING = requestBody.skipParsing === true;
@@ -700,6 +724,7 @@ Deno.serve(async (req) => {
         existingFolderId,
         existingFolderName,
         existingFolderWebViewLink,
+        overrideFolderName: overrideBusinessName ? formatFolderName(overrideBusinessName, new Date()) : null,
       });
 
       const combinedWarnings = Array.from(new Set([

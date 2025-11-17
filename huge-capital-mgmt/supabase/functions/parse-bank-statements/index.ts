@@ -61,6 +61,76 @@ async function fetchWithTimeout(
 const REQUEST_TIMEOUT_MS = 30000; // Reduced from 60s to 30s for faster failure
 const TIME_BUDGET_MS = 100000; // Reduced from 120s to 100s to stay well under 150s hard limit
 const LARGE_PDF_BYTES_THRESHOLD = 18 * 1024 * 1024;
+const MAX_RETRIES = 3; // Maximum retry attempts for rate limit errors
+
+// OpenAI settings (10M tokens/min rate limit - much higher than Anthropic's 50k)
+const OPENAI_BATCH_SIZE = 5; // Process 5 files at a time with OpenAI
+const OPENAI_BATCH_DELAY_MS = 2000; // 2 second delay between batches for OpenAI
+
+// Anthropic settings (50k tokens/min rate limit - very restrictive)
+const ANTHROPIC_BATCH_SIZE = 1; // Process 1 file at a time with Anthropic (sequential)
+const ANTHROPIC_BATCH_DELAY_MS = 40000; // 40 second delay between files for Anthropic to avoid rate limits
+
+/**
+ * Retry a function with exponential backoff for rate limit errors
+ */
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  retries: number = MAX_RETRIES,
+  baseDelay: number = 1000
+): Promise<T> {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      const isRateLimitError =
+        error?.status === 429 ||
+        error?.message?.includes('rate_limit_error') ||
+        error?.message?.includes('rate limit');
+
+      const isLastAttempt = attempt === retries - 1;
+
+      if (!isRateLimitError || isLastAttempt) {
+        throw error;
+      }
+
+      const delay = baseDelay * Math.pow(2, attempt);
+      console.log(`Rate limit hit, retrying in ${delay}ms (attempt ${attempt + 1}/${retries})`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  throw new Error('Max retries exceeded');
+}
+
+/**
+ * Process items in batches with controlled concurrency
+ */
+async function processBatch<T, R>(
+  items: T[],
+  processor: (item: T) => Promise<R>,
+  batchSize: number = BATCH_SIZE,
+  delayBetweenBatches: number = BATCH_DELAY_MS
+): Promise<R[]> {
+  const results: R[] = [];
+
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    console.log(`Processing batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(items.length / batchSize)} (${batch.length} files)`);
+
+    const batchResults = await Promise.all(
+      batch.map(item => processor(item))
+    );
+
+    results.push(...batchResults);
+
+    // Add delay between batches (except after the last batch)
+    if (i + batchSize < items.length) {
+      await new Promise(resolve => setTimeout(resolve, delayBetweenBatches));
+    }
+  }
+
+  return results;
+}
 
 async function uploadPdfToOpenAI(
   fileName: string,
@@ -188,9 +258,138 @@ If information is missing, use nulls. Always respond with valid JSON.`;
     let uploadedFileId: string | null = null;
 
     const canUseAnthropic = Boolean(anthropicKey);
-    const preferAnthropic = canUseAnthropic && mimeType.toLowerCase().includes('pdf');
+    const canUseOpenAI = Boolean(openAiKey);
 
-    if (preferAnthropic) {
+    // Prefer OpenAI for PDFs due to much higher rate limits (10M vs 50k tokens/min)
+    // and guaranteed JSON output format
+    const preferOpenAI = canUseOpenAI && mimeType.toLowerCase().includes('pdf');
+
+    // Try OpenAI first for PDFs (better rate limits and guaranteed JSON)
+    if (preferOpenAI) {
+      console.log(`Analyzing bank statement with OpenAI (preferred for PDFs): ${fileName}`);
+
+      try {
+        // Upload PDF to OpenAI first
+        const uploadForm = new FormData();
+        uploadForm.append('purpose', 'assistants');
+        uploadForm.append('file', new Blob([bytes], { type: mimeType }), fileName);
+
+        const uploadResponse = await fetchWithTimeout('https://api.openai.com/v1/files', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${openAiKey}`,
+          },
+          body: uploadForm,
+        }, REQUEST_TIMEOUT_MS);
+
+        if (!uploadResponse.ok) {
+          const errorText = await uploadResponse.text();
+          console.error('Failed to upload PDF to OpenAI:', errorText);
+          warnings.push(`OpenAI file upload failed for ${fileName}: ${errorText}`);
+          // Fall through to Anthropic if available
+        } else {
+          const uploadedFile = await uploadResponse.json();
+          uploadedFileId = uploadedFile.id;
+
+          const openaiResponse = await retryWithBackoff(async () => {
+            return await fetchWithTimeout('https://api.openai.com/v1/responses', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${openAiKey}`,
+              },
+              body: JSON.stringify({
+                model: 'gpt-4.1-mini',
+                input: [
+                  {
+                    role: 'system',
+                    content: [
+                      {
+                        type: 'input_text',
+                        text: systemPrompt,
+                      },
+                    ],
+                  },
+                  {
+                    role: 'user',
+                    content: [
+                      {
+                        type: 'input_text',
+                        text: instruction,
+                      },
+                      {
+                        type: 'input_file',
+                        file_id: uploadedFileId,
+                      },
+                    ],
+                  },
+                ],
+                max_output_tokens: 2000,
+              }),
+            }, REQUEST_TIMEOUT_MS);
+          });
+
+          if (openaiResponse.ok) {
+            const responseData = await openaiResponse.json();
+            const textChunks: string[] = [];
+            if (Array.isArray(responseData.output)) {
+              for (const output of responseData.output) {
+                if (Array.isArray(output.content)) {
+                  for (const contentItem of output.content) {
+                    if (contentItem.type === 'output_text' && contentItem.text) {
+                      textChunks.push(contentItem.text);
+                    }
+                  }
+                }
+              }
+            }
+
+            const combined = textChunks.join('\n').trim();
+            const parsed = extractJsonFromText(combined);
+
+            // Clean up uploaded file
+            if (uploadedFileId) {
+              fetch(`https://api.openai.com/v1/files/${uploadedFileId}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${openAiKey}` },
+              }).catch((cleanupError) => console.error('Failed to delete OpenAI file:', cleanupError));
+            }
+
+            if (parsed) {
+              console.log(`✓ Successfully parsed ${fileName} with OpenAI`);
+              return {
+                statements: Array.isArray(parsed.statements) ? parsed.statements : [],
+                fundingPositions: Array.isArray(parsed.fundingPositions) ? parsed.fundingPositions : [],
+                warnings: Array.isArray(parsed.warnings) ? parsed.warnings : warnings,
+                confidence: typeof parsed.confidence === 'object' && parsed.confidence
+                  ? parsed.confidence
+                  : { statements: [] },
+              };
+            } else {
+              warnings.push(`OpenAI analysis returned invalid JSON for ${fileName}.`);
+            }
+          } else {
+            const errorText = await openaiResponse.text();
+            warnings.push(`OpenAI analysis failed for ${fileName}: ${errorText}`);
+          }
+        }
+      } catch (openaiError: any) {
+        console.error(`OpenAI processing error for ${fileName}:`, openaiError);
+        warnings.push(`OpenAI error for ${fileName}: ${openaiError.message || 'Unknown error'}`);
+        // Fall through to Anthropic if available
+      } finally {
+        // Clean up file if it was uploaded
+        if (uploadedFileId && openAiKey) {
+          fetch(`https://api.openai.com/v1/files/${uploadedFileId}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${openAiKey}` },
+          }).catch(() => {});
+        }
+      }
+    }
+
+    // Fallback to Anthropic if OpenAI failed or not preferred
+    if (canUseAnthropic) {
       if (bytes.length === 0) {
         warnings.push(`The file ${fileName} appears to be empty and could not be processed.`);
         return { ...defaultResult, warnings };
@@ -203,38 +402,40 @@ If information is missing, use nulls. Always respond with valid JSON.`;
 
       console.log(`Analyzing bank statement with Anthropic Haiku: ${fileName}`);
 
-      const response = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': anthropicKey!,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-3-5-haiku-20241022',
-          max_tokens: 800, // Reduced from 1500 to 800 for faster responses
-          system: systemPrompt,
-          messages: [
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'document',
-                  source: {
-                    type: 'base64',
-                    media_type: mimeType,
-                    data: base64Content,
+      const response = await retryWithBackoff(async () => {
+        return await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': anthropicKey!,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: 'claude-3-5-haiku-20241022',
+            max_tokens: 800, // Reduced from 1500 to 800 for faster responses
+            system: systemPrompt,
+            messages: [
+              {
+                role: 'user',
+                content: [
+                  {
+                    type: 'document',
+                    source: {
+                      type: 'base64',
+                      media_type: mimeType,
+                      data: base64Content,
+                    },
                   },
-                },
-                {
-                  type: 'text',
-                  text: instruction,
-                },
-              ],
-            },
-          ],
-        }),
-      }, REQUEST_TIMEOUT_MS);
+                  {
+                    type: 'text',
+                    text: instruction,
+                  },
+                ],
+              },
+            ],
+          }),
+        }, REQUEST_TIMEOUT_MS);
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -499,7 +700,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`parse-bank-statements: Parsing documents using ${ANTHROPIC_API_KEY ? 'Anthropic Haiku' : 'OpenAI'} (per-file analysis)`);
+    // Determine which AI service will be used (prefer OpenAI for PDFs)
+    const hasOpenAI = Boolean(OPENAI_API_KEY);
+    const hasAnthropic = Boolean(ANTHROPIC_API_KEY);
+    const willUseOpenAI = hasOpenAI; // OpenAI is now preferred for PDFs
+
+    console.log(`parse-bank-statements: Parsing documents using ${willUseOpenAI ? 'OpenAI (preferred)' : 'Anthropic Haiku'} (per-file analysis)`);
+
+    // Use appropriate batch settings based on AI service
+    const batchSize = willUseOpenAI ? OPENAI_BATCH_SIZE : ANTHROPIC_BATCH_SIZE;
+    const batchDelay = willUseOpenAI ? OPENAI_BATCH_DELAY_MS : ANTHROPIC_BATCH_DELAY_MS;
+
+    console.log(`Batch settings: size=${batchSize}, delay=${batchDelay}ms (${willUseOpenAI ? 'OpenAI 10M tokens/min' : 'Anthropic 50k tokens/min'})`);
 
     const startedAt = performance.now();
 
@@ -510,40 +722,40 @@ Deno.serve(async (req) => {
       warnings: [],
     };
 
-    // Process all files in parallel instead of sequentially to avoid timeout
-    const filePromises = files
-      .filter((file) => typeof file !== 'string')
-      .map(async (file) => {
-        const { name, content, type } = file;
-        const fileName = name || 'Document';
-        const mimeType = typeof type === 'string' ? type : 'application/octet-stream';
-        const base64Content = typeof content === 'string' ? content : '';
-        const bytes = base64Content ? base64ToUint8Array(base64Content) : new Uint8Array();
+    // Process files in batches with controlled concurrency to avoid rate limits
+    const filesToProcess = files.filter((file) => typeof file !== 'string');
 
-        console.log(`Processing bank statement file: ${fileName}, type: ${mimeType}, bytes: ${bytes.length}`);
+    const processFile = async (file: any): Promise<DocumentExtractionResult> => {
+      const { name, content, type } = file;
+      const fileName = name || 'Document';
+      const mimeType = typeof type === 'string' ? type : 'application/octet-stream';
+      const base64Content = typeof content === 'string' ? content : '';
+      const bytes = base64Content ? base64ToUint8Array(base64Content) : new Uint8Array();
 
-        try {
-          const result = await analyzeBankDocument(
-            fileName,
-            mimeType,
-            base64Content,
-            bytes,
-            ANTHROPIC_API_KEY,
-            OPENAI_API_KEY,
-          );
-          return result;
-        } catch (error) {
-          console.error(`Error processing ${fileName}:`, error);
-          return {
-            statements: [],
-            fundingPositions: [],
-            warnings: [`Failed to process ${fileName}: ${error instanceof Error ? error.message : 'Unknown error'}`],
-            confidence: { statements: [] },
-          };
-        }
-      });
+      console.log(`Processing bank statement file: ${fileName}, type: ${mimeType}, bytes: ${bytes.length}`);
 
-    // Wait for all files to be processed in parallel with timeout protection
+      try {
+        const result = await analyzeBankDocument(
+          fileName,
+          mimeType,
+          base64Content,
+          bytes,
+          ANTHROPIC_API_KEY,
+          OPENAI_API_KEY,
+        );
+        return result;
+      } catch (error) {
+        console.error(`Error processing ${fileName}:`, error);
+        return {
+          statements: [],
+          fundingPositions: [],
+          warnings: [`Failed to process ${fileName}: ${error instanceof Error ? error.message : 'Unknown error'}`],
+          confidence: { statements: [] },
+        };
+      }
+    };
+
+    // Process files in batches with timeout protection
     const timeoutPromise = new Promise<DocumentExtractionResult[]>((_, reject) => {
       setTimeout(() => reject(new Error('Processing exceeded time budget')), TIME_BUDGET_MS);
     });
@@ -551,7 +763,7 @@ Deno.serve(async (req) => {
     let results: DocumentExtractionResult[];
     try {
       results = await Promise.race([
-        Promise.all(filePromises),
+        processBatch(filesToProcess, processFile, batchSize, batchDelay),
         timeoutPromise,
       ]) as DocumentExtractionResult[];
     } catch (error) {
@@ -559,11 +771,8 @@ Deno.serve(async (req) => {
       console.warn(timeoutWarning);
       aggregatedResult.warnings.push(timeoutWarning);
 
-      // Try to get partial results from settled promises
-      const settledResults = await Promise.allSettled(filePromises);
-      results = settledResults
-        .filter((r): r is PromiseFulfilledResult<DocumentExtractionResult> => r.status === 'fulfilled')
-        .map(r => r.value);
+      // On timeout, return empty results (batched processing doesn't support partial results)
+      results = [];
     }
 
     // Aggregate all results

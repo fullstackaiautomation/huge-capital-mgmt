@@ -40,6 +40,7 @@ interface DriveFileMeta {
 interface UploadFile extends DealUploadFileDisplay {
   file: File;
   driveFile?: DriveFileMeta | null;
+  parsingStatus?: 'pending' | 'in_progress' | 'success' | 'error';
 }
 
 const STAGE_DEFINITIONS: Array<{ key: StageKey; label: string }> = [
@@ -256,6 +257,36 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
         throw new Error('Please sign in before submitting a deal.');
       }
 
+      // Pre-extract business name from first application document
+      let businessName: string | null = null;
+      const firstApplicationFile = files.find((file) => file.category === 'application');
+
+      if (firstApplicationFile) {
+        updateStage('upload', {
+          status: 'in_progress',
+          detail: 'Extracting business name...',
+        });
+
+        try {
+          const base64 = await fileToBase64(firstApplicationFile.file);
+          const { data: nameData } = await supabase.functions.invoke('extract-business-name', {
+            body: {
+              file: {
+                name: firstApplicationFile.name,
+                type: firstApplicationFile.file.type,
+                content: base64,
+              },
+            },
+          });
+
+          businessName = nameData?.businessName || null;
+          console.log('Extracted business name:', businessName);
+        } catch (nameError) {
+          console.error('Failed to extract business name:', nameError);
+          // Continue with upload even if name extraction fails
+        }
+      }
+
       let folder = driveFolder;
       const accumulatedDriveFiles: DriveFileMeta[] = [];
 
@@ -279,6 +310,7 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
             existingFolderId: folder?.id,
             existingFolderName: folder?.name,
             existingFolderWebViewLink: folder?.webViewLink,
+            overrideBusinessName: businessName,
           },
         });
 
@@ -330,6 +362,11 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
           detail: 'Analyzing application documents...',
         });
 
+        // Set parsing status to in_progress for application files
+        applicationFiles.forEach((file) => {
+          setFileStatus(file.id, { parsingStatus: 'in_progress' });
+        });
+
         const payload = await Promise.all(applicationFiles.map(async (file) => ({
           name: file.name,
           type: file.file.type,
@@ -341,6 +378,9 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
         });
 
         if (error) {
+          applicationFiles.forEach((file) => {
+            setFileStatus(file.id, { parsingStatus: 'error' });
+          });
           throw new Error('Failed to parse application documents.');
         }
 
@@ -349,6 +389,11 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
         if (Array.isArray(data?.warnings)) {
           data.warnings.forEach((w: string) => warningSet.add(w));
         }
+
+        // Set parsing status to success for application files
+        applicationFiles.forEach((file) => {
+          setFileStatus(file.id, { parsingStatus: 'success' });
+        });
 
         updateStage('parseApplication', {
           status: 'success',
@@ -416,8 +461,8 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
           reason_for_loan: dealData.reason_for_loan || null,
           loan_type: loanType,
           status: 'New',
-          application_google_drive_link: folder.webViewLink,
-          statements_google_drive_link: folder.webViewLink,
+          application_google_drive_link: folder?.webViewLink || null,
+          statements_google_drive_link: folder?.webViewLink || null,
         })
         .select()
         .single();
@@ -472,6 +517,11 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
           detail: 'Analyzing bank statements...',
         });
 
+        // Set parsing status to in_progress for statement files
+        statementFiles.forEach((file) => {
+          setFileStatus(file.id, { parsingStatus: 'in_progress' });
+        });
+
         const payload = await Promise.all(statementFiles.map(async (file) => ({
           name: file.name,
           type: file.file.type,
@@ -485,6 +535,9 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
         if (response.error) {
           const details = describeFunctionsError(response.error);
           console.error('parse-bank-statements invocation error:', response.error);
+          statementFiles.forEach((file) => {
+            setFileStatus(file.id, { parsingStatus: 'error' });
+          });
           updateStage('parseStatements', {
             status: 'error',
             detail: details,
@@ -496,6 +549,9 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
         if (!response.data) {
           const detail = 'Edge function returned no data.';
           console.error('parse-bank-statements returned empty data payload.', response);
+          statementFiles.forEach((file) => {
+            setFileStatus(file.id, { parsingStatus: 'error' });
+          });
           updateStage('parseStatements', {
             status: 'error',
             detail,
@@ -509,6 +565,11 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
         if (Array.isArray(response.data?.warnings)) {
           response.data.warnings.forEach((w: string) => warningSet.add(w));
         }
+
+        // Set parsing status to success for statement files
+        statementFiles.forEach((file) => {
+          setFileStatus(file.id, { parsingStatus: 'success' });
+        });
 
         updateStage('parseStatements', {
           status: 'success',
@@ -546,7 +607,7 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
               bank_name: bankName,
               statement_month: statementMonth,
               statement_id: statementIdentifier,
-              statement_file_url: folder.webViewLink,
+              statement_file_url: folder?.webViewLink || null,
               credits: numberOrNull(statement.credits),
               debits: numberOrNull(statement.debits),
               nsfs: numberOrNull(statement.nsfs) ?? 0,
@@ -578,7 +639,7 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
             lender_name: funding.lender_name || 'Unknown Lender',
             amount: amountValue,
             frequency: funding.frequency || 'daily',
-            detected_dates: Array.isArray(funding.detected_dates) ? funding.detected_dates : [],
+            detected_dates: (funding?.detected_dates && Array.isArray(funding.detected_dates)) ? funding.detected_dates : [],
           });
 
           if (fundingError) {
@@ -689,6 +750,48 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
     );
   };
 
+  const renderFileWithDualStatus = (file: UploadFile) => {
+    const uploadIcon = file.status === 'success'
+      ? <CheckCircle className="w-4 h-4 text-green-400" />
+      : file.status === 'uploading'
+      ? <Loader className="w-4 h-4 text-indigo-400 animate-spin" />
+      : file.status === 'error'
+      ? <AlertCircle className="w-4 h-4 text-red-400" />
+      : <div className="w-4 h-4 rounded border-2 border-gray-600" />;
+
+    const parsingIcon = file.parsingStatus === 'success'
+      ? <CheckCircle className="w-4 h-4 text-green-400" />
+      : file.parsingStatus === 'in_progress'
+      ? <Loader className="w-4 h-4 text-indigo-400 animate-spin" />
+      : file.parsingStatus === 'error'
+      ? <AlertCircle className="w-4 h-4 text-red-400" />
+      : <div className="w-4 h-4 rounded-full border-2 border-gray-600" />;
+
+    return (
+      <div key={file.id} className="flex items-center gap-2 bg-gray-800/50 border border-gray-700/30 rounded-lg p-2.5">
+        <div className="flex gap-1.5">
+          {uploadIcon}
+          {parsingIcon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs text-white truncate">{file.name}</p>
+          <p className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+          {file.error && file.status === 'error' && (
+            <p className="text-xs text-red-400 truncate">{file.error}</p>
+          )}
+        </div>
+        {file.status === 'uploading' && (
+          <div className="w-16 h-1 bg-gray-700 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-indigo-500 transition-all"
+              style={{ width: `${Math.min(100, Math.max(0, file.progress))}%` }}
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (!isOpen) {
     return null;
   }
@@ -712,39 +815,60 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
         </div>
 
         <div className="px-6 py-5 space-y-6">
-          {(mode === 'upload' || mode === 'processing') && (
+          {mode === 'upload' && (
             <div className="space-y-5">
               <DocumentUpload
                 files={displayFiles}
                 onAddFiles={handleAddFiles}
                 onRemoveFile={handleRemoveFile}
-                disabled={mode !== 'upload' || isWorking}
+                disabled={isWorking}
                 helperText={combinedHelperText}
                 maxFiles={20}
               />
-              {mode === 'upload' && (
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleSubmitDeal}
-                    disabled={isWorking}
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-all font-medium flex items-center justify-center gap-2"
-                  >
-                    {isWorking && <Loader className="w-4 h-4 animate-spin" />}
-                    Start Deal Intake
-                  </button>
-                </div>
-              )}
+              <div className="flex gap-3">
+                <button
+                  onClick={handleSubmitDeal}
+                  disabled={isWorking}
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-all font-medium flex items-center justify-center gap-2"
+                >
+                  {isWorking && <Loader className="w-4 h-4 animate-spin" />}
+                  Start Deal Intake
+                </button>
+              </div>
             </div>
           )}
 
           {mode === 'processing' && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm text-indigo-300">
-                <Loader className="w-4 h-4 animate-spin" />
-                Processing deal submission...
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Column: Documents with dual status */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-white">Documents</h3>
+                  <div className="flex items-center gap-3 text-xs text-gray-400">
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 rounded border-2 border-gray-600" />
+                      <span>Upload</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 rounded-full border-2 border-gray-600" />
+                      <span>Analyze</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
+                  {files.map(renderFileWithDualStatus)}
+                </div>
               </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                {stages.map(renderStageStatus)}
+
+              {/* Right Column: Processing stages */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm text-indigo-300">
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Processing deal submission...
+                </div>
+                <div className="space-y-3">
+                  {stages.map(renderStageStatus)}
+                </div>
               </div>
             </div>
           )}
