@@ -21,7 +21,7 @@ interface NewDealModalProps {
 }
 
 type StageStatus = 'pending' | 'in_progress' | 'success' | 'error';
-type StageKey = 'upload' | 'parseApplication' | 'saveDeal' | 'parseStatements' | 'saveFinancials' | 'match';
+type StageKey = 'upload' | 'parseApplication' | 'saveDeal' | 'parseStatements' | 'lenderOptions' | 'submitDeal';
 
 interface WorkflowStage {
   key: StageKey;
@@ -44,12 +44,12 @@ interface UploadFile extends DealUploadFileDisplay {
 }
 
 const STAGE_DEFINITIONS: Array<{ key: StageKey; label: string }> = [
-  { key: 'upload', label: 'Upload documents to Drive' },
-  { key: 'parseApplication', label: 'Analyze application documents' },
-  { key: 'saveDeal', label: 'Create deal record' },
-  { key: 'parseStatements', label: 'Analyze bank statements' },
-  { key: 'saveFinancials', label: 'Store financial metrics' },
-  // { key: 'match', label: 'Generate lender matches' }, // Disabled for now
+  { key: 'upload', label: 'Drive\nUpload' },
+  { key: 'parseApplication', label: 'Analyze\nApplication' },
+  { key: 'parseStatements', label: 'Analyze\nStatements' },
+  { key: 'saveDeal', label: 'Create Deal\nRecord' },
+  { key: 'lenderOptions', label: 'Lender\nOptions' },
+  { key: 'submitDeal', label: 'Submit\nDeal' },
 ];
 
 const createId = () => (
@@ -386,6 +386,13 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
 
         applicationResult = data;
 
+        console.log('📄 Application parsing result:', {
+          deal: data?.deal,
+          owners: data?.owners,
+          confidence: data?.confidence,
+          warnings: data?.warnings,
+        });
+
         if (Array.isArray(data?.warnings)) {
           data.warnings.forEach((w: string) => warningSet.add(w));
         }
@@ -434,42 +441,58 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
         ? Math.round((Date.now() - new Date(businessStartDate).getTime()) / (1000 * 60 * 60 * 24 * 30))
         : null;
 
+      // Log the data being inserted for debugging
+      const dealInsertData = {
+        user_id: user.id,
+        legal_business_name: legalBusinessName,
+        dba_name: dealData.dba_name || null,
+        ein: einValue,
+        business_type: dealData.business_type || null,
+        address: addressValue,
+        city: cityValue,
+        state: stateValue,
+        zip: zipValue,
+        phone: dealData.phone || null,
+        website: dealData.website || null,
+        franchise_business: Boolean(dealData.franchise_business),
+        seasonal_business: Boolean(dealData.seasonal_business),
+        peak_sales_month: dealData.peak_sales_month || null,
+        business_start_date: businessStartDate,
+        time_in_business_months: timeInBusinessMonths,
+        product_service_sold: dealData.product_service_sold || null,
+        franchise_units: franchiseUnits,
+        average_monthly_sales: averageMonthlySales,
+        average_monthly_sales_low: numberOrNull(dealData.average_monthly_sales_low),
+        average_monthly_sales_high: numberOrNull(dealData.average_monthly_sales_high),
+        average_monthly_card_sales: averageMonthlyCardSales,
+        desired_loan_amount: desiredLoanAmount,
+        reason_for_loan: dealData.reason_for_loan || null,
+        loan_type: loanType,
+        status: 'New',
+        application_google_drive_link: folder?.webViewLink || null,
+        statements_google_drive_link: folder?.webViewLink || null,
+      };
+
+      console.log('📝 Attempting to insert deal record:', dealInsertData);
+
       const { data: insertedDeal, error: dealInsertError } = await supabase
         .from('deals')
-        .insert({
-          user_id: user.id,
-          legal_business_name: legalBusinessName,
-          dba_name: dealData.dba_name || null,
-          ein: einValue,
-          business_type: dealData.business_type || null,
-          address: addressValue,
-          city: cityValue,
-          state: stateValue,
-          zip: zipValue,
-          phone: dealData.phone || null,
-          website: dealData.website || null,
-          franchise_business: Boolean(dealData.franchise_business),
-          seasonal_business: Boolean(dealData.seasonal_business),
-          peak_sales_month: dealData.peak_sales_month || null,
-          business_start_date: businessStartDate,
-          time_in_business_months: timeInBusinessMonths,
-          product_service_sold: dealData.product_service_sold || null,
-          franchise_units: franchiseUnits,
-          average_monthly_sales: averageMonthlySales,
-          average_monthly_card_sales: averageMonthlyCardSales,
-          desired_loan_amount: desiredLoanAmount,
-          reason_for_loan: dealData.reason_for_loan || null,
-          loan_type: loanType,
-          status: 'New',
-          application_google_drive_link: folder?.webViewLink || null,
-          statements_google_drive_link: folder?.webViewLink || null,
-        })
+        .insert(dealInsertData)
         .select()
         .single();
 
       if (dealInsertError) {
-        throw dealInsertError;
+        console.error('❌ Deal insert failed:', dealInsertError);
+        console.error('Error details:', {
+          message: dealInsertError.message,
+          details: dealInsertError.details,
+          hint: dealInsertError.hint,
+          code: dealInsertError.code,
+        });
+        throw new Error(`Database error: ${dealInsertError.message}${dealInsertError.hint ? ` (Hint: ${dealInsertError.hint})` : ''}`);
       }
+
+      console.log('✅ Deal inserted successfully:', insertedDeal);
 
       setDealRecord(insertedDeal);
 
@@ -582,12 +605,7 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
         });
       }
 
-      // Save statements and funding positions
-      currentStage = 'saveFinancials';
-      updateStage('saveFinancials', {
-        status: 'in_progress',
-        detail: 'Saving financial data...',
-      });
+      // Save statements and funding positions (part of saveDeal stage)
 
       const statementIds: string[] = [];
       const statements = Array.isArray(statementsResult?.statements) ? statementsResult.statements : [];
@@ -648,12 +666,7 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
         }
       }
 
-      updateStage('saveFinancials', {
-        status: 'success',
-        detail: statementIds.length
-          ? `Saved ${statementIds.length} statement${statementIds.length === 1 ? '' : 's'}.`
-          : 'No financial data to store.',
-      });
+      // Financial data saved as part of saveDeal stage
 
       // Lender matching disabled for now
       // currentStage = 'match';
@@ -750,6 +763,48 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
     );
   };
 
+  const renderHorizontalProgress = () => {
+    return (
+      <div className="flex items-center justify-between gap-2">
+        {stages.map((stage, index) => {
+          let stepColor = 'text-gray-500';
+          let bgColor = 'bg-gray-700/30';
+          let icon = <div className="w-6 h-6 rounded-full border-2 border-gray-600 bg-gray-800" />;
+
+          if (stage.status === 'success') {
+            stepColor = 'text-green-400';
+            bgColor = 'bg-green-500/20';
+            icon = <CheckCircle className="w-6 h-6 text-green-400" />;
+          } else if (stage.status === 'error') {
+            stepColor = 'text-red-400';
+            bgColor = 'bg-red-500/20';
+            icon = <AlertCircle className="w-6 h-6 text-red-400" />;
+          } else if (stage.status === 'in_progress') {
+            stepColor = 'text-indigo-400';
+            bgColor = 'bg-indigo-500/20';
+            icon = <Loader className="w-6 h-6 text-indigo-400 animate-spin" />;
+          }
+
+          return (
+            <div key={stage.key} className="flex items-center flex-1">
+              <div className="flex flex-col items-center gap-2 flex-1">
+                <div className={`flex items-center justify-center w-10 h-10 rounded-full ${bgColor}`}>
+                  {icon}
+                </div>
+                <span className={`text-xs font-medium ${stepColor} text-center whitespace-pre-line leading-tight`}>
+                  {stage.label}
+                </span>
+              </div>
+              {index < stages.length - 1 && (
+                <ChevronRight className="w-4 h-4 text-gray-600 flex-shrink-0 mx-1" />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   const renderFileWithDualStatus = (file: UploadFile) => {
     const uploadIcon = file.status === 'success'
       ? <CheckCircle className="w-4 h-4 text-green-400" />
@@ -800,18 +855,34 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <div className="bg-gray-900 border border-gray-700 rounded-lg max-w-4xl w-full max-h-[92vh] overflow-y-auto shadow-2xl">
         <div className="sticky top-0 flex items-center justify-between bg-gray-900 border-b border-gray-800 px-6 py-5">
-          <div>
+          <div className="flex items-center gap-3">
             <h2 className="text-xl font-semibold text-white">New Deal Submission</h2>
-            <p className="text-sm text-gray-400">Upload documents, verify extracted data, and save the deal.</p>
+            {mode === 'review' && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 border border-green-500/30 rounded-md">
+                <CheckCircle className="w-4 h-4 text-green-400" />
+                <span className="text-sm font-medium text-green-300">Deal saved successfully</span>
+              </div>
+            )}
           </div>
-          <button
-            onClick={handleClose}
-            disabled={isWorking}
-            className={`text-gray-400 hover:text-gray-200 transition-colors ${isWorking ? 'cursor-not-allowed opacity-50' : ''}`}
-            aria-label="Close deal submission"
-          >
-            <X className="w-6 h-6" />
-          </button>
+          <div className="flex items-center gap-3">
+            {mode === 'review' && dealRecord?.id && (
+              <Link
+                to={`/deals/${dealRecord.id}`}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-all font-semibold flex items-center gap-2"
+              >
+                View Full Deal Details
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+            )}
+            <button
+              onClick={handleClose}
+              disabled={isWorking}
+              className={`text-gray-400 hover:text-gray-200 transition-colors ${isWorking ? 'cursor-not-allowed opacity-50' : ''}`}
+              aria-label="Close deal submission"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
         </div>
 
         <div className="px-6 py-5 space-y-6">
@@ -839,8 +910,17 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
           )}
 
           {mode === 'processing' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Left Column: Documents with dual status */}
+            <div className="space-y-6">
+              {/* Horizontal Progress Bar */}
+              <div className="border border-gray-700/40 bg-gray-800/30 rounded-lg p-6">
+                <div className="flex items-center gap-2 text-sm text-indigo-300 mb-6">
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Processing deal submission...
+                </div>
+                {renderHorizontalProgress()}
+              </div>
+
+              {/* Documents with dual status */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-white">Documents</h3>
@@ -855,19 +935,8 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
                     </div>
                   </div>
                 </div>
-                <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto pr-2">
                   {files.map(renderFileWithDualStatus)}
-                </div>
-              </div>
-
-              {/* Right Column: Processing stages */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-indigo-300">
-                  <Loader className="w-4 h-4 animate-spin" />
-                  Processing deal submission...
-                </div>
-                <div className="space-y-3">
-                  {stages.map(renderStageStatus)}
                 </div>
               </div>
             </div>
@@ -875,125 +944,244 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
 
           {mode === 'review' && extractedData && (
             <div className="space-y-6">
-              <div className="flex items-start gap-3 p-4 border border-green-500/30 bg-green-500/10 rounded-lg">
-                <CheckCircle className="w-6 h-6 text-green-300 mt-0.5" />
-                <div>
-                  <h3 className="text-lg font-semibold text-white">Deal saved successfully</h3>
-                  <p className="text-sm text-gray-300">Review the extracted data below or click into the deal record to edit details.</p>
+              {/* Deal Snapshot - Full Width Top Row */}
+              <div className="border border-gray-800 rounded-lg bg-gray-800/40 p-5">
+                <h4 className="text-sm font-semibold text-white uppercase tracking-wide mb-3">Deal snapshot</h4>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm text-gray-300">
+                  <div>
+                    <span className="text-gray-500 block mb-1">Business:</span>
+                    <span className="text-white font-medium">{extractedData.deal.legal_business_name || 'Untitled Deal'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 block mb-1">Loan type:</span>
+                    <span className="text-white">{extractedData.deal.loan_type || 'Unknown'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 block mb-1">Desired Loan Amount:</span>
+                    <span className="text-white">${numberOrNull(extractedData.deal.desired_loan_amount)?.toLocaleString() ?? 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 block mb-1">Average monthly sales:</span>
+                    <span className="text-white">${numberOrNull(extractedData.deal.average_monthly_sales)?.toLocaleString() ?? 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 block mb-1">Drive Folder:</span>
+                    {driveFolder ? (
+                      <a
+                        href={driveFolder.webViewLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-indigo-300 hover:text-indigo-200 font-medium"
+                      >
+                        {driveFolder.name}
+                      </a>
+                    ) : (
+                      <span className="text-white">N/A</span>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-2">
-                {stages.map(renderStageStatus)}
+              {/* Horizontal Progress Bar */}
+              <div className="border border-gray-700/40 bg-gray-800/30 rounded-lg p-5">
+                {renderHorizontalProgress()}
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="border border-gray-800 rounded-lg bg-gray-800/40 p-4 space-y-2">
-                  <h4 className="text-sm font-semibold text-white uppercase tracking-wide">Deal snapshot</h4>
-                  <div className="space-y-2 text-sm text-gray-300">
-                    <div>
-                      <span className="text-gray-500">Business:</span>
-                      <span className="ml-2 text-white font-medium">{extractedData.deal.legal_business_name || 'Untitled Deal'}</span>
+              {/* Bank Statements Table */}
+              {extractedData.statements && extractedData.statements.length > 0 && (() => {
+                // Sort statements by month ascending (oldest first)
+                const sortedStatements = [...extractedData.statements].sort((a, b) => {
+                  const monthA = a.statement_month || '';
+                  const monthB = b.statement_month || '';
+                  return monthA.localeCompare(monthB);
+                });
+
+                // Calculate 3-month and 6-month averages (take from end for most recent)
+                const last3Months = sortedStatements.slice(-3);
+                const last6Months = sortedStatements.slice(-6);
+
+                const calculateAverage = (statements: typeof sortedStatements) => {
+                  const count = statements.length;
+                  if (count === 0) return { credits: null, debits: null, nsfs: 0, deposits: null, avgBal: null };
+
+                  const totals = statements.reduce((acc, stmt) => ({
+                    credits: acc.credits + (stmt.credits || 0),
+                    debits: acc.debits + (stmt.debits || 0),
+                    nsfs: acc.nsfs + (stmt.nsfs || 0),
+                    deposits: acc.deposits + (stmt.deposit_count || 0),
+                    avgBal: acc.avgBal + (stmt.average_daily_balance || 0),
+                  }), { credits: 0, debits: 0, nsfs: 0, deposits: 0, avgBal: 0 });
+
+                  return {
+                    credits: Math.round(totals.credits / count),
+                    debits: Math.round(totals.debits / count),
+                    nsfs: Math.round(totals.nsfs / count),
+                    deposits: Math.round(totals.deposits / count),
+                    avgBal: Math.round(totals.avgBal / count),
+                  };
+                };
+
+                const avg3Month = calculateAverage(last3Months);
+                const avg6Month = calculateAverage(last6Months);
+
+                return (
+                  <div className="border border-gray-800 rounded-lg bg-gray-800/40 overflow-hidden">
+                    <div className="px-5 py-4 border-b border-gray-700/50">
+                      <h4 className="text-sm font-semibold text-white uppercase tracking-wide">Bank Statements</h4>
                     </div>
-                    <div>
-                      <span className="text-gray-500">Loan type:</span>
-                      <span className="ml-2">{extractedData.deal.loan_type || 'Unknown'}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Requested amount:</span>
-                      <span className="ml-2">${numberOrNull(extractedData.deal.desired_loan_amount)?.toLocaleString() ?? 'N/A'}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Average monthly sales:</span>
-                      <span className="ml-2">${numberOrNull(extractedData.deal.average_monthly_sales)?.toLocaleString() ?? 'N/A'}</span>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-900/50 border-b border-gray-700/30">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">ID</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Month</th>
+                            <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Credits</th>
+                            <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Debits</th>
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">NSFs</th>
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Dep</th>
+                            <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Ave Bal</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-700/20">
+                          {sortedStatements.map((statement, index) => (
+                            <tr key={index} className={`hover:bg-gray-700/10 transition-colors ${index % 2 === 0 ? 'bg-gray-900/20' : ''}`}>
+                              <td className="px-4 py-3 text-gray-300 font-mono text-xs">
+                                {statement.statement_id || 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 text-white font-medium">
+                                {statement.statement_month || 'Unknown'}
+                              </td>
+                              <td className="px-4 py-3 text-right text-green-400 font-medium">
+                                ${statement.credits?.toLocaleString() ?? 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 text-right text-red-400 font-medium">
+                                ${statement.debits?.toLocaleString() ?? 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 text-center text-white">
+                                {statement.nsfs ?? 0}
+                              </td>
+                              <td className="px-4 py-3 text-center text-white">
+                                {statement.deposit_count ?? statement.overdrafts ?? 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 text-right text-blue-400 font-medium">
+                                ${statement.average_daily_balance?.toLocaleString() ?? 'N/A'}
+                              </td>
+                            </tr>
+                          ))}
+
+                          {/* 3-Month Average */}
+                          {last3Months.length >= 3 && (
+                            <tr className="bg-indigo-500/10 border-t-2 border-indigo-500/30 font-semibold">
+                              <td className="px-4 py-3 text-gray-400 text-xs" colSpan={2}>
+                                Last 3 Month Average
+                              </td>
+                              <td className="px-4 py-3 text-right text-green-300">
+                                ${avg3Month.credits?.toLocaleString() ?? 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 text-right text-red-300">
+                                ${avg3Month.debits?.toLocaleString() ?? 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 text-center text-white">
+                                {avg3Month.nsfs}
+                              </td>
+                              <td className="px-4 py-3 text-center text-white">
+                                {avg3Month.deposits}
+                              </td>
+                              <td className="px-4 py-3 text-right text-blue-300">
+                                ${avg3Month.avgBal?.toLocaleString() ?? 'N/A'}
+                              </td>
+                            </tr>
+                          )}
+
+                          {/* 6-Month Average */}
+                          {last6Months.length >= 6 && (
+                            <tr className="bg-purple-500/10 border-t border-purple-500/30 font-semibold">
+                              <td className="px-4 py-3 text-gray-400 text-xs" colSpan={2}>
+                                Last 6 Month Average
+                              </td>
+                              <td className="px-4 py-3 text-right text-green-300">
+                                ${avg6Month.credits?.toLocaleString() ?? 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 text-right text-red-300">
+                                ${avg6Month.debits?.toLocaleString() ?? 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 text-center text-white">
+                                {avg6Month.nsfs}
+                              </td>
+                              <td className="px-4 py-3 text-center text-white">
+                                {avg6Month.deposits}
+                              </td>
+                              <td className="px-4 py-3 text-right text-blue-300">
+                                ${avg6Month.avgBal?.toLocaleString() ?? 'N/A'}
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
-                  {dealRecord?.id && (
-                    <Link
-                      to={`/deals/${dealRecord.id}`}
-                      className="inline-flex items-center gap-2 text-sm text-indigo-300 hover:text-indigo-200 font-medium"
-                    >
-                      View full customer deal details
-                      <ChevronRight className="w-4 h-4" />
-                    </Link>
-                  )}
-                </div>
+                );
+              })()}
 
-                <div className="border border-gray-800 rounded-lg bg-gray-800/40 p-4 space-y-2">
-                  <h4 className="text-sm font-semibold text-white uppercase tracking-wide">Documents</h4>
-                  {driveFolder ? (
-                    <div className="text-sm text-gray-300 space-y-2">
-                      <div>
-                        <span className="text-gray-500">Drive folder:</span>
-                        <a
-                          href={driveFolder.webViewLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="ml-2 text-indigo-300 hover:text-indigo-200"
-                        >
-                          {driveFolder.name}
-                        </a>
+              {(() => {
+                // Define critical warning patterns (things users should act on)
+                const CRITICAL_WARNING_PATTERNS = [
+                  /failed to/i,
+                  /error/i,
+                  /missing required/i,
+                  /invalid/i,
+                  /could not (find|extract|parse)/i,
+                  /unable to/i,
+                ];
+
+                // Filter out informational AI transparency messages
+                const criticalWarnings = globalWarnings.filter(warning => {
+                  // Always show if it matches a critical pattern
+                  if (CRITICAL_WARNING_PATTERNS.some(pattern => pattern.test(warning))) {
+                    return true;
+                  }
+
+                  // Hide informational AI transparency messages
+                  const isInformational =
+                    warning.includes('SKIP_PARSING') ||
+                    warning.includes('inferred') ||
+                    warning.includes('approximated') ||
+                    warning.includes('assumed') ||
+                    warning.includes('estimated') ||
+                    warning.includes('not explicitly') ||
+                    warning.includes('may vary') ||
+                    warning.includes('may have minor') ||
+                    warning.includes('set to null') ||
+                    warning.includes('set as null');
+
+                  return !isInformational;
+                });
+
+                // Log informational warnings to console for debugging
+                if (globalWarnings.length > criticalWarnings.length) {
+                  console.log('ℹ️ Informational warnings (not shown to user):',
+                    globalWarnings.filter(w => !criticalWarnings.includes(w))
+                  );
+                }
+
+                return (criticalWarnings.length > 0 || matchWarning) && (
+                  <div className="space-y-3">
+                    {criticalWarnings.length > 0 && (
+                      <div className="border border-yellow-500/40 bg-yellow-500/10 rounded-lg p-3 space-y-1">
+                        <p className="text-sm font-semibold text-yellow-100">Warnings</p>
+                        {criticalWarnings.map((warning) => (
+                          <p className="text-xs text-yellow-100/90" key={warning}>{warning}</p>
+                        ))}
                       </div>
-                      {driveFiles.length > 0 && (
-                        <ul className="text-xs text-gray-400 space-y-1 max-h-32 overflow-y-auto border border-gray-700/40 rounded-md p-2">
-                          {driveFiles.map((doc) => (
-                            <li key={doc.id} className="flex items-center gap-2">
-                              <span className="text-gray-300">{doc.name}</span>
-                              <span className="text-gray-600 text-[11px]">{doc.mimeType}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      {matchLogId && (
-                        <div className="text-xs text-gray-500 border-t border-gray-700/40 pt-2 mt-2">
-                          Match log ID:
-                          <span className="ml-2 font-mono text-gray-300">{matchLogId}</span>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-400">No Drive folder metadata available.</p>
-                  )}
-                </div>
-              </div>
-
-              {(globalWarnings.length > 0 || matchWarning) && (
-                <div className="space-y-3">
-                  {globalWarnings.length > 0 && (
-                    <div className="border border-yellow-500/40 bg-yellow-500/10 rounded-lg p-3 space-y-1">
-                      <p className="text-sm font-semibold text-yellow-100">Warnings</p>
-                      {globalWarnings.map((warning) => (
-                        <p className="text-xs text-yellow-100/90" key={warning}>{warning}</p>
-                      ))}
-                    </div>
-                  )}
-                  {matchWarning && (
-                    <div className="border border-orange-500/40 bg-orange-500/10 rounded-lg p-3 text-xs text-orange-100">
-                      {matchWarning}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  onClick={() => {
-                    resetWorkflow();
-                    setFiles([]);
-                    setUploadError(null);
-                    setMode('upload');
-                  }}
-                  className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-200 px-4 py-2 rounded-lg transition-all"
-                >
-                  Start another deal
-                </button>
-                <button
-                  onClick={handleClose}
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-all"
-                >
-                  Close
-                </button>
-              </div>
+                    )}
+                    {matchWarning && (
+                      <div className="border border-orange-500/40 bg-orange-500/10 rounded-lg p-3 text-xs text-orange-100">
+                        {matchWarning}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )}
 

@@ -71,6 +71,22 @@ export default function Deals() {
 
       if (dealsError) throw dealsError;
 
+      // Get unique user IDs
+      const userIds = [...new Set(dealsData?.map(d => d.user_id) || [])];
+
+      // Fetch broker emails for all unique users using RPC
+      const brokerMap = new Map<string, string | null>();
+
+      for (const userId of userIds) {
+        try {
+          const { data: email } = await supabase.rpc('get_user_email', { user_uuid: userId });
+          brokerMap.set(userId, email);
+        } catch (e) {
+          console.error(`Failed to fetch email for user ${userId}:`, e);
+          brokerMap.set(userId, null);
+        }
+      }
+
       // Fetch owner counts, owners, and statements for each deal
       const dealsWithOwners = await Promise.all(
         (dealsData || []).map(async (deal) => {
@@ -91,11 +107,16 @@ export default function Deals() {
               .order('statement_month', { ascending: false }),
           ]);
 
+          const brokerEmail = brokerMap.get(deal.user_id) || null;
+          const brokerName = brokerEmail?.split('@')[0] || 'Unknown';
+
           return {
             ...deal,
             owner_count: count || 0,
             owners: owners || [],
             statements: statements || [],
+            broker_email: brokerEmail,
+            broker_name: brokerName,
           };
         })
       );
@@ -291,7 +312,7 @@ export default function Deals() {
                 className="bg-gray-800/30 backdrop-blur-sm border border-gray-700/30 rounded-lg p-5 hover:border-gray-700/50 transition-all group"
               >
                 <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-4">
+                  <div className="flex-1 grid grid-cols-1 md:grid-cols-6 gap-4">
                     {/* Business Name Column */}
                     <div>
                       <p className="text-sm text-gray-400 mb-1">BUSINESS NAME</p>
@@ -299,6 +320,14 @@ export default function Deals() {
                         {deal.legal_business_name}
                       </h3>
                       {deal.dba_name && <p className="text-sm text-gray-400">{deal.dba_name}</p>}
+                    </div>
+
+                    {/* Broker */}
+                    <div>
+                      <p className="text-sm text-gray-400 mb-1">BROKER</p>
+                      <h3 className="text-lg font-semibold text-white">
+                        {deal.broker_name || 'Unknown'}
+                      </h3>
                     </div>
 
                     {/* Loan Amount */}
@@ -420,57 +449,141 @@ export default function Deals() {
                             </div>
                           </div>
 
-                          {/* Bank Statements Summary */}
-                          {deal.statements && deal.statements.length > 0 && (
-                            <div className="bg-gray-700/20 rounded-lg p-3 border border-gray-700/30">
-                              <h5 className="text-sm font-semibold text-gray-300 mb-3">
-                                Bank Statements ({deal.statements.length})
-                              </h5>
-                              <div className="space-y-3 max-h-64 overflow-y-auto">
-                                {deal.statements.map((stmt) => (
-                                  <div key={stmt.id} className="border-b border-gray-700/30 pb-3 last:border-0 last:pb-0">
-                                    <div className="font-medium text-white text-xs mb-2">
-                                      {stmt.bank_name} - {stmt.statement_month}
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                                      <div className="flex justify-between">
-                                        <span className="text-gray-500">Deposit Count:</span>
-                                        <span className="text-gray-300 font-medium">{stmt.deposit_count || 'N/A'}</span>
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span className="text-gray-500">Avg Daily Balance:</span>
-                                        <span className="text-emerald-400 font-medium">
-                                          {stmt.average_daily_balance
-                                            ? `$${stmt.average_daily_balance.toLocaleString()}`
-                                            : 'N/A'}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span className="text-gray-500">Overdrafts:</span>
-                                        <span className="text-orange-400 font-medium">{stmt.overdrafts || 0}</span>
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span className="text-gray-500">Credits:</span>
-                                        <span className="text-green-400 font-medium">
-                                          {stmt.credits ? `$${stmt.credits.toLocaleString()}` : 'N/A'}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span className="text-gray-500">NSFs:</span>
-                                        <span className="text-orange-400 font-medium">{stmt.nsfs || 0}</span>
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span className="text-gray-500">Debits:</span>
-                                        <span className="text-red-400 font-medium">
-                                          {stmt.debits ? `$${stmt.debits.toLocaleString()}` : 'N/A'}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
+                          {/* Bank Statements Table */}
+                          {deal.statements && deal.statements.length > 0 && (() => {
+                            // Sort statements by month ascending (oldest first)
+                            const sortedStatements = [...deal.statements].sort((a, b) => {
+                              return a.statement_month.localeCompare(b.statement_month);
+                            });
+
+                            // Calculate 3-month and 6-month averages (take from end for most recent)
+                            const last3Months = sortedStatements.slice(-3);
+                            const last6Months = sortedStatements.slice(-6);
+
+                            const calculateAverage = (statements: typeof sortedStatements) => {
+                              const count = statements.length;
+                              if (count === 0) return { credits: null, debits: null, nsfs: 0, deposits: null, avgBal: null };
+
+                              const totals = statements.reduce((acc, stmt) => ({
+                                credits: acc.credits + (stmt.credits || 0),
+                                debits: acc.debits + (stmt.debits || 0),
+                                nsfs: acc.nsfs + (stmt.nsfs || 0),
+                                deposits: acc.deposits + (stmt.deposit_count || 0),
+                                avgBal: acc.avgBal + (stmt.average_daily_balance || 0),
+                              }), { credits: 0, debits: 0, nsfs: 0, deposits: 0, avgBal: 0 });
+
+                              return {
+                                credits: Math.round(totals.credits / count),
+                                debits: Math.round(totals.debits / count),
+                                nsfs: Math.round(totals.nsfs / count),
+                                deposits: Math.round(totals.deposits / count),
+                                avgBal: Math.round(totals.avgBal / count),
+                              };
+                            };
+
+                            const avg3Month = calculateAverage(last3Months);
+                            const avg6Month = calculateAverage(last6Months);
+
+                            return (
+                              <div className="bg-gray-700/20 rounded-lg border border-gray-700/30 overflow-hidden">
+                                <div className="px-3 py-2 border-b border-gray-700/30">
+                                  <h5 className="text-sm font-semibold text-gray-300">
+                                    Bank Statements ({deal.statements.length})
+                                  </h5>
+                                </div>
+                                <div className="overflow-x-auto max-h-96">
+                                  <table className="w-full text-xs">
+                                    <thead className="bg-gray-800/50 border-b border-gray-700/30 sticky top-0">
+                                      <tr>
+                                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-400 uppercase">ID</th>
+                                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-400 uppercase">Month</th>
+                                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-400 uppercase">Credits</th>
+                                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-400 uppercase">Debits</th>
+                                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-400 uppercase">NSFs</th>
+                                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-400 uppercase">Dep</th>
+                                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-400 uppercase">Ave Bal</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-700/20">
+                                      {sortedStatements.map((statement, index) => (
+                                        <tr key={statement.id} className={`hover:bg-gray-700/10 transition-colors ${index % 2 === 0 ? 'bg-gray-900/20' : ''}`}>
+                                          <td className="px-3 py-2 text-gray-300 font-mono text-xs">
+                                            {statement.id.slice(0, 5)}
+                                          </td>
+                                          <td className="px-3 py-2 text-white font-medium">
+                                            {statement.statement_month}
+                                          </td>
+                                          <td className="px-3 py-2 text-right text-green-400 font-medium">
+                                            ${statement.credits?.toLocaleString() ?? 'N/A'}
+                                          </td>
+                                          <td className="px-3 py-2 text-right text-red-400 font-medium">
+                                            ${statement.debits?.toLocaleString() ?? 'N/A'}
+                                          </td>
+                                          <td className="px-3 py-2 text-center text-white">
+                                            {statement.nsfs ?? 0}
+                                          </td>
+                                          <td className="px-3 py-2 text-center text-white">
+                                            {statement.deposit_count ?? statement.overdrafts ?? 'N/A'}
+                                          </td>
+                                          <td className="px-3 py-2 text-right text-blue-400 font-medium">
+                                            ${statement.average_daily_balance?.toLocaleString() ?? 'N/A'}
+                                          </td>
+                                        </tr>
+                                      ))}
+
+                                      {/* 3-Month Average */}
+                                      {last3Months.length >= 3 && (
+                                        <tr className="bg-indigo-500/10 border-t-2 border-indigo-500/30 font-semibold">
+                                          <td className="px-3 py-2 text-gray-400 text-xs" colSpan={2}>
+                                            Last 3 Month Avg
+                                          </td>
+                                          <td className="px-3 py-2 text-right text-green-300">
+                                            ${avg3Month.credits?.toLocaleString() ?? 'N/A'}
+                                          </td>
+                                          <td className="px-3 py-2 text-right text-red-300">
+                                            ${avg3Month.debits?.toLocaleString() ?? 'N/A'}
+                                          </td>
+                                          <td className="px-3 py-2 text-center text-white">
+                                            {avg3Month.nsfs}
+                                          </td>
+                                          <td className="px-3 py-2 text-center text-white">
+                                            {avg3Month.deposits}
+                                          </td>
+                                          <td className="px-3 py-2 text-right text-blue-300">
+                                            ${avg3Month.avgBal?.toLocaleString() ?? 'N/A'}
+                                          </td>
+                                        </tr>
+                                      )}
+
+                                      {/* 6-Month Average */}
+                                      {last6Months.length >= 6 && (
+                                        <tr className="bg-purple-500/10 border-t border-purple-500/30 font-semibold">
+                                          <td className="px-3 py-2 text-gray-400 text-xs" colSpan={2}>
+                                            Last 6 Month Avg
+                                          </td>
+                                          <td className="px-3 py-2 text-right text-green-300">
+                                            ${avg6Month.credits?.toLocaleString() ?? 'N/A'}
+                                          </td>
+                                          <td className="px-3 py-2 text-right text-red-300">
+                                            ${avg6Month.debits?.toLocaleString() ?? 'N/A'}
+                                          </td>
+                                          <td className="px-3 py-2 text-center text-white">
+                                            {avg6Month.nsfs}
+                                          </td>
+                                          <td className="px-3 py-2 text-center text-white">
+                                            {avg6Month.deposits}
+                                          </td>
+                                          <td className="px-3 py-2 text-right text-blue-300">
+                                            ${avg6Month.avgBal?.toLocaleString() ?? 'N/A'}
+                                          </td>
+                                        </tr>
+                                      )}
+                                    </tbody>
+                                  </table>
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            );
+                          })()}
 
                           {/* Documents Link */}
                           {deal.application_google_drive_link && (

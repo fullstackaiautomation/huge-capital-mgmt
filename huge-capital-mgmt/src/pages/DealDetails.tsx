@@ -75,7 +75,25 @@ export default function DealDetails() {
           .single();
 
         if (fetchError) throw fetchError;
-        setDeal(data as DealWithRelations);
+
+        // Fetch broker email for this deal
+        if (data?.user_id) {
+          try {
+            const { data: brokerEmail } = await supabase.rpc('get_user_email', { user_uuid: data.user_id });
+            const brokerName = brokerEmail?.split('@')[0] || 'Unknown';
+
+            setDeal({
+              ...data,
+              broker_email: brokerEmail,
+              broker_name: brokerName
+            } as DealWithRelations);
+          } catch (e) {
+            console.error('Failed to fetch broker email:', e);
+            setDeal(data as DealWithRelations);
+          }
+        } else {
+          setDeal(data as DealWithRelations);
+        }
       } catch (err) {
         console.error('Failed to load deal details:', err);
         setError('Unable to load deal details.');
@@ -179,7 +197,13 @@ export default function DealDetails() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="bg-gray-900/40 rounded-lg border border-gray-700/40 p-4">
+              <p className="text-xs text-gray-500 uppercase">Broker</p>
+              <p className="text-lg text-white font-semibold mt-2">
+                {deal.broker_name || 'Unknown'}
+              </p>
+            </div>
             <div className="bg-gray-900/40 rounded-lg border border-gray-700/40 p-4">
               <p className="text-xs text-gray-500 uppercase">Monthly Revenue</p>
               <p className="text-lg text-white font-semibold mt-2">
@@ -239,66 +263,181 @@ export default function DealDetails() {
           )}
         </section>
 
-        <section className="bg-gray-800/30 border border-gray-700/30 rounded-xl p-6 space-y-4">
-          <div className="flex items-center gap-3">
-            <FileText className="w-6 h-6 text-indigo-300" />
-            <div>
-              <h2 className="text-xl font-semibold text-white">Financial Statements</h2>
-              <p className="text-gray-400 text-sm">Bank statements and detected funding positions.</p>
+        <section className="bg-gray-800/30 border border-gray-700/30 rounded-xl overflow-hidden">
+          <div className="p-6 border-b border-gray-700/30">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <FileText className="w-6 h-6 text-indigo-300" />
+                <div>
+                  <h2 className="text-xl font-semibold text-white">Bank Statements</h2>
+                  <p className="text-gray-400 text-sm">Financial metrics from analyzed statements.</p>
+                </div>
+              </div>
+              {deal.statements_google_drive_link && (
+                <a
+                  href={deal.statements_google_drive_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-sm text-indigo-300 hover:text-indigo-200 font-medium"
+                >
+                  <FileText className="w-4 h-4" />
+                  View in Drive
+                </a>
+              )}
             </div>
           </div>
 
-          {deal.statements_google_drive_link && (
-            <a
-              href={deal.statements_google_drive_link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm text-indigo-300 hover:text-indigo-200"
-            >
-              <ChevronRight className="w-4 h-4" />
-              Open statements folder in Google Drive
-            </a>
-          )}
-
           {deal.deal_bank_statements.length === 0 ? (
-            <p className="text-gray-400 text-sm">No bank statements were attached to this deal.</p>
-          ) : (
-            <div className="space-y-4">
-              {deal.deal_bank_statements.map((statement) => (
-                <div key={statement.id} className="bg-gray-900/40 border border-gray-700/40 rounded-lg p-4 space-y-3">
-                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold text-white">{statement.bank_name}</h3>
-                      <p className="text-gray-400 text-sm">Statement Month: {statement.statement_month}</p>
-                    </div>
-                    <div className="flex flex-wrap gap-3 text-sm text-gray-300">
-                      <span>Credits: {statement.credits ? `$${Number(statement.credits).toLocaleString()}` : '—'}</span>
-                      <span>Debits: {statement.debits ? `$${Number(statement.debits).toLocaleString()}` : '—'}</span>
-                      <span>NSFs: {statement.nsfs}</span>
-                      <span>Overdrafts: {statement.overdrafts}</span>
-                    </div>
-                  </div>
+            <div className="p-6">
+              <p className="text-gray-400 text-sm">No bank statements were attached to this deal.</p>
+            </div>
+          ) : (() => {
+            // Sort statements by month ascending (oldest first)
+            const sortedStatements = [...deal.deal_bank_statements].sort((a, b) => {
+              return a.statement_month.localeCompare(b.statement_month);
+            });
 
-                  {statement.deal_funding_positions.length > 0 && (
-                    <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-lg p-4 space-y-3">
-                      <p className="text-sm text-indigo-200 font-semibold">Detected Funding Positions</p>
-                      <div className="space-y-2">
-                        {statement.deal_funding_positions.map((position) => (
-                          <div key={position.id} className="flex flex-wrap items-center justify-between gap-3 text-sm text-indigo-100">
-                            <span className="font-medium">{position.lender_name}</span>
-                            <span>${Number(position.amount).toLocaleString()} • {position.frequency}</span>
-                            {position.detected_dates.length > 0 && (
-                              <span className="text-xs text-indigo-200/80">
-                                Dates: {position.detected_dates.join(', ')}
-                              </span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
+            // Calculate 3-month and 6-month averages (take from end for most recent)
+            const last3Months = sortedStatements.slice(-3);
+            const last6Months = sortedStatements.slice(-6);
+
+            const calculateAverage = (statements: typeof sortedStatements) => {
+              const count = statements.length;
+              if (count === 0) return { credits: null, debits: null, nsfs: 0, deposits: null, avgBal: null };
+
+              const totals = statements.reduce((acc, stmt) => ({
+                credits: acc.credits + (stmt.credits || 0),
+                debits: acc.debits + (stmt.debits || 0),
+                nsfs: acc.nsfs + (stmt.nsfs || 0),
+                deposits: acc.deposits + (stmt.deposit_count || 0),
+                avgBal: acc.avgBal + (stmt.average_daily_balance || 0),
+              }), { credits: 0, debits: 0, nsfs: 0, deposits: 0, avgBal: 0 });
+
+              return {
+                credits: Math.round(totals.credits / count),
+                debits: Math.round(totals.debits / count),
+                nsfs: Math.round(totals.nsfs / count),
+                deposits: Math.round(totals.deposits / count),
+                avgBal: Math.round(totals.avgBal / count),
+              };
+            };
+
+            const avg3Month = calculateAverage(last3Months);
+            const avg6Month = calculateAverage(last6Months);
+
+            return (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-900/50 border-b border-gray-700/30">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">ID</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Month</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Credits</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Debits</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">NSFs</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Dep</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Ave Bal</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-700/20">
+                    {sortedStatements.map((statement, index) => (
+                      <tr key={statement.id} className={`hover:bg-gray-700/10 transition-colors ${index % 2 === 0 ? 'bg-gray-900/20' : ''}`}>
+                        <td className="px-4 py-3 text-gray-300 font-mono text-xs">
+                          {statement.id.slice(0, 5)}
+                        </td>
+                        <td className="px-4 py-3 text-white font-medium">
+                          {statement.statement_month}
+                        </td>
+                        <td className="px-4 py-3 text-right text-green-400 font-medium">
+                          ${statement.credits?.toLocaleString() ?? 'N/A'}
+                        </td>
+                        <td className="px-4 py-3 text-right text-red-400 font-medium">
+                          ${statement.debits?.toLocaleString() ?? 'N/A'}
+                        </td>
+                        <td className="px-4 py-3 text-center text-white">
+                          {statement.nsfs ?? 0}
+                        </td>
+                        <td className="px-4 py-3 text-center text-white">
+                          {statement.deposit_count ?? statement.overdrafts ?? 'N/A'}
+                        </td>
+                        <td className="px-4 py-3 text-right text-blue-400 font-medium">
+                          ${statement.average_daily_balance?.toLocaleString() ?? 'N/A'}
+                        </td>
+                      </tr>
+                    ))}
+
+                    {/* 3-Month Average */}
+                    {last3Months.length >= 3 && (
+                      <tr className="bg-indigo-500/10 border-t-2 border-indigo-500/30 font-semibold">
+                        <td className="px-4 py-3 text-gray-400 text-xs" colSpan={2}>
+                          Last 3 Month Average
+                        </td>
+                        <td className="px-4 py-3 text-right text-green-300">
+                          ${avg3Month.credits?.toLocaleString() ?? 'N/A'}
+                        </td>
+                        <td className="px-4 py-3 text-right text-red-300">
+                          ${avg3Month.debits?.toLocaleString() ?? 'N/A'}
+                        </td>
+                        <td className="px-4 py-3 text-center text-white">
+                          {avg3Month.nsfs}
+                        </td>
+                        <td className="px-4 py-3 text-center text-white">
+                          {avg3Month.deposits}
+                        </td>
+                        <td className="px-4 py-3 text-right text-blue-300">
+                          ${avg3Month.avgBal?.toLocaleString() ?? 'N/A'}
+                        </td>
+                      </tr>
+                    )}
+
+                    {/* 6-Month Average */}
+                    {last6Months.length >= 6 && (
+                      <tr className="bg-purple-500/10 border-t border-purple-500/30 font-semibold">
+                        <td className="px-4 py-3 text-gray-400 text-xs" colSpan={2}>
+                          Last 6 Month Average
+                        </td>
+                        <td className="px-4 py-3 text-right text-green-300">
+                          ${avg6Month.credits?.toLocaleString() ?? 'N/A'}
+                        </td>
+                        <td className="px-4 py-3 text-right text-red-300">
+                          ${avg6Month.debits?.toLocaleString() ?? 'N/A'}
+                        </td>
+                        <td className="px-4 py-3 text-center text-white">
+                          {avg6Month.nsfs}
+                        </td>
+                        <td className="px-4 py-3 text-center text-white">
+                          {avg6Month.deposits}
+                        </td>
+                        <td className="px-4 py-3 text-right text-blue-300">
+                          ${avg6Month.avgBal?.toLocaleString() ?? 'N/A'}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
+
+          {/* Funding Positions Section */}
+          {deal.deal_bank_statements.some(s => s.deal_funding_positions.length > 0) && (
+            <div className="p-6 border-t border-gray-700/30 bg-gray-900/20">
+              <h3 className="text-sm font-semibold text-indigo-200 mb-4">Detected Funding Positions</h3>
+              <div className="space-y-3">
+                {deal.deal_bank_statements.map((statement) =>
+                  statement.deal_funding_positions.map((position) => (
+                    <div key={position.id} className="flex flex-wrap items-center justify-between gap-3 text-sm bg-indigo-500/5 border border-indigo-500/20 rounded-lg p-3">
+                      <span className="font-medium text-indigo-100">{position.lender_name}</span>
+                      <span className="text-indigo-200">${Number(position.amount).toLocaleString()} • {position.frequency}</span>
+                      {position.detected_dates.length > 0 && (
+                        <span className="text-xs text-indigo-300/80">
+                          Dates: {position.detected_dates.join(', ')}
+                        </span>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
+                  ))
+                )}
+              </div>
             </div>
           )}
         </section>
