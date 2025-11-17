@@ -147,11 +147,9 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [dealRecord, setDealRecord] = useState<any>(null);
   const [driveFolder, setDriveFolder] = useState<{ id: string; name: string; webViewLink: string } | null>(null);
-  const [driveFiles, setDriveFiles] = useState<DriveFileMeta[]>([]);
   const [extractedData, setExtractedData] = useState<ExtractedDealData | null>(null);
   const [globalWarnings, setGlobalWarnings] = useState<string[]>([]);
   const [matchWarning, setMatchWarning] = useState<string | null>(null);
-  const [matchLogId, setMatchLogId] = useState<string | null>(null);
 
   const displayFiles = useMemo<DealUploadFileDisplay[]>(
     () => files.map(({ file, driveFile, ...rest }) => ({ ...rest })),
@@ -165,10 +163,8 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
     setErrorMessage(null);
     setGlobalWarnings([]);
     setMatchWarning(null);
-    setMatchLogId(null);
     setDealRecord(null);
     setDriveFolder(null);
-    setDriveFiles([]);
     setExtractedData(null);
     setFiles((prev) => prev.map((file) => ({ ...file, status: 'pending', progress: 0, error: undefined })));
   }, []);
@@ -234,9 +230,7 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
     setGlobalWarnings([]);
     setDealRecord(null);
     setDriveFolder(null);
-    setDriveFiles([]);
     setMatchWarning(null);
-    setMatchLogId(null);
     setExtractedData(null);
     setStages(() => buildInitialStages().map((stage) => (
       stage.key === 'upload' ? { ...stage, status: 'in_progress' as StageStatus, detail: 'Starting document uploads...' } : stage
@@ -349,7 +343,6 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
       }
 
       setDriveFolder(folder);
-      setDriveFiles(accumulatedDriveFiles);
 
       // Parse application documents
       currentStage = 'parseApplication';
@@ -1004,20 +997,26 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
                   const count = statements.length;
                   if (count === 0) return { credits: null, debits: null, nsfs: 0, deposits: null, avgBal: null };
 
-                  const totals = statements.reduce((acc, stmt) => ({
-                    credits: acc.credits + (stmt.credits || 0),
-                    debits: acc.debits + (stmt.debits || 0),
-                    nsfs: acc.nsfs + (stmt.nsfs || 0),
-                    deposits: acc.deposits + (stmt.deposit_count || 0),
-                    avgBal: acc.avgBal + (stmt.average_daily_balance || 0),
-                  }), { credits: 0, debits: 0, nsfs: 0, deposits: 0, avgBal: 0 });
+                  let totalCredits = 0;
+                  let totalDebits = 0;
+                  let totalNsfs = 0;
+                  let totalDeposits = 0;
+                  let totalAvgBal = 0;
+
+                  statements.forEach((stmt) => {
+                    totalCredits += stmt.credits || 0;
+                    totalDebits += stmt.debits || 0;
+                    totalNsfs += stmt.nsfs || 0;
+                    totalDeposits += stmt.deposit_count || 0;
+                    totalAvgBal += stmt.average_daily_balance || 0;
+                  });
 
                   return {
-                    credits: Math.round(totals.credits / count),
-                    debits: Math.round(totals.debits / count),
-                    nsfs: Math.round(totals.nsfs / count),
-                    deposits: Math.round(totals.deposits / count),
-                    avgBal: Math.round(totals.avgBal / count),
+                    credits: Math.round(totalCredits / count),
+                    debits: Math.round(totalDebits / count),
+                    nsfs: Math.round(totalNsfs / count),
+                    deposits: Math.round(totalDeposits / count),
+                    avgBal: Math.round(totalAvgBal / count),
                   };
                 };
 

@@ -20,6 +20,7 @@ import NewDealModal from '../components/Deals/NewDealModal';
 import type { Deal, DealStatus, DealOwner, DealBankStatement } from '../types/deals';
 
 interface DealWithOwners extends Deal {
+  broker_name?: string;
   owner_count?: number;
   owners?: DealOwner[];
   statements?: DealBankStatement[];

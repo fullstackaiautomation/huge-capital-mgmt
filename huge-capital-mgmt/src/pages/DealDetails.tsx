@@ -36,6 +36,7 @@ interface DealBankStatement {
 }
 
 interface DealWithRelations extends Deal {
+  broker_name?: string;
   deal_owners: DealOwner[];
   deal_bank_statements: DealBankStatement[];
   deal_lender_matches: Array<{
