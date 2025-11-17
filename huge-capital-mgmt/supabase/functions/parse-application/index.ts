@@ -18,7 +18,9 @@ interface ExtractedApplicationData {
     business_start_date: string | null;
     product_service_sold: string | null;
     franchise_units: number | null; // Count of franchise units owned (integer)
-    average_monthly_sales: number | null;
+    average_monthly_sales: number | null; // Midpoint of range
+    average_monthly_sales_low: number | null; // Lower bound
+    average_monthly_sales_high: number | null; // Upper bound
     average_monthly_card_sales: number | null;
     desired_loan_amount: number | null;
     reason_for_loan: string | null;
@@ -197,10 +199,27 @@ DO NOT extract bank statement data, funding positions, or financial transaction 
 IGNORE any bank statements or transaction history in the documents.
 
 Extract the following fields and return valid JSON:
-1. Deal information: legal_business_name, dba_name, ein, business_type, address, city, state, zip, phone, website, franchise_business, seasonal_business, peak_sales_month, business_start_date, product_service_sold, franchise_units (count of franchise units as integer, NOT percentage), average_monthly_sales, average_monthly_card_sales, desired_loan_amount, reason_for_loan, loan_type (MCA or Business LOC)
+1. Deal information: legal_business_name, dba_name, ein, business_type, address, city, state, zip, phone, website, franchise_business, seasonal_business, peak_sales_month, business_start_date, product_service_sold, franchise_units (count of franchise units as integer, NOT percentage), average_monthly_sales (midpoint), average_monthly_sales_low, average_monthly_sales_high, average_monthly_card_sales, desired_loan_amount, reason_for_loan, loan_type (MCA or Business LOC)
 2. Owners (up to 2): owner_number, full_name, street_address, city, state, zip, phone, email, ownership_percent, drivers_license_number, date_of_birth
 3. Confidence scores (0-100) for deal and each owner
 4. Missing fields and warnings
+
+CRITICAL MONETARY CONVERSION RULES:
+- For desired_loan_amount, average_monthly_sales, and average_monthly_card_sales:
+  - Convert "$50K" or "50K" to 50000 (multiply by 1000)
+  - Convert "$2M" or "2M" to 2000000 (multiply by 1000000)
+  - "$50" stays as 50 ONLY if it's clearly less than $10,000 AND explicitly shown without K suffix
+  - All loan amounts will be over $10,000 in practice
+  - For RANGES (e.g., "$100K-$250K" or "$100,000 - $250,000"):
+    * Set average_monthly_sales_low to the LOWER value (e.g., 100000)
+    * Set average_monthly_sales_high to the UPPER value (e.g., 250000)
+    * Set average_monthly_sales to the MIDPOINT (e.g., 175000)
+    * Example: "$100K-$250K" → low=100000, high=250000, midpoint=175000
+    * Example: "$100,000 - $250,000" → low=100000, high=250000, midpoint=175000
+  - For SINGLE VALUES (e.g., "$150K"):
+    * Set average_monthly_sales to that value
+    * Set average_monthly_sales_low and average_monthly_sales_high to null
+  - Always return numeric values without currency symbols or suffixes
 
 Return ONLY valid JSON matching this structure exactly. Focus on application data, ignore statements.`;
 
@@ -383,6 +402,8 @@ Return ONLY valid JSON matching this structure exactly. Focus on application dat
         product_service_sold: null,
         franchise_units: null,
         average_monthly_sales: null,
+        average_monthly_sales_low: null,
+        average_monthly_sales_high: null,
         average_monthly_card_sales: null,
         desired_loan_amount: null,
         reason_for_loan: null,

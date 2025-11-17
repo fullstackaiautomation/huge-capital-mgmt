@@ -10,6 +10,8 @@ export interface Deal {
   created_at: string;
   updated_at: string;
   user_id: string;
+  broker_email?: string; // Email of the broker who submitted (from auth.users)
+  broker_name?: string; // Name of the broker (from auth.users metadata)
 
   // Business Information
   legal_business_name: string;
@@ -37,7 +39,9 @@ export interface Deal {
   franchise_units: number | null; // Count of franchise units owned (integer)
 
   // Financial Information
-  average_monthly_sales: number | null;
+  average_monthly_sales: number | null; // Midpoint of range (calculated)
+  average_monthly_sales_low: number | null; // Lower bound of range
+  average_monthly_sales_high: number | null; // Upper bound of range
   average_monthly_card_sales: number | null;
   desired_loan_amount: number;
   reason_for_loan: string | null;

@@ -65,7 +65,7 @@ const MAX_RETRIES = 3; // Maximum retry attempts for rate limit errors
 
 // OpenAI settings (10M tokens/min rate limit - much higher than Anthropic's 50k)
 const OPENAI_BATCH_SIZE = 5; // Process 5 files at a time with OpenAI
-const OPENAI_BATCH_DELAY_MS = 2000; // 2 second delay between batches for OpenAI
+const OPENAI_BATCH_DELAY_MS = 500; // 500ms delay between batches for OpenAI (reduced from 2000ms)
 
 // Anthropic settings (50k tokens/min rate limit - very restrictive)
 const ANTHROPIC_BATCH_SIZE = 1; // Process 1 file at a time with Anthropic (sequential)
@@ -108,14 +108,18 @@ async function retryWithBackoff<T>(
 async function processBatch<T, R>(
   items: T[],
   processor: (item: T) => Promise<R>,
-  batchSize: number = BATCH_SIZE,
-  delayBetweenBatches: number = BATCH_DELAY_MS
+  batchSize: number = 5,
+  delayBetweenBatches: number = 500
 ): Promise<R[]> {
+  // Safety check: ensure batchSize is valid
+  const safeBatchSize = Math.max(1, Number.isFinite(batchSize) ? batchSize : 5);
+  const safeDelay = Math.max(0, Number.isFinite(delayBetweenBatches) ? delayBetweenBatches : 500);
+
   const results: R[] = [];
 
-  for (let i = 0; i < items.length; i += batchSize) {
-    const batch = items.slice(i, i + batchSize);
-    console.log(`Processing batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(items.length / batchSize)} (${batch.length} files)`);
+  for (let i = 0; i < items.length; i += safeBatchSize) {
+    const batch = items.slice(i, i + safeBatchSize);
+    console.log(`Processing batch ${Math.floor(i / safeBatchSize) + 1} of ${Math.ceil(items.length / safeBatchSize)} (${batch.length} files)`);
 
     const batchResults = await Promise.all(
       batch.map(item => processor(item))
@@ -124,8 +128,8 @@ async function processBatch<T, R>(
     results.push(...batchResults);
 
     // Add delay between batches (except after the last batch)
-    if (i + batchSize < items.length) {
-      await new Promise(resolve => setTimeout(resolve, delayBetweenBatches));
+    if (i + safeBatchSize < items.length) {
+      await new Promise(resolve => setTimeout(resolve, safeDelay));
     }
   }
 

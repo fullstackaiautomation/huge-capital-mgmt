@@ -98,17 +98,20 @@ function sanitizeDriveName(input: string): string {
 }
 
 function formatFolderName(businessName: string | null | undefined, uploadedAt: Date): string {
-  // Format: "Business Name - MM/DD/YY H:MMAM/PM"
-  const month = String(uploadedAt.getMonth() + 1).padStart(2, '0');
-  const day = String(uploadedAt.getDate()).padStart(2, '0');
-  const year = String(uploadedAt.getFullYear()).slice(-2);
+  // Format: "Business Name - MM.DD.YY H:MMAM/PM" in CST
+  // Convert to CST (UTC-6, or UTC-5 during DST)
+  const cstDate = new Date(uploadedAt.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
 
-  let hours = uploadedAt.getHours();
-  const minutes = String(uploadedAt.getMinutes()).padStart(2, '0');
+  const month = String(cstDate.getMonth() + 1).padStart(2, '0');
+  const day = String(cstDate.getDate()).padStart(2, '0');
+  const year = String(cstDate.getFullYear()).slice(-2);
+
+  let hours = cstDate.getHours();
+  const minutes = String(cstDate.getMinutes()).padStart(2, '0');
   const ampm = hours >= 12 ? 'PM' : 'AM';
   hours = hours % 12 || 12;
 
-  const datePart = `${month}/${day}/${year} ${hours}:${minutes}${ampm}`;
+  const datePart = `${month}.${day}.${year} ${hours}:${minutes}${ampm}`;
   const namePart = sanitizeDriveName(businessName ?? 'Deal Upload');
   return `${namePart} - ${datePart}`;
 }
@@ -594,20 +597,47 @@ Deno.serve(async (req) => {
 
         const uploadedFiles: Array<{ id: string; name: string; mimeType: string; webViewLink: string }> = [];
         console.log(`Starting upload of ${originalDocuments.length} documents to Google Drive folder ${folder.id}`);
-        for (const doc of originalDocuments) {
-          console.log(`Uploading: ${doc.name}, type: ${doc.type}, category: ${doc.category}, bytes: ${doc.bytes.length}`);
-          if (!doc || doc.bytes.length === 0) {
-            console.warn(`Skipping ${doc?.name || 'unknown'}: empty or null document`);
-            continue;
-          }
-          const uploaded = await uploadFileToDrive(token, folder.id, doc.name, doc.type, doc.bytes);
-          if (uploaded) {
-            console.log(`Successfully uploaded: ${uploaded.name} (${uploaded.id})`);
-            uploadedFiles.push(uploaded);
-          } else {
-            console.error(`Failed to upload: ${doc.name}`);
+
+        // Upload files in parallel batches for better performance
+        const UPLOAD_BATCH_SIZE = 5; // Upload 5 files simultaneously
+        const BATCH_DELAY_MS = 500; // Small delay between batches to avoid rate limits
+
+        for (let i = 0; i < originalDocuments.length; i += UPLOAD_BATCH_SIZE) {
+          const batch = originalDocuments.slice(i, i + UPLOAD_BATCH_SIZE);
+          console.log(`Uploading batch ${Math.floor(i / UPLOAD_BATCH_SIZE) + 1} of ${Math.ceil(originalDocuments.length / UPLOAD_BATCH_SIZE)} (${batch.length} files)`);
+
+          const batchUploads = await Promise.all(
+            batch.map(async (doc) => {
+              console.log(`Uploading: ${doc.name}, type: ${doc.type}, category: ${doc.category}, bytes: ${doc.bytes.length}`);
+              if (!doc || doc.bytes.length === 0) {
+                console.warn(`Skipping ${doc?.name || 'unknown'}: empty or null document`);
+                return null;
+              }
+              try {
+                const uploaded = await uploadFileToDrive(token, folder.id, doc.name, doc.type, doc.bytes);
+                if (uploaded) {
+                  console.log(`Successfully uploaded: ${uploaded.name} (${uploaded.id})`);
+                  return uploaded;
+                } else {
+                  console.error(`Failed to upload: ${doc.name}`);
+                  return null;
+                }
+              } catch (uploadError) {
+                console.error(`Error uploading ${doc.name}:`, uploadError);
+                return null;
+              }
+            })
+          );
+
+          // Add successfully uploaded files to the list
+          uploadedFiles.push(...batchUploads.filter((file): file is NonNullable<typeof file> => file !== null));
+
+          // Small delay between batches to avoid Google Drive API rate limits
+          if (i + UPLOAD_BATCH_SIZE < originalDocuments.length) {
+            await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
           }
         }
+
         console.log(`Upload complete: ${uploadedFiles.length} of ${originalDocuments.length} files uploaded`);
 
         if (extracted) {

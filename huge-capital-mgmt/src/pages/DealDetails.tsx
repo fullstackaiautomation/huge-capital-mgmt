@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Loader, AlertCircle, Building2, DollarSign, MapPin, Users, FileText, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Loader, AlertCircle, Building2, DollarSign, MapPin, FileText, ChevronRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Deal } from '../types/deals';
 
@@ -106,20 +106,6 @@ export default function DealDetails() {
     fetchDeal();
   }, [id]);
 
-  const statusBadge = useMemo(() => {
-    if (!deal) return null;
-    const colors: Record<string, string> = {
-      New: 'bg-gray-500/20 text-gray-200 border border-gray-500/40',
-      Analyzing: 'bg-blue-500/20 text-blue-200 border border-blue-500/40',
-      Matched: 'bg-purple-500/20 text-purple-200 border border-purple-500/40',
-      Submitted: 'bg-yellow-500/20 text-yellow-200 border border-yellow-500/40',
-      Pending: 'bg-orange-500/20 text-orange-200 border border-orange-500/40',
-      Approved: 'bg-emerald-500/20 text-emerald-200 border border-emerald-500/40',
-      Funded: 'bg-green-500/20 text-green-200 border border-green-500/40',
-      Declined: 'bg-red-500/20 text-red-200 border border-red-500/40',
-    };
-    return colors[deal.status] ?? 'bg-gray-700/20 text-gray-200 border border-gray-600/40';
-  }, [deal]);
 
   if (loading) {
     return (
@@ -166,7 +152,38 @@ export default function DealDetails() {
                 <Building2 className="w-8 h-8 text-indigo-400" />
                 {deal.legal_business_name}
               </h1>
-              {deal.dba_name && <p className="text-gray-400 mt-1">DBA: {deal.dba_name}</p>}
+
+              {/* DBA and Address Row */}
+              <div className="mt-1 flex flex-wrap items-center gap-3 text-gray-400 text-sm">
+                {deal.dba_name && <span>DBA: {deal.dba_name}</span>}
+                {deal.deal_owners.length > 0 && (
+                  <>
+                    {deal.deal_owners.map((owner, idx) => (
+                      <span key={owner.id}>
+                        {idx === 0 && deal.dba_name && <span className="mx-2">•</span>}
+                        {owner.street_address}, {owner.city}, {owner.state} {owner.zip}
+                      </span>
+                    ))}
+                  </>
+                )}
+              </div>
+
+              {/* Owner Details Row */}
+              {deal.deal_owners.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {deal.deal_owners.map((owner) => (
+                    <div key={owner.id} className="flex flex-wrap items-center gap-3 text-sm">
+                      <span className="font-medium text-indigo-200">{owner.full_name}</span>
+                      {owner.ownership_percent !== null && (
+                        <span className="text-indigo-300">{owner.ownership_percent}%</span>
+                      )}
+                      {owner.email && <span className="text-gray-400">{owner.email}</span>}
+                      {owner.phone && <span className="text-gray-400">{owner.phone}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="mt-3 flex flex-wrap gap-3 text-sm text-gray-300">
                 <span className="inline-flex items-center gap-2">
                   <DollarSign className="w-4 h-4 text-emerald-300" />
@@ -180,13 +197,7 @@ export default function DealDetails() {
                 <span>EIN: {deal.ein}</span>
               </div>
             </div>
-            <span className={`px-4 py-1 rounded-full text-sm font-semibold ${statusBadge}`}>
-              {deal.status}
-            </span>
-          </div>
-
-          {deal.application_google_drive_link && (
-            <div className="flex flex-wrap items-center gap-3">
+            {deal.application_google_drive_link && (
               <a
                 href={deal.application_google_drive_link}
                 target="_blank"
@@ -195,8 +206,8 @@ export default function DealDetails() {
               >
                 <FileText className="w-4 h-4" /> View uploaded documents
               </a>
-            </div>
-          )}
+            )}
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="bg-gray-900/40 rounded-lg border border-gray-700/40 p-4">
@@ -231,38 +242,6 @@ export default function DealDetails() {
             </div>
           </div>
         </div>
-
-        <section className="bg-gray-800/30 border border-gray-700/30 rounded-xl p-6 space-y-4">
-          <div className="flex items-center gap-3">
-            <Users className="w-6 h-6 text-indigo-300" />
-            <div>
-              <h2 className="text-xl font-semibold text-white">Owners</h2>
-              <p className="text-gray-400 text-sm">Key principals associated with this deal.</p>
-            </div>
-          </div>
-
-          {deal.deal_owners.length === 0 ? (
-            <p className="text-gray-400 text-sm">No owners recorded for this deal.</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {deal.deal_owners.map((owner) => (
-                <div key={owner.id} className="bg-gray-900/40 border border-gray-700/40 rounded-lg p-4 space-y-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <h3 className="text-lg text-white font-semibold">{owner.full_name}</h3>
-                    {owner.ownership_percent !== null && (
-                      <span className="text-sm text-indigo-300">{owner.ownership_percent}%</span>
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-300">{owner.street_address}, {owner.city}, {owner.state} {owner.zip}</p>
-                  <div className="text-sm text-gray-400 space-y-1">
-                    <p>Email: {owner.email ?? '—'}</p>
-                    <p>Phone: {owner.phone ?? '—'}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
 
         <section className="bg-gray-800/30 border border-gray-700/30 rounded-xl overflow-hidden">
           <div className="p-6 border-b border-gray-700/30">
@@ -425,19 +404,168 @@ export default function DealDetails() {
             <div className="p-6 border-t border-gray-700/30 bg-gray-900/20">
               <h3 className="text-sm font-semibold text-indigo-200 mb-4">Detected Funding Positions</h3>
               <div className="space-y-3">
-                {deal.deal_bank_statements.map((statement) =>
-                  statement.deal_funding_positions.map((position) => (
-                    <div key={position.id} className="flex flex-wrap items-center justify-between gap-3 text-sm bg-indigo-500/5 border border-indigo-500/20 rounded-lg p-3">
-                      <span className="font-medium text-indigo-100">{position.lender_name}</span>
-                      <span className="text-indigo-200">${Number(position.amount).toLocaleString()} • {position.frequency}</span>
-                      {position.detected_dates.length > 0 && (
-                        <span className="text-xs text-indigo-300/80">
-                          Dates: {position.detected_dates.join(', ')}
-                        </span>
-                      )}
-                    </div>
-                  ))
-                )}
+                {(() => {
+                  // Helper function to normalize lender names for matching
+                  const normalizeLenderName = (name: string): string => {
+                    let normalized = name.toLowerCase().trim();
+
+                    // Remove common suffixes iteratively (in case there are multiple)
+                    const suffixes = ['payments', 'payment', 'funding', 'capital', 'partners', 'partner', 'inc', 'llc', 'corp', 'corporation', 'select', 'group', 'financial', 'services'];
+
+                    let changed = true;
+                    while (changed) {
+                      changed = false;
+                      for (const suffix of suffixes) {
+                        const pattern = new RegExp(`\\s+${suffix}$`, 'i');
+                        if (pattern.test(normalized)) {
+                          normalized = normalized.replace(pattern, '').trim();
+                          changed = true;
+                        }
+                      }
+                    }
+
+                    return normalized;
+                  };
+
+                  // Consolidate funding positions by normalized name + amount (ignore frequency)
+                  const consolidatedPositions = new Map<string, {
+                    lender_name: string;
+                    amount: number;
+                    frequency: string;
+                    dates: string[];
+                  }>();
+
+                  deal.deal_bank_statements.forEach(statement => {
+                    statement.deal_funding_positions.forEach(position => {
+                      const normalizedName = normalizeLenderName(position.lender_name);
+                      // Key is now just normalized name + amount (frequency can vary due to parsing errors)
+                      const key = `${normalizedName}|${position.amount}`;
+
+                      if (consolidatedPositions.has(key)) {
+                        const existing = consolidatedPositions.get(key)!;
+                        existing.dates.push(...position.detected_dates);
+                        // Use the shorter name if available
+                        if (position.lender_name.length < existing.lender_name.length) {
+                          existing.lender_name = position.lender_name;
+                        }
+                        // Keep the most common frequency (or first one if tie)
+                      } else {
+                        consolidatedPositions.set(key, {
+                          lender_name: position.lender_name,
+                          amount: Number(position.amount),
+                          frequency: position.frequency,
+                          dates: [...position.detected_dates]
+                        });
+                      }
+                    });
+                  });
+
+                  // Sort and format dates to M/D format
+                  const formatDate = (dateStr: string) => {
+                    const date = new Date(dateStr);
+                    return `${date.getMonth() + 1}/${date.getDate()}`;
+                  };
+
+                  // Determine status based on date patterns
+                  const getStatus = (dates: string[]): 'New' | 'Active' | 'Closed' | 'Unclear' => {
+                    const uniqueDates = [...new Set(dates)].sort();
+                    if (uniqueDates.length === 0) return 'Closed';
+
+                    // Unclear: Only one occurrence detected
+                    if (uniqueDates.length === 1) {
+                      return 'Unclear';
+                    }
+
+                    // Find all unique bank statements (by month)
+                    const statementMonths = new Set<string>();
+                    deal.deal_bank_statements.forEach(stmt => {
+                      statementMonths.add(stmt.statement_month);
+                    });
+
+                    // Get sorted statement months (most recent first)
+                    const sortedMonths = Array.from(statementMonths).sort().reverse();
+
+                    if (sortedMonths.length === 0) return 'Unclear';
+
+                    const mostRecentMonth = sortedMonths[0];
+                    const secondMostRecentMonth = sortedMonths.length > 1 ? sortedMonths[1] : null;
+
+                    // Check if any payment dates fall within the most recent statement month
+                    const hasRecentPayment = uniqueDates.some(dateStr => {
+                      return dateStr.startsWith(mostRecentMonth.substring(0, 7)); // YYYY-MM comparison
+                    });
+
+                    // Check if any payment dates fall within the second most recent month
+                    const hasSecondRecentPayment = secondMostRecentMonth
+                      ? uniqueDates.some(dateStr => dateStr.startsWith(secondMostRecentMonth.substring(0, 7)))
+                      : false;
+
+                    // New: Appears in recent month, has multiple occurrences, but no older history
+                    if (hasRecentPayment && !hasSecondRecentPayment && uniqueDates.length >= 2) {
+                      return 'New';
+                    }
+
+                    // Closed: Does NOT appear in the most recent 2 months
+                    if (!hasRecentPayment && !hasSecondRecentPayment) {
+                      return 'Closed';
+                    }
+
+                    // Active: Appears in recent month and has history from previous months
+                    if (hasRecentPayment && hasSecondRecentPayment) {
+                      return 'Active';
+                    }
+
+                    return 'Unclear';
+                  };
+
+                  // Sort positions by number of occurrences (descending)
+                  const sortedPositions = Array.from(consolidatedPositions.values()).sort((a, b) => {
+                    const uniqueDatesA = [...new Set(a.dates)].length;
+                    const uniqueDatesB = [...new Set(b.dates)].length;
+                    return uniqueDatesB - uniqueDatesA; // Descending order
+                  });
+
+                  return sortedPositions.map((position, idx) => {
+                    // Remove duplicates and sort dates
+                    const uniqueDates = [...new Set(position.dates)].sort();
+                    const formattedDates = uniqueDates.map(formatDate).join(', ');
+                    const status = getStatus(position.dates);
+
+                    // Status badge colors
+                    const statusColors = {
+                      'New': 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+                      'Active': 'bg-green-500/20 text-green-300 border-green-500/30',
+                      'Closed': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+                      'Unclear': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
+                    };
+
+                    return (
+                      <div key={idx} className="flex items-center gap-4 text-sm bg-indigo-500/5 border border-indigo-500/20 rounded-lg p-3">
+                        <div className="flex-shrink-0 w-48">
+                          <span className="font-medium text-indigo-100 text-xs">{position.lender_name}</span>
+                        </div>
+                        <div className="flex-shrink-0 w-20 text-center">
+                          <span className={`text-xs font-semibold px-2 py-1 rounded border ${statusColors[status]}`}>
+                            {status}
+                          </span>
+                        </div>
+                        <div className="flex-shrink-0 w-16 text-center">
+                          <span className="text-indigo-200 text-xs font-semibold">{uniqueDates.length}x</span>
+                        </div>
+                        <div className="flex-shrink-0 w-36">
+                          <span className="text-indigo-200 text-xs">${position.amount.toLocaleString()} • {position.frequency}</span>
+                        </div>
+                        {uniqueDates.length > 0 && (
+                          <div className="flex-1">
+                            <span className="text-xs text-indigo-300/80">
+                              Dates: {formattedDates}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
           )}
