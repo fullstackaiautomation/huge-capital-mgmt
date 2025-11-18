@@ -818,27 +818,6 @@ export default function Deals() {
                               return { ...position, status, uniqueDates };
                             });
 
-                            const activePositions = positionsWithStatus.filter(p => p.status === 'Active');
-                            const unclearPositions = positionsWithStatus.filter(p => p.status === 'Unclear');
-
-                            const activeMonthlyCommitment = activePositions.reduce((sum, p) => {
-                              // Estimate monthly amount based on frequency
-                              let monthlyAmount = 0;
-                              if (p.frequency.toLowerCase().includes('weekly')) {
-                                monthlyAmount = p.amount * 4;
-                              } else if (p.frequency.toLowerCase().includes('daily')) {
-                                monthlyAmount = p.amount * 22; // ~22 business days
-                              } else if (p.frequency.toLowerCase().includes('bi-weekly') || p.frequency.toLowerCase().includes('biweekly')) {
-                                monthlyAmount = p.amount * 2;
-                              } else {
-                                // Assume monthly
-                                monthlyAmount = p.amount;
-                              }
-                              return sum + monthlyAmount;
-                            }, 0);
-
-                            const unclearTotal = unclearPositions.reduce((sum, p) => sum + p.amount, 0);
-
                             // Status badge colors
                             const statusColors = {
                               'New': 'bg-purple-500/20 text-purple-300 border-purple-500/30',
