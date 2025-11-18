@@ -14,6 +14,8 @@ import {
   Loader,
   ChevronDown,
   ChevronUp,
+  FileText,
+  MapPin,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import NewDealModal from '../components/Deals/NewDealModal';
@@ -103,7 +105,10 @@ export default function Deals() {
               .order('owner_number', { ascending: true }),
             supabase
               .from('deal_bank_statements')
-              .select('*')
+              .select(`
+                *,
+                deal_funding_positions (*)
+              `)
               .eq('deal_id', deal.id)
               .order('statement_month', { ascending: false }),
           ]);
@@ -320,15 +325,12 @@ export default function Deals() {
                       <h3 className="text-lg font-semibold text-white group-hover:text-indigo-400 transition-colors">
                         {deal.legal_business_name}
                       </h3>
-                      {deal.dba_name && <p className="text-sm text-gray-400">{deal.dba_name}</p>}
-                    </div>
-
-                    {/* Broker */}
-                    <div>
-                      <p className="text-sm text-gray-400 mb-1">BROKER</p>
-                      <h3 className="text-lg font-semibold text-white">
-                        {deal.broker_name || 'Unknown'}
-                      </h3>
+                      {deal.city && deal.state && (
+                        <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+                          <MapPin className="w-3 h-3" />
+                          {deal.city}, {deal.state}
+                        </p>
+                      )}
                     </div>
 
                     {/* Loan Amount */}
@@ -351,11 +353,25 @@ export default function Deals() {
                       <h3 className="text-lg font-semibold text-white">{deal.ein || 'N/A'}</h3>
                     </div>
 
-                    {/* Created */}
+                    {/* Time in Business */}
                     <div>
-                      <p className="text-sm text-gray-400 mb-1">CREATED</p>
+                      <p className="text-sm text-gray-400 mb-1">TIME IN BUSINESS</p>
                       <h3 className="text-lg font-semibold text-white">
-                        {new Date(deal.created_at).toLocaleDateString()}
+                        {deal.time_in_business_months ? (() => {
+                          const years = Math.floor(deal.time_in_business_months / 12);
+                          const months = deal.time_in_business_months % 12;
+                          if (years === 0) return `${months} month${months !== 1 ? 's' : ''}`;
+                          if (months === 0) return `${years} year${years !== 1 ? 's' : ''}`;
+                          return `${years} year${years !== 1 ? 's' : ''}, ${months} month${months !== 1 ? 's' : ''}`;
+                        })() : '—'}
+                      </h3>
+                    </div>
+
+                    {/* Broker */}
+                    <div>
+                      <p className="text-sm text-gray-400 mb-1">BROKER</p>
+                      <h3 className="text-lg font-semibold text-white">
+                        {deal.broker_name || 'Unknown'}
                       </h3>
                     </div>
                   </div>
@@ -366,242 +382,508 @@ export default function Deals() {
                 </div>
 
                 {/* Expanded Details */}
-                {expandedDealId === deal.id && (
+                {expandedDealId === deal.id && (() => {
+                  // Calculate funding position summaries
+                  let activeMonthlyCommitment = 0;
+                  let unclearTotal = 0;
+                  let activeCount = 0;
+                  let unclearCount = 0;
+
+                  if (deal.statements && deal.statements.length > 0) {
+                    // Helper function to normalize lender names
+                    const normalizeLenderName = (name: string): string => {
+                      let normalized = name.toLowerCase().trim();
+                      const suffixes = ['payments', 'payment', 'funding', 'capital', 'partners', 'partner', 'inc', 'llc', 'corp', 'corporation', 'select', 'group', 'financial', 'services'];
+                      let changed = true;
+                      while (changed) {
+                        changed = false;
+                        for (const suffix of suffixes) {
+                          const pattern = new RegExp(`\\s+${suffix}$`, 'i');
+                          if (pattern.test(normalized)) {
+                            normalized = normalized.replace(pattern, '').trim();
+                            changed = true;
+                          }
+                        }
+                      }
+                      return normalized;
+                    };
+
+                    // Consolidate positions
+                    const consolidatedPositions = new Map<string, { lender_name: string; amount: number; frequency: string; dates: string[] }>();
+                    deal.statements.forEach((statement: any) => {
+                      statement.deal_funding_positions?.forEach((position: any) => {
+                        const normalizedName = normalizeLenderName(position.lender_name);
+                        const key = `${normalizedName}|${position.amount}`;
+                        if (consolidatedPositions.has(key)) {
+                          const existing = consolidatedPositions.get(key)!;
+                          existing.dates.push(...position.detected_dates);
+                        } else {
+                          consolidatedPositions.set(key, {
+                            lender_name: position.lender_name,
+                            amount: position.amount,
+                            frequency: position.frequency,
+                            dates: [...position.detected_dates],
+                          });
+                        }
+                      });
+                    });
+
+                    // Determine status
+                    const getStatus = (dates: string[]): 'New' | 'Active' | 'Closed' | 'Unclear' => {
+                      const uniqueDates = [...new Set(dates)].sort();
+                      if (uniqueDates.length === 0) return 'Closed';
+                      const statementMonths = new Set<string>();
+                      deal.statements?.forEach((stmt: any) => statementMonths.add(stmt.statement_month));
+                      const sortedMonths = Array.from(statementMonths).sort().reverse();
+                      if (sortedMonths.length === 0) return 'Closed';
+                      const mostRecentMonth = sortedMonths[0];
+                      const secondMostRecentMonth = sortedMonths.length > 1 ? sortedMonths[1] : null;
+                      const hasRecentPayment = uniqueDates.some(dateStr => dateStr.startsWith(mostRecentMonth.substring(0, 7)));
+                      const hasSecondRecentPayment = secondMostRecentMonth ? uniqueDates.some(dateStr => dateStr.startsWith(secondMostRecentMonth.substring(0, 7))) : false;
+                      if (uniqueDates.length === 1 && (hasRecentPayment || hasSecondRecentPayment)) return 'Unclear';
+                      if (hasRecentPayment && !hasSecondRecentPayment && uniqueDates.length >= 2) return 'New';
+                      if (!hasRecentPayment && !hasSecondRecentPayment) return 'Closed';
+                      if (hasRecentPayment && hasSecondRecentPayment) return 'Active';
+                      return 'Closed';
+                    };
+
+                    // Calculate totals
+                    Array.from(consolidatedPositions.values()).forEach(position => {
+                      const status = getStatus(position.dates);
+                      if (status === 'Active') {
+                        activeCount++;
+                        let monthlyAmount = 0;
+                        if (position.frequency.toLowerCase().includes('weekly')) monthlyAmount = position.amount * 4;
+                        else if (position.frequency.toLowerCase().includes('daily')) monthlyAmount = position.amount * 22;
+                        else if (position.frequency.toLowerCase().includes('bi-weekly') || position.frequency.toLowerCase().includes('biweekly')) monthlyAmount = position.amount * 2;
+                        else monthlyAmount = position.amount;
+                        activeMonthlyCommitment += monthlyAmount;
+                      } else if (status === 'Unclear') {
+                        unclearCount++;
+                        unclearTotal += position.amount;
+                      }
+                    });
+                  }
+
+                  return (
                   <div className="mt-4 pt-4 border-t border-gray-700/30">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Left Column - Owners */}
-                      <div>
-                        <div className="flex items-center gap-2 mb-3">
-                          <Building2 className="w-5 h-5 text-indigo-400" />
-                          <h4 className="text-lg font-semibold text-white">Owners</h4>
-                        </div>
-                        <div className="space-y-3">
-                          {deal.owners && deal.owners.length > 0 ? (
-                            deal.owners.map((owner) => (
-                              <div
-                                key={owner.id}
-                                className="bg-gray-700/20 rounded-lg p-3 border border-gray-700/30"
-                              >
-                                <div className="flex items-start justify-between mb-2">
-                                  <h5 className="font-semibold text-white">{owner.full_name}</h5>
-                                  {owner.ownership_percent && (
-                                    <span className="text-sm text-indigo-400 font-medium">
-                                      {owner.ownership_percent}%
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="space-y-1 text-sm text-gray-400">
-                                  <p>
-                                    {owner.street_address}, {owner.city}, {owner.state} {owner.zip}
-                                  </p>
-                                  {owner.email && (
-                                    <p>
-                                      <span className="text-gray-500">Email:</span> {owner.email}
-                                    </p>
-                                  )}
-                                  {owner.phone && (
-                                    <p>
-                                      <span className="text-gray-500">Phone:</span> {owner.phone}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <p className="text-sm text-gray-500 italic">No owners recorded</p>
-                          )}
-                        </div>
+                    {/* Info Cards Row */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
+                      <div className="bg-gray-900/40 rounded-lg border border-gray-700/40 p-4">
+                        {deal.owners && deal.owners.length > 0 ? (
+                          <>
+                            <p className="text-xs text-gray-500 uppercase mb-1">
+                              {deal.owners[0].full_name || 'Unknown'} ({deal.owners[0].ownership_percent || 0}%)
+                            </p>
+                            <p className="text-sm text-gray-400">
+                              {deal.owners[0].email || 'No email'}
+                            </p>
+                            <p className="text-sm text-gray-400">
+                              {deal.owners[0].phone || 'No phone'}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-xs text-gray-500 uppercase">No owner info</p>
+                        )}
                       </div>
-
-                      {/* Right Column - Financial Overview */}
-                      <div>
-                        <div className="flex items-center gap-2 mb-3">
-                          <TrendingUp className="w-5 h-5 text-emerald-400" />
-                          <h4 className="text-lg font-semibold text-white">Financial Overview</h4>
-                        </div>
-                        <div className="space-y-3">
-                          {/* Key Financial Metrics */}
-                          <div className="bg-gray-700/20 rounded-lg p-3 border border-gray-700/30 space-y-2">
-                            <div className="flex justify-between">
-                              <span className="text-sm text-gray-400">Avg Monthly Sales</span>
-                              <span className="text-sm font-semibold text-white">
-                                {deal.average_monthly_sales
-                                  ? `$${deal.average_monthly_sales.toLocaleString()}`
-                                  : 'N/A'}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-sm text-gray-400">Avg Monthly Card Sales</span>
-                              <span className="text-sm font-semibold text-white">
-                                {deal.average_monthly_card_sales
-                                  ? `$${deal.average_monthly_card_sales.toLocaleString()}`
-                                  : 'N/A'}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-sm text-gray-400">Time in Business</span>
-                              <span className="text-sm font-semibold text-white">
-                                {deal.time_in_business_months
-                                  ? `${Math.floor(deal.time_in_business_months / 12)} years, ${
-                                      deal.time_in_business_months % 12
-                                    } months`
-                                  : 'N/A'}
-                              </span>
-                            </div>
+                      <div className="bg-gray-900/40 rounded-lg border border-gray-700/40 p-4">
+                        <p className="text-xs text-gray-500 uppercase">Monthly Revenue</p>
+                        <p className="text-lg text-white font-semibold mt-2">
+                          {deal.average_monthly_sales ? `$${Number(deal.average_monthly_sales).toLocaleString()}` : '—'}
+                        </p>
+                      </div>
+                      <div className="bg-gray-900/40 rounded-lg border border-gray-700/40 p-4">
+                        <p className="text-xs text-gray-500 uppercase">Card Sales</p>
+                        <p className="text-lg text-white font-semibold mt-2">
+                          {deal.average_monthly_card_sales ? `$${Number(deal.average_monthly_card_sales).toLocaleString()}` : '—'}
+                        </p>
+                      </div>
+                      {activeCount > 0 && (
+                        <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                          <p className="text-xs text-green-400 uppercase font-semibold mb-2">{activeCount} Active Position{activeCount !== 1 ? 's' : ''}</p>
+                          <div className="flex items-baseline gap-2">
+                            <p className="text-2xl text-green-300 font-bold">
+                              ${Math.round(activeMonthlyCommitment).toLocaleString()}
+                            </p>
+                            <p className="text-xs text-green-400/80">Monthly</p>
                           </div>
-
-                          {/* Bank Statements Table */}
-                          {deal.statements && deal.statements.length > 0 && (() => {
-                            // Sort statements by month ascending (oldest first)
-                            const sortedStatements = [...deal.statements].sort((a, b) => {
-                              return a.statement_month.localeCompare(b.statement_month);
-                            });
-
-                            // Calculate 3-month and 6-month averages (take from end for most recent)
-                            const last3Months = sortedStatements.slice(-3);
-                            const last6Months = sortedStatements.slice(-6);
-
-                            const calculateAverage = (statements: typeof sortedStatements) => {
-                              const count = statements.length;
-                              if (count === 0) return { credits: null, debits: null, nsfs: 0, deposits: null, avgBal: null };
-
-                              const totals = statements.reduce((acc, stmt) => ({
-                                credits: acc.credits + (stmt.credits || 0),
-                                debits: acc.debits + (stmt.debits || 0),
-                                nsfs: acc.nsfs + (stmt.nsfs || 0),
-                                deposits: acc.deposits + (stmt.deposit_count || 0),
-                                avgBal: acc.avgBal + (stmt.average_daily_balance || 0),
-                              }), { credits: 0, debits: 0, nsfs: 0, deposits: 0, avgBal: 0 });
-
-                              return {
-                                credits: Math.round(totals.credits / count),
-                                debits: Math.round(totals.debits / count),
-                                nsfs: Math.round(totals.nsfs / count),
-                                deposits: Math.round(totals.deposits / count),
-                                avgBal: Math.round(totals.avgBal / count),
-                              };
-                            };
-
-                            const avg3Month = calculateAverage(last3Months);
-                            const avg6Month = calculateAverage(last6Months);
-
-                            return (
-                              <div className="bg-gray-700/20 rounded-lg border border-gray-700/30 overflow-hidden">
-                                <div className="px-3 py-2 border-b border-gray-700/30">
-                                  <h5 className="text-sm font-semibold text-gray-300">
-                                    Bank Statements ({deal.statements.length})
-                                  </h5>
-                                </div>
-                                <div className="overflow-x-auto max-h-96">
-                                  <table className="w-full text-xs">
-                                    <thead className="bg-gray-800/50 border-b border-gray-700/30 sticky top-0">
-                                      <tr>
-                                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-400 uppercase">ID</th>
-                                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-400 uppercase">Month</th>
-                                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-400 uppercase">Credits</th>
-                                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-400 uppercase">Debits</th>
-                                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-400 uppercase">NSFs</th>
-                                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-400 uppercase">Dep</th>
-                                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-400 uppercase">Ave Bal</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-700/20">
-                                      {sortedStatements.map((statement, index) => (
-                                        <tr key={statement.id} className={`hover:bg-gray-700/10 transition-colors ${index % 2 === 0 ? 'bg-gray-900/20' : ''}`}>
-                                          <td className="px-3 py-2 text-gray-300 font-mono text-xs">
-                                            {statement.id.slice(0, 5)}
-                                          </td>
-                                          <td className="px-3 py-2 text-white font-medium">
-                                            {statement.statement_month}
-                                          </td>
-                                          <td className="px-3 py-2 text-right text-green-400 font-medium">
-                                            ${statement.credits?.toLocaleString() ?? 'N/A'}
-                                          </td>
-                                          <td className="px-3 py-2 text-right text-red-400 font-medium">
-                                            ${statement.debits?.toLocaleString() ?? 'N/A'}
-                                          </td>
-                                          <td className="px-3 py-2 text-center text-white">
-                                            {statement.nsfs ?? 0}
-                                          </td>
-                                          <td className="px-3 py-2 text-center text-white">
-                                            {statement.deposit_count ?? statement.overdrafts ?? 'N/A'}
-                                          </td>
-                                          <td className="px-3 py-2 text-right text-blue-400 font-medium">
-                                            ${statement.average_daily_balance?.toLocaleString() ?? 'N/A'}
-                                          </td>
-                                        </tr>
-                                      ))}
-
-                                      {/* 3-Month Average */}
-                                      {last3Months.length >= 3 && (
-                                        <tr className="bg-indigo-500/10 border-t-2 border-indigo-500/30 font-semibold">
-                                          <td className="px-3 py-2 text-gray-400 text-xs" colSpan={2}>
-                                            Last 3 Month Avg
-                                          </td>
-                                          <td className="px-3 py-2 text-right text-green-300">
-                                            ${avg3Month.credits?.toLocaleString() ?? 'N/A'}
-                                          </td>
-                                          <td className="px-3 py-2 text-right text-red-300">
-                                            ${avg3Month.debits?.toLocaleString() ?? 'N/A'}
-                                          </td>
-                                          <td className="px-3 py-2 text-center text-white">
-                                            {avg3Month.nsfs}
-                                          </td>
-                                          <td className="px-3 py-2 text-center text-white">
-                                            {avg3Month.deposits}
-                                          </td>
-                                          <td className="px-3 py-2 text-right text-blue-300">
-                                            ${avg3Month.avgBal?.toLocaleString() ?? 'N/A'}
-                                          </td>
-                                        </tr>
-                                      )}
-
-                                      {/* 6-Month Average */}
-                                      {last6Months.length >= 6 && (
-                                        <tr className="bg-purple-500/10 border-t border-purple-500/30 font-semibold">
-                                          <td className="px-3 py-2 text-gray-400 text-xs" colSpan={2}>
-                                            Last 6 Month Avg
-                                          </td>
-                                          <td className="px-3 py-2 text-right text-green-300">
-                                            ${avg6Month.credits?.toLocaleString() ?? 'N/A'}
-                                          </td>
-                                          <td className="px-3 py-2 text-right text-red-300">
-                                            ${avg6Month.debits?.toLocaleString() ?? 'N/A'}
-                                          </td>
-                                          <td className="px-3 py-2 text-center text-white">
-                                            {avg6Month.nsfs}
-                                          </td>
-                                          <td className="px-3 py-2 text-center text-white">
-                                            {avg6Month.deposits}
-                                          </td>
-                                          <td className="px-3 py-2 text-right text-blue-300">
-                                            ${avg6Month.avgBal?.toLocaleString() ?? 'N/A'}
-                                          </td>
-                                        </tr>
-                                      )}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </div>
-                            );
-                          })()}
-
-                          {/* Documents Link */}
-                          {deal.application_google_drive_link && (
-                            <a
-                              href={deal.application_google_drive_link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block text-center text-sm text-indigo-400 hover:text-indigo-300 transition-colors py-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20"
-                            >
-                              View Documents Folder →
-                            </a>
-                          )}
                         </div>
+                      )}
+                      {unclearCount > 0 && (
+                        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                          <p className="text-xs text-yellow-400 uppercase font-semibold mb-2">{unclearCount} Unclear Position{unclearCount !== 1 ? 's' : ''}</p>
+                          <div className="flex items-baseline gap-2">
+                            <p className="text-2xl text-yellow-300 font-bold">
+                              ${Math.round(unclearTotal).toLocaleString()}
+                            </p>
+                            <p className="text-xs text-yellow-400/80">Total</p>
+                          </div>
+                        </div>
+                      )}
+                      <div className="bg-gray-900/40 rounded-lg border border-gray-700/40 p-4">
+                        <p className="text-xs text-gray-500 uppercase">Created</p>
+                        <p className="text-lg text-white font-semibold mt-2">
+                          {new Date(deal.created_at).toLocaleDateString('en-US', {
+                            month: 'numeric',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </p>
                       </div>
                     </div>
+
+                    {/* Two-column layout: Bank Statements & Funding Positions */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Bank Statements Section */}
+                      <section className="bg-gray-800/30 border border-gray-700/30 rounded-xl overflow-hidden">
+                        <div className="p-6 border-b border-gray-700/30">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <FileText className="w-6 h-6 text-indigo-300" />
+                              <div>
+                                <h2 className="text-xl font-semibold text-white">Bank Statements</h2>
+                                <p className="text-gray-400 text-sm">Financial metrics from analyzed statements.</p>
+                              </div>
+                            </div>
+                            {deal.application_google_drive_link && (
+                              <a
+                                href={deal.application_google_drive_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 text-sm text-indigo-300 hover:text-indigo-200 font-medium"
+                              >
+                                <FileText className="w-4 h-4" />
+                                View in Drive
+                              </a>
+                            )}
+                          </div>
+                        </div>
+
+                        {!deal.statements || deal.statements.length === 0 ? (
+                          <div className="p-6">
+                            <p className="text-gray-400 text-sm">No bank statements were attached to this deal.</p>
+                          </div>
+                        ) : (() => {
+                          // Sort statements by month ascending (oldest first)
+                          const sortedStatements = [...deal.statements].sort((a, b) => {
+                            return a.statement_month.localeCompare(b.statement_month);
+                          });
+
+                          // Calculate 3-month and 6-month averages (take from end for most recent)
+                          const last3Months = sortedStatements.slice(-3);
+                          const last6Months = sortedStatements.slice(-6);
+
+                          const calculateAverage = (statements: typeof sortedStatements) => {
+                            const count = statements.length;
+                            if (count === 0) return { credits: null, debits: null, nsfs: 0, deposits: null, avgBal: null };
+
+                            const totals = statements.reduce((acc, stmt) => ({
+                              credits: acc.credits + (stmt.credits || 0),
+                              debits: acc.debits + (stmt.debits || 0),
+                              nsfs: acc.nsfs + (stmt.nsfs || 0),
+                              deposits: acc.deposits + (stmt.deposit_count || 0),
+                              avgBal: acc.avgBal + (stmt.average_daily_balance || 0),
+                            }), { credits: 0, debits: 0, nsfs: 0, deposits: 0, avgBal: 0 });
+
+                            return {
+                              credits: Math.round(totals.credits / count),
+                              debits: Math.round(totals.debits / count),
+                              nsfs: Math.round(totals.nsfs / count),
+                              deposits: Math.round(totals.deposits / count),
+                              avgBal: Math.round(totals.avgBal / count),
+                            };
+                          };
+
+                          const avg3Month = calculateAverage(last3Months);
+                          const avg6Month = calculateAverage(last6Months);
+
+                          return (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead className="bg-gray-900/50 border-b border-gray-700/30">
+                                  <tr>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Month</th>
+                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Credits</th>
+                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Debits</th>
+                                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">NSFs</th>
+                                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Dep</th>
+                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Ave Bal</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-700/20">
+                                  {sortedStatements.map((statement, index) => (
+                                    <tr key={statement.id} className={`hover:bg-gray-700/10 transition-colors ${index % 2 === 0 ? 'bg-gray-900/20' : ''}`}>
+                                      <td className="px-4 py-3 text-white font-medium">
+                                        {statement.statement_month}
+                                      </td>
+                                      <td className="px-4 py-3 text-right text-green-400 font-medium">
+                                        ${statement.credits ? Math.round(statement.credits).toLocaleString() : 'N/A'}
+                                      </td>
+                                      <td className="px-4 py-3 text-right text-red-400 font-medium">
+                                        ${statement.debits ? Math.round(statement.debits).toLocaleString() : 'N/A'}
+                                      </td>
+                                      <td className="px-4 py-3 text-center text-white">
+                                        {statement.nsfs ?? 0}
+                                      </td>
+                                      <td className="px-4 py-3 text-center text-white">
+                                        {statement.deposit_count ?? statement.overdrafts ?? 'N/A'}
+                                      </td>
+                                      <td className="px-4 py-3 text-right text-blue-400 font-medium">
+                                        ${statement.average_daily_balance ? Math.round(statement.average_daily_balance).toLocaleString() : 'N/A'}
+                                      </td>
+                                    </tr>
+                                  ))}
+
+                                  {/* 3-Month Average */}
+                                  {last3Months.length >= 3 && (
+                                    <tr className="bg-indigo-500/10 border-t-2 border-indigo-500/30 font-semibold">
+                                      <td className="px-4 py-3 text-gray-400 text-xs">
+                                        Last 3 Month Average
+                                      </td>
+                                      <td className="px-4 py-3 text-right text-green-300">
+                                        ${avg3Month.credits?.toLocaleString() ?? 'N/A'}
+                                      </td>
+                                      <td className="px-4 py-3 text-right text-red-300">
+                                        ${avg3Month.debits?.toLocaleString() ?? 'N/A'}
+                                      </td>
+                                      <td className="px-4 py-3 text-center text-white">
+                                        {avg3Month.nsfs}
+                                      </td>
+                                      <td className="px-4 py-3 text-center text-white">
+                                        {avg3Month.deposits}
+                                      </td>
+                                      <td className="px-4 py-3 text-right text-blue-300">
+                                        ${avg3Month.avgBal?.toLocaleString() ?? 'N/A'}
+                                      </td>
+                                    </tr>
+                                  )}
+
+                                  {/* 6-Month Average */}
+                                  {last6Months.length >= 6 && (
+                                    <tr className="bg-purple-500/10 border-t border-purple-500/30 font-semibold">
+                                      <td className="px-4 py-3 text-gray-400 text-xs">
+                                        Last 6 Month Average
+                                      </td>
+                                      <td className="px-4 py-3 text-right text-green-300">
+                                        ${avg6Month.credits?.toLocaleString() ?? 'N/A'}
+                                      </td>
+                                      <td className="px-4 py-3 text-right text-red-300">
+                                        ${avg6Month.debits?.toLocaleString() ?? 'N/A'}
+                                      </td>
+                                      <td className="px-4 py-3 text-center text-white">
+                                        {avg6Month.nsfs}
+                                      </td>
+                                      <td className="px-4 py-3 text-center text-white">
+                                        {avg6Month.deposits}
+                                      </td>
+                                      <td className="px-4 py-3 text-right text-blue-300">
+                                        ${avg6Month.avgBal?.toLocaleString() ?? 'N/A'}
+                                      </td>
+                                    </tr>
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
+                          );
+                        })()}
+                      </section>
+
+                      {/* Funding Positions Section */}
+                      {deal.statements && deal.statements.some((s: any) => s.deal_funding_positions?.length > 0) && (
+                        <section className="bg-gray-800/30 border border-gray-700/30 rounded-xl overflow-hidden">
+                          <div className="p-6 border-b border-gray-700/30 bg-gray-900/20">
+                            <h3 className="text-xl font-semibold text-white mb-1">Detected Funding Positions</h3>
+                            <p className="text-gray-400 text-sm">Active and historical funding detected from bank statements.</p>
+                          </div>
+                          <div className="p-6 space-y-4">
+                            {(() => {
+                              // Helper function to normalize lender names for matching
+                              const normalizeLenderName = (name: string): string => {
+                                let normalized = name.toLowerCase().trim();
+
+                              // Remove common suffixes iteratively (in case there are multiple)
+                              const suffixes = ['payments', 'payment', 'funding', 'capital', 'partners', 'partner', 'inc', 'llc', 'corp', 'corporation', 'select', 'group', 'financial', 'services'];
+
+                              let changed = true;
+                              while (changed) {
+                                changed = false;
+                                for (const suffix of suffixes) {
+                                  const pattern = new RegExp(`\\s+${suffix}$`, 'i');
+                                  if (pattern.test(normalized)) {
+                                    normalized = normalized.replace(pattern, '').trim();
+                                    changed = true;
+                                  }
+                                }
+                              }
+
+                              return normalized;
+                            };
+
+                            // Consolidate funding positions by normalized name + amount
+                            const consolidatedPositions = new Map<string, {
+                              lender_name: string;
+                              amount: number;
+                              frequency: string;
+                              dates: string[];
+                            }>();
+
+                            deal.statements.forEach((statement: any) => {
+                              statement.deal_funding_positions?.forEach((position: any) => {
+                                const normalizedName = normalizeLenderName(position.lender_name);
+                                const key = `${normalizedName}|${position.amount}`;
+
+                                if (consolidatedPositions.has(key)) {
+                                  const existing = consolidatedPositions.get(key)!;
+                                  existing.dates.push(...position.detected_dates);
+                                } else {
+                                  consolidatedPositions.set(key, {
+                                    lender_name: position.lender_name,
+                                    amount: position.amount,
+                                    frequency: position.frequency,
+                                    dates: [...position.detected_dates],
+                                  });
+                                }
+                              });
+                            });
+
+                            // Format date for display
+                            const formatDate = (dateStr: string): string => {
+                              const date = new Date(dateStr);
+                              return `${date.getMonth() + 1}/${date.getDate()}`;
+                            };
+
+                            // Determine status based on date patterns
+                            const getStatus = (dates: string[]): 'New' | 'Active' | 'Closed' | 'Unclear' => {
+                              const uniqueDates = [...new Set(dates)].sort();
+                              if (uniqueDates.length === 0) return 'Closed';
+
+                              // Find all unique bank statements (by month)
+                              const statementMonths = new Set<string>();
+                              deal.statements?.forEach((stmt: any) => {
+                                statementMonths.add(stmt.statement_month);
+                              });
+
+                              // Get sorted statement months (most recent first)
+                              const sortedMonths = Array.from(statementMonths).sort().reverse();
+
+                              if (sortedMonths.length === 0) return 'Closed';
+
+                              const mostRecentMonth = sortedMonths[0];
+                              const secondMostRecentMonth = sortedMonths.length > 1 ? sortedMonths[1] : null;
+
+                              // Check if any payment dates fall within the most recent statement month
+                              const hasRecentPayment = uniqueDates.some(dateStr => {
+                                return dateStr.startsWith(mostRecentMonth.substring(0, 7)); // YYYY-MM comparison
+                              });
+
+                              // Check if any payment dates fall within the second most recent month
+                              const hasSecondRecentPayment = secondMostRecentMonth
+                                ? uniqueDates.some(dateStr => dateStr.startsWith(secondMostRecentMonth.substring(0, 7)))
+                                : false;
+
+                              // Unclear: Only one occurrence detected AND it's in the most recent two months
+                              if (uniqueDates.length === 1 && (hasRecentPayment || hasSecondRecentPayment)) {
+                                return 'Unclear';
+                              }
+
+                              // New: Appears in recent month, has multiple occurrences, but no older history
+                              if (hasRecentPayment && !hasSecondRecentPayment && uniqueDates.length >= 2) {
+                                return 'New';
+                              }
+
+                              // Closed: Does NOT appear in the most recent 2 months
+                              if (!hasRecentPayment && !hasSecondRecentPayment) {
+                                return 'Closed';
+                              }
+
+                              // Active: Appears in recent month and has history from previous months
+                              if (hasRecentPayment && hasSecondRecentPayment) {
+                                return 'Active';
+                              }
+
+                              return 'Closed';
+                            };
+
+                            // Sort positions by number of occurrences (descending)
+                            const sortedPositions = Array.from(consolidatedPositions.values()).sort((a, b) => {
+                              const uniqueDatesA = [...new Set(a.dates)].length;
+                              const uniqueDatesB = [...new Set(b.dates)].length;
+                              return uniqueDatesB - uniqueDatesA; // Descending order
+                            });
+
+                            // Calculate summaries for Active and Unclear positions
+                            const positionsWithStatus = sortedPositions.map(position => {
+                              const uniqueDates = [...new Set(position.dates)].sort();
+                              const status = getStatus(position.dates);
+                              return { ...position, status, uniqueDates };
+                            });
+
+                            const activePositions = positionsWithStatus.filter(p => p.status === 'Active');
+                            const unclearPositions = positionsWithStatus.filter(p => p.status === 'Unclear');
+
+                            const activeMonthlyCommitment = activePositions.reduce((sum, p) => {
+                              // Estimate monthly amount based on frequency
+                              let monthlyAmount = 0;
+                              if (p.frequency.toLowerCase().includes('weekly')) {
+                                monthlyAmount = p.amount * 4;
+                              } else if (p.frequency.toLowerCase().includes('daily')) {
+                                monthlyAmount = p.amount * 22; // ~22 business days
+                              } else if (p.frequency.toLowerCase().includes('bi-weekly') || p.frequency.toLowerCase().includes('biweekly')) {
+                                monthlyAmount = p.amount * 2;
+                              } else {
+                                // Assume monthly
+                                monthlyAmount = p.amount;
+                              }
+                              return sum + monthlyAmount;
+                            }, 0);
+
+                            const unclearTotal = unclearPositions.reduce((sum, p) => sum + p.amount, 0);
+
+                            // Status badge colors
+                            const statusColors = {
+                              'New': 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+                              'Active': 'bg-green-500/20 text-green-300 border-green-500/30',
+                              'Closed': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+                              'Unclear': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
+                            };
+
+                              return (
+                                <>
+                                  {/* Positions List */}
+                                  <div className="space-y-3">
+                                    {positionsWithStatus.map((position, idx) => {
+                                      const formattedDates = position.uniqueDates.map(formatDate).join(', ');
+                                      const status = position.status;
+
+                                      return (
+                                        <div key={idx} className="group/position flex items-center gap-3 text-sm bg-indigo-500/5 border border-indigo-500/20 rounded-lg p-3 relative isolate">
+                                          <span className={`text-xs font-semibold px-2 py-1 rounded border flex-shrink-0 ${statusColors[status]}`}>
+                                            {status}
+                                          </span>
+                                          <span className="font-medium text-indigo-100 text-lg flex-1">{position.lender_name}</span>
+                                          <div className="flex items-center gap-3 text-lg flex-shrink-0 relative whitespace-nowrap">
+                                            <span className="text-indigo-200 font-medium">{position.uniqueDates.length}x</span>
+                                            <span className="text-indigo-200 font-medium">${Math.round(position.amount).toLocaleString()} • {position.frequency}</span>
+                                            {position.uniqueDates.length > 0 && (
+                                              <div className="absolute top-full right-0 mt-2 hidden group-hover/position:block bg-gray-800 border border-gray-700 rounded-lg p-2 text-xs text-indigo-300 whitespace-nowrap z-[100] shadow-lg pointer-events-none">
+                                                Dates: {formattedDates}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        </section>
+                      )}
+                    </div>
                   </div>
-                )}
+                  );
+                })()}
 
                 {/* Action Buttons */}
                 <div className="flex gap-2 pt-4 border-t border-gray-700/30">

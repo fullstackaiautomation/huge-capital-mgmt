@@ -125,7 +125,7 @@ INSERT INTO lenders_mca (
   'scott@tmrnow.com',
   '4 Bank Statements and App',
   'Email',
-  'uw@tmrnow.com, scott@tmrn0w.com + Subject Line = Only The biz name',
+  'uw@tmrnow.com, scott@tmrnow.com + Subject Line = Only The biz name',
   550,
   '$10,000',
   '5',

@@ -1,0 +1,143 @@
+# Parse Bank Statements Sub-Skill
+
+## Purpose
+Extract financial metrics from 2-4 months of bank statements using AI.
+
+## When to Use
+- After application parsed successfully
+- User uploads additional statements
+- Need to recalculate financial metrics
+
+## Process
+
+### Input
+```typescript
+{
+  statementFileUrls: string[],  // Array of 2-4 statement URLs
+  dealId?: string              // Optional, for updates
+}
+```
+
+### Edge Function
+**Path:** `supabase/functions/parse-bank-statements/index.ts`
+**Model:** Claude 3.5 Sonnet (handles multi-format statements)
+
+### Extraction Per Statement
+
+**Basic Metrics:**
+- statement_id (generated)
+- bank_name (Chase, BofA, Wells Fargo, etc.)
+- statement_month (YYYY-MM format)
+- credits (total deposits)
+- debits (total withdrawals)
+- nsfs (negative days count)
+- overdrafts (overdraft count)
+- average_daily_balance
+- deposit_count
+
+**Funding Position Detection:**
+- Detect recurring payments (same amount ±$50, regular intervals)
+- Identify lender names from transaction descriptions
+- Calculate daily/weekly/monthly patterns
+- Flag as existing debt obligations
+
+### Output
+```json
+{
+  "statements": [
+    {
+      "statement_id": "stmt_202501",
+      "bank_name": "Chase",
+      "statement_month": "2025-01",
+      "credits": 125000.00,
+      "debits": 98000.00,
+      "nsfs": 0,
+      "overdrafts": 0,
+      "average_daily_balance": 45000.00,
+      "deposit_count": 28
+    },
+    {
+      "statement_id": "stmt_202502",
+      "bank_name": "Chase",
+      "statement_month": "2025-02",
+      "credits": 118000.00,
+      "debits": 95000.00,
+      "nsfs": 1,
+      "overdrafts": 0,
+      "average_daily_balance": 42000.00,
+      "deposit_count": 26
+    },
+    {
+      "statement_id": "stmt_202503",
+      "bank_name": "Chase",
+      "statement_month": "2025-03",
+      "credits": 121000.00,
+      "debits": 96500.00,
+      "nsfs": 0,
+      "overdrafts": 1,
+      "average_daily_balance": 43500.00,
+      "deposit_count": 27
+    }
+  ],
+  "fundingPositions": [
+    {
+      "lender_name": "OnDeck",
+      "amount": 1250.00,
+      "frequency": "daily",
+      "detected_dates": ["2025-01-05", "2025-01-06", "2025-01-07", "..."],
+      "total_paid": 37500.00
+    }
+  ],
+  "threeMonthAverages": {
+    "average_monthly_sales": 121333.33,
+    "average_credits": 121333.33,
+    "average_debits": 96500.00,
+    "average_daily_balance": 43500.00,
+    "total_nsfs": 1,
+    "total_overdrafts": 1,
+    "net_cash_flow": 24833.33
+  },
+  "confidence": 0.92,
+  "warnings": [
+    "1 NSF detected in February",
+    "Existing funding position: OnDeck $1,250/day"
+  ]
+}
+```
+
+### Bank Format Support
+- **Chase:** PDF tables, CSV exports
+- **Bank of America:** PDF, scanned images
+- **Wells Fargo:** PDF statements
+- **Regional banks:** OCR + table extraction
+- **CSV exports:** Direct parsing
+
+### Confidence Scoring
+- **>0.9:** All transactions extracted accurately
+- **0.7-0.9:** Most data accurate, minor gaps
+- **<0.7:** Significant missing data, manual review needed
+
+### Error Handling
+- If <2 months detected, request more statements
+- If bank format unrecognized, fall back to OCR
+- Flag inconsistent data (e.g., credits + debits don't match ending balance)
+
+## Usage Example
+```typescript
+const bankData = await parseBankStatements({
+  statementFileUrls: [
+    'https://drive.google.com/.../jan.pdf',
+    'https://drive.google.com/.../feb.pdf',
+    'https://drive.google.com/.../mar.pdf'
+  ]
+});
+
+// Check for red flags
+if (bankData.threeMonthAverages.total_nsfs > 3) {
+  console.warn('High NSF count - risky deal');
+}
+
+if (bankData.fundingPositions.length > 0) {
+  console.log('Existing lender positions detected');
+}
+```

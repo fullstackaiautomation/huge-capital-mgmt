@@ -1,0 +1,100 @@
+# Parse Application Sub-Skill
+
+## Purpose
+Extract structured business and owner information from application PDF using AI.
+
+## When to Use
+- After documents uploaded to Google Drive
+- User wants to re-parse application with better accuracy
+- Manual data entry verification needed
+
+## Process
+
+### Input
+```typescript
+{
+  applicationFileUrl: string,  // Google Drive URL or public URL
+  fileType: 'pdf' | 'image'   // File format
+}
+```
+
+### Edge Function
+**Path:** `supabase/functions/parse-application/index.ts`
+**Model:** Claude 3.5 Sonnet (vision-enabled)
+
+### Extraction Fields
+
+**Business Information:**
+- legal_business_name
+- dba_name
+- ein
+- address, city, state, zip
+- phone, website
+- business_type (LLC, Corporation, etc.)
+- franchise_business (boolean)
+- seasonal_business (boolean)
+- business_start_date
+- desired_loan_amount
+- loan_type (MCA, Business LOC)
+- reason_for_loan
+
+**Owner Information (1-2 owners):**
+- owner_number (1 or 2)
+- full_name
+- street_address, city, state, zip
+- phone, email
+- ownership_percent
+- date_of_birth
+- drivers_license_number (if present)
+
+### Output
+```json
+{
+  "businessInfo": {
+    "legal_business_name": "ABC Company LLC",
+    "dba_name": "ABC Services",
+    "ein": "12-3456789",
+    "address": "123 Main St",
+    "city": "New York",
+    "state": "NY",
+    "zip": "10001",
+    "business_type": "LLC",
+    "desired_loan_amount": 50000,
+    "loan_type": "MCA"
+  },
+  "owners": [
+    {
+      "owner_number": 1,
+      "full_name": "John Doe",
+      "ownership_percent": 100,
+      "email": "john@abc.com"
+    }
+  ],
+  "confidence": 0.95,
+  "warnings": []
+}
+```
+
+### Confidence Scoring
+- **>0.9:** High confidence, minimal review needed
+- **0.7-0.9:** Good, spot-check recommended
+- **<0.7:** Low confidence, manual review required
+
+### Error Handling
+- If parsing fails, return partial data with low confidence
+- Flag specific fields that couldn't be extracted
+- Suggest manual data entry for missing fields
+
+## Usage Example
+```typescript
+const parsed = await parseApplication({
+  applicationFileUrl: driveFileUrl,
+  fileType: 'pdf'
+});
+
+if (parsed.confidence < 0.7) {
+  // Show manual review form
+} else {
+  // Pre-fill form with extracted data
+}
+```

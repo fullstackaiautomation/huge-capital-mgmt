@@ -1,0 +1,182 @@
+# Create Deal Record Sub-Skill
+
+## Purpose
+Insert complete deal record into Supabase database with all related data.
+
+## When to Use
+- After successful parsing of application and bank statements
+- User confirms/corrects extracted data
+- Ready to save deal to pipeline
+
+## Process
+
+### Input
+```typescript
+{
+  userId: string,
+  businessInfo: BusinessInfo,     // From parse-application
+  owners: Owner[],                // From parse-application
+  statements: BankStatement[],    // From parse-bank-statements
+  fundingPositions: FundingPosition[], // From parse-bank-statements
+  documentsFolder: {              // From upload-documents
+    folderId: string,
+    folderUrl: string
+  }
+}
+```
+
+### Database Operations
+
+**1. Insert Deal (Main Record)**
+```sql
+INSERT INTO deals (
+  user_id,
+  legal_business_name,
+  dba_name,
+  ein,
+  address,
+  city,
+  state,
+  zip,
+  phone,
+  website,
+  business_type,
+  franchise_business,
+  seasonal_business,
+  business_start_date,
+  time_in_business_months,
+  desired_loan_amount,
+  loan_type,
+  reason_for_loan,
+  average_monthly_sales,
+  status,
+  documentsFolder,
+  created_at,
+  updated_at
+) VALUES (...)
+RETURNING id;
+```
+
+**2. Insert Owners (1-2 Records)**
+```sql
+INSERT INTO deal_owners (
+  deal_id,
+  owner_number,
+  full_name,
+  street_address,
+  city,
+  state,
+  zip,
+  phone,
+  email,
+  ownership_percent,
+  date_of_birth,
+  drivers_license_number
+) VALUES (...);
+```
+
+**3. Insert Bank Statements (2-4 Records)**
+```sql
+INSERT INTO deal_bank_statements (
+  deal_id,
+  statement_id,
+  bank_name,
+  statement_month,
+  credits,
+  debits,
+  nsfs,
+  overdrafts,
+  average_daily_balance,
+  deposit_count,
+  statement_file_url
+) VALUES (...)
+RETURNING id;
+```
+
+**4. Insert Funding Positions (0-N Records)**
+```sql
+INSERT INTO deal_funding_positions (
+  statement_id,
+  lender_name,
+  amount,
+  frequency,
+  detected_dates
+) VALUES (...);
+```
+
+### Transaction Safety
+All inserts wrapped in a Supabase transaction:
+```typescript
+const { data, error } = await supabase.rpc('create_complete_deal', {
+  deal_data: {...},
+  owners_data: [...],
+  statements_data: [...],
+  positions_data: [...]
+});
+```
+
+If any insert fails, all are rolled back.
+
+### Output
+```json
+{
+  "success": true,
+  "dealId": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "New",
+  "createdRecords": {
+    "deal": 1,
+    "owners": 2,
+    "statements": 3,
+    "fundingPositions": 1
+  },
+  "message": "Deal created successfully"
+}
+```
+
+### Status Logic
+- If all data complete + high confidence → "Ready for Matching"
+- If missing data or low confidence → "Needs Review"
+- Default → "New"
+
+### Validation Before Insert
+- Required fields present (legal_business_name, ein, loan_amount)
+- EIN format valid (XX-XXXXXXX)
+- State codes valid (2-letter)
+- Ownership percentages sum to 100%
+- At least 2 bank statements
+- Loan amount reasonable vs monthly sales (< 24x)
+
+### Error Handling
+- Duplicate EIN → Ask user if updating existing deal
+- Missing required field → Return validation errors
+- Database connection error → Retry up to 3 times
+- Transaction failure → Roll back and return detailed error
+
+## Usage Example
+```typescript
+const result = await createDealRecord({
+  userId: currentUser.id,
+  businessInfo: parsedApplication.businessInfo,
+  owners: parsedApplication.owners,
+  statements: parsedStatements.statements,
+  fundingPositions: parsedStatements.fundingPositions,
+  documentsFolder: uploadedDocs
+});
+
+if (result.success) {
+  // Navigate to deal detail page
+  navigate(`/deals/${result.dealId}`);
+
+  // Show success toast
+  toast.success('Deal created successfully!');
+} else {
+  // Show error details
+  toast.error(result.message);
+}
+```
+
+## Related Database Schema
+- [deals table](../../../supabase/migrations/*_create_deals_table.sql)
+- [deal_owners table](../../../supabase/migrations/*_create_deal_owners_table.sql)
+- [deal_bank_statements table](../../../supabase/migrations/*_create_deal_bank_statements_table.sql)
+- [deal_funding_positions table](../../../supabase/migrations/*_create_deal_funding_positions_table.sql)

@@ -243,167 +243,170 @@ export default function DealDetails() {
           </div>
         </div>
 
-        <section className="bg-gray-800/30 border border-gray-700/30 rounded-xl overflow-hidden">
-          <div className="p-6 border-b border-gray-700/30">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <FileText className="w-6 h-6 text-indigo-300" />
-                <div>
-                  <h2 className="text-xl font-semibold text-white">Bank Statements</h2>
-                  <p className="text-gray-400 text-sm">Financial metrics from analyzed statements.</p>
+        {/* Two-column layout: Bank Statements & Funding Positions */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Bank Statements Section */}
+          <section className="bg-gray-800/30 border border-gray-700/30 rounded-xl overflow-hidden">
+            <div className="p-6 border-b border-gray-700/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <FileText className="w-6 h-6 text-indigo-300" />
+                  <div>
+                    <h2 className="text-xl font-semibold text-white">Bank Statements</h2>
+                    <p className="text-gray-400 text-sm">Financial metrics from analyzed statements.</p>
+                  </div>
                 </div>
+                {deal.statements_google_drive_link && (
+                  <a
+                    href={deal.statements_google_drive_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-sm text-indigo-300 hover:text-indigo-200 font-medium"
+                  >
+                    <FileText className="w-4 h-4" />
+                    View in Drive
+                  </a>
+                )}
               </div>
-              {deal.statements_google_drive_link && (
-                <a
-                  href={deal.statements_google_drive_link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-sm text-indigo-300 hover:text-indigo-200 font-medium"
-                >
-                  <FileText className="w-4 h-4" />
-                  View in Drive
-                </a>
-              )}
             </div>
-          </div>
 
-          {deal.deal_bank_statements.length === 0 ? (
-            <div className="p-6">
-              <p className="text-gray-400 text-sm">No bank statements were attached to this deal.</p>
-            </div>
-          ) : (() => {
-            // Sort statements by month ascending (oldest first)
-            const sortedStatements = [...deal.deal_bank_statements].sort((a, b) => {
-              return a.statement_month.localeCompare(b.statement_month);
-            });
+            {deal.deal_bank_statements.length === 0 ? (
+              <div className="p-6">
+                <p className="text-gray-400 text-sm">No bank statements were attached to this deal.</p>
+              </div>
+            ) : (() => {
+              // Sort statements by month ascending (oldest first)
+              const sortedStatements = [...deal.deal_bank_statements].sort((a, b) => {
+                return a.statement_month.localeCompare(b.statement_month);
+              });
 
-            // Calculate 3-month and 6-month averages (take from end for most recent)
-            const last3Months = sortedStatements.slice(-3);
-            const last6Months = sortedStatements.slice(-6);
+              // Calculate 3-month and 6-month averages (take from end for most recent)
+              const last3Months = sortedStatements.slice(-3);
+              const last6Months = sortedStatements.slice(-6);
 
-            const calculateAverage = (statements: typeof sortedStatements) => {
-              const count = statements.length;
-              if (count === 0) return { credits: null, debits: null, nsfs: 0, deposits: null, avgBal: null };
+              const calculateAverage = (statements: typeof sortedStatements) => {
+                const count = statements.length;
+                if (count === 0) return { credits: null, debits: null, nsfs: 0, deposits: null, avgBal: null };
 
-              const totals = statements.reduce((acc, stmt) => ({
-                credits: acc.credits + (stmt.credits || 0),
-                debits: acc.debits + (stmt.debits || 0),
-                nsfs: acc.nsfs + (stmt.nsfs || 0),
-                deposits: acc.deposits + (stmt.deposit_count || 0),
-                avgBal: acc.avgBal + (stmt.average_daily_balance || 0),
-              }), { credits: 0, debits: 0, nsfs: 0, deposits: 0, avgBal: 0 });
+                const totals = statements.reduce((acc, stmt) => ({
+                  credits: acc.credits + (stmt.credits || 0),
+                  debits: acc.debits + (stmt.debits || 0),
+                  nsfs: acc.nsfs + (stmt.nsfs || 0),
+                  deposits: acc.deposits + (stmt.deposit_count || 0),
+                  avgBal: acc.avgBal + (stmt.average_daily_balance || 0),
+                }), { credits: 0, debits: 0, nsfs: 0, deposits: 0, avgBal: 0 });
 
-              return {
-                credits: Math.round(totals.credits / count),
-                debits: Math.round(totals.debits / count),
-                nsfs: Math.round(totals.nsfs / count),
-                deposits: Math.round(totals.deposits / count),
-                avgBal: Math.round(totals.avgBal / count),
+                return {
+                  credits: Math.round(totals.credits / count),
+                  debits: Math.round(totals.debits / count),
+                  nsfs: Math.round(totals.nsfs / count),
+                  deposits: Math.round(totals.deposits / count),
+                  avgBal: Math.round(totals.avgBal / count),
+                };
               };
-            };
 
-            const avg3Month = calculateAverage(last3Months);
-            const avg6Month = calculateAverage(last6Months);
+              const avg3Month = calculateAverage(last3Months);
+              const avg6Month = calculateAverage(last6Months);
 
-            return (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-900/50 border-b border-gray-700/30">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">ID</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Month</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Credits</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Debits</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">NSFs</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Dep</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Ave Bal</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-700/20">
-                    {sortedStatements.map((statement, index) => (
-                      <tr key={statement.id} className={`hover:bg-gray-700/10 transition-colors ${index % 2 === 0 ? 'bg-gray-900/20' : ''}`}>
-                        <td className="px-4 py-3 text-gray-300 font-mono text-xs">
-                          {statement.id.slice(0, 5)}
-                        </td>
-                        <td className="px-4 py-3 text-white font-medium">
-                          {statement.statement_month}
-                        </td>
-                        <td className="px-4 py-3 text-right text-green-400 font-medium">
-                          ${statement.credits?.toLocaleString() ?? 'N/A'}
-                        </td>
-                        <td className="px-4 py-3 text-right text-red-400 font-medium">
-                          ${statement.debits?.toLocaleString() ?? 'N/A'}
-                        </td>
-                        <td className="px-4 py-3 text-center text-white">
-                          {statement.nsfs ?? 0}
-                        </td>
-                        <td className="px-4 py-3 text-center text-white">
-                          {statement.deposit_count ?? statement.overdrafts ?? 'N/A'}
-                        </td>
-                        <td className="px-4 py-3 text-right text-blue-400 font-medium">
-                          ${statement.average_daily_balance?.toLocaleString() ?? 'N/A'}
-                        </td>
+              return (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-900/50 border-b border-gray-700/30">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Month</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Credits</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Debits</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">NSFs</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Dep</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Ave Bal</th>
                       </tr>
-                    ))}
+                    </thead>
+                    <tbody className="divide-y divide-gray-700/20">
+                      {sortedStatements.map((statement, index) => (
+                        <tr key={statement.id} className={`hover:bg-gray-700/10 transition-colors ${index % 2 === 0 ? 'bg-gray-900/20' : ''}`}>
+                          <td className="px-4 py-3 text-white font-medium">
+                            {statement.statement_month}
+                          </td>
+                          <td className="px-4 py-3 text-right text-green-400 font-medium">
+                            ${statement.credits ? Math.round(statement.credits).toLocaleString() : 'N/A'}
+                          </td>
+                          <td className="px-4 py-3 text-right text-red-400 font-medium">
+                            ${statement.debits ? Math.round(statement.debits).toLocaleString() : 'N/A'}
+                          </td>
+                          <td className="px-4 py-3 text-center text-white">
+                            {statement.nsfs ?? 0}
+                          </td>
+                          <td className="px-4 py-3 text-center text-white">
+                            {statement.deposit_count ?? statement.overdrafts ?? 'N/A'}
+                          </td>
+                          <td className="px-4 py-3 text-right text-blue-400 font-medium">
+                            ${statement.average_daily_balance ? Math.round(statement.average_daily_balance).toLocaleString() : 'N/A'}
+                          </td>
+                        </tr>
+                      ))}
 
-                    {/* 3-Month Average */}
-                    {last3Months.length >= 3 && (
-                      <tr className="bg-indigo-500/10 border-t-2 border-indigo-500/30 font-semibold">
-                        <td className="px-4 py-3 text-gray-400 text-xs" colSpan={2}>
-                          Last 3 Month Average
-                        </td>
-                        <td className="px-4 py-3 text-right text-green-300">
-                          ${avg3Month.credits?.toLocaleString() ?? 'N/A'}
-                        </td>
-                        <td className="px-4 py-3 text-right text-red-300">
-                          ${avg3Month.debits?.toLocaleString() ?? 'N/A'}
-                        </td>
-                        <td className="px-4 py-3 text-center text-white">
-                          {avg3Month.nsfs}
-                        </td>
-                        <td className="px-4 py-3 text-center text-white">
-                          {avg3Month.deposits}
-                        </td>
-                        <td className="px-4 py-3 text-right text-blue-300">
-                          ${avg3Month.avgBal?.toLocaleString() ?? 'N/A'}
-                        </td>
-                      </tr>
-                    )}
+                      {/* 3-Month Average */}
+                      {last3Months.length >= 3 && (
+                        <tr className="bg-indigo-500/10 border-t-2 border-indigo-500/30 font-semibold">
+                          <td className="px-4 py-3 text-gray-400 text-xs">
+                            Last 3 Month Average
+                          </td>
+                          <td className="px-4 py-3 text-right text-green-300">
+                            ${avg3Month.credits?.toLocaleString() ?? 'N/A'}
+                          </td>
+                          <td className="px-4 py-3 text-right text-red-300">
+                            ${avg3Month.debits?.toLocaleString() ?? 'N/A'}
+                          </td>
+                          <td className="px-4 py-3 text-center text-white">
+                            {avg3Month.nsfs}
+                          </td>
+                          <td className="px-4 py-3 text-center text-white">
+                            {avg3Month.deposits}
+                          </td>
+                          <td className="px-4 py-3 text-right text-blue-300">
+                            ${avg3Month.avgBal?.toLocaleString() ?? 'N/A'}
+                          </td>
+                        </tr>
+                      )}
 
-                    {/* 6-Month Average */}
-                    {last6Months.length >= 6 && (
-                      <tr className="bg-purple-500/10 border-t border-purple-500/30 font-semibold">
-                        <td className="px-4 py-3 text-gray-400 text-xs" colSpan={2}>
-                          Last 6 Month Average
-                        </td>
-                        <td className="px-4 py-3 text-right text-green-300">
-                          ${avg6Month.credits?.toLocaleString() ?? 'N/A'}
-                        </td>
-                        <td className="px-4 py-3 text-right text-red-300">
-                          ${avg6Month.debits?.toLocaleString() ?? 'N/A'}
-                        </td>
-                        <td className="px-4 py-3 text-center text-white">
-                          {avg6Month.nsfs}
-                        </td>
-                        <td className="px-4 py-3 text-center text-white">
-                          {avg6Month.deposits}
-                        </td>
-                        <td className="px-4 py-3 text-right text-blue-300">
-                          ${avg6Month.avgBal?.toLocaleString() ?? 'N/A'}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            );
-          })()}
+                      {/* 6-Month Average */}
+                      {last6Months.length >= 6 && (
+                        <tr className="bg-purple-500/10 border-t border-purple-500/30 font-semibold">
+                          <td className="px-4 py-3 text-gray-400 text-xs">
+                            Last 6 Month Average
+                          </td>
+                          <td className="px-4 py-3 text-right text-green-300">
+                            ${avg6Month.credits?.toLocaleString() ?? 'N/A'}
+                          </td>
+                          <td className="px-4 py-3 text-right text-red-300">
+                            ${avg6Month.debits?.toLocaleString() ?? 'N/A'}
+                          </td>
+                          <td className="px-4 py-3 text-center text-white">
+                            {avg6Month.nsfs}
+                          </td>
+                          <td className="px-4 py-3 text-center text-white">
+                            {avg6Month.deposits}
+                          </td>
+                          <td className="px-4 py-3 text-right text-blue-300">
+                            ${avg6Month.avgBal?.toLocaleString() ?? 'N/A'}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
+          </section>
 
           {/* Funding Positions Section */}
           {deal.deal_bank_statements.some(s => s.deal_funding_positions.length > 0) && (
-            <div className="p-6 border-t border-gray-700/30 bg-gray-900/20">
-              <h3 className="text-sm font-semibold text-indigo-200 mb-4">Detected Funding Positions</h3>
-              <div className="space-y-3">
+            <section className="bg-gray-800/30 border border-gray-700/30 rounded-xl overflow-hidden">
+              <div className="p-6 border-b border-gray-700/30 bg-gray-900/20">
+                <h3 className="text-xl font-semibold text-white mb-1">Detected Funding Positions</h3>
+                <p className="text-gray-400 text-sm">Active and historical funding detected from bank statements.</p>
+              </div>
+              <div className="p-6 space-y-4">
                 {(() => {
                   // Helper function to normalize lender names for matching
                   const normalizeLenderName = (name: string): string => {
@@ -471,11 +474,6 @@ export default function DealDetails() {
                     const uniqueDates = [...new Set(dates)].sort();
                     if (uniqueDates.length === 0) return 'Closed';
 
-                    // Unclear: Only one occurrence detected
-                    if (uniqueDates.length === 1) {
-                      return 'Unclear';
-                    }
-
                     // Find all unique bank statements (by month)
                     const statementMonths = new Set<string>();
                     deal.deal_bank_statements.forEach(stmt => {
@@ -485,7 +483,7 @@ export default function DealDetails() {
                     // Get sorted statement months (most recent first)
                     const sortedMonths = Array.from(statementMonths).sort().reverse();
 
-                    if (sortedMonths.length === 0) return 'Unclear';
+                    if (sortedMonths.length === 0) return 'Closed';
 
                     const mostRecentMonth = sortedMonths[0];
                     const secondMostRecentMonth = sortedMonths.length > 1 ? sortedMonths[1] : null;
@@ -499,6 +497,11 @@ export default function DealDetails() {
                     const hasSecondRecentPayment = secondMostRecentMonth
                       ? uniqueDates.some(dateStr => dateStr.startsWith(secondMostRecentMonth.substring(0, 7)))
                       : false;
+
+                    // Unclear: Only one occurrence detected AND it's in the most recent two months
+                    if (uniqueDates.length === 1 && (hasRecentPayment || hasSecondRecentPayment)) {
+                      return 'Unclear';
+                    }
 
                     // New: Appears in recent month, has multiple occurrences, but no older history
                     if (hasRecentPayment && !hasSecondRecentPayment && uniqueDates.length >= 2) {
@@ -515,7 +518,7 @@ export default function DealDetails() {
                       return 'Active';
                     }
 
-                    return 'Unclear';
+                    return 'Closed';
                   };
 
                   // Sort positions by number of occurrences (descending)
@@ -525,51 +528,104 @@ export default function DealDetails() {
                     return uniqueDatesB - uniqueDatesA; // Descending order
                   });
 
-                  return sortedPositions.map((position, idx) => {
-                    // Remove duplicates and sort dates
+                  // Calculate summaries for Active and Unclear positions
+                  const positionsWithStatus = sortedPositions.map(position => {
                     const uniqueDates = [...new Set(position.dates)].sort();
-                    const formattedDates = uniqueDates.map(formatDate).join(', ');
                     const status = getStatus(position.dates);
-
-                    // Status badge colors
-                    const statusColors = {
-                      'New': 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-                      'Active': 'bg-green-500/20 text-green-300 border-green-500/30',
-                      'Closed': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-                      'Unclear': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
-                    };
-
-                    return (
-                      <div key={idx} className="flex items-center gap-4 text-sm bg-indigo-500/5 border border-indigo-500/20 rounded-lg p-3">
-                        <div className="flex-shrink-0 w-48">
-                          <span className="font-medium text-indigo-100 text-xs">{position.lender_name}</span>
-                        </div>
-                        <div className="flex-shrink-0 w-20 text-center">
-                          <span className={`text-xs font-semibold px-2 py-1 rounded border ${statusColors[status]}`}>
-                            {status}
-                          </span>
-                        </div>
-                        <div className="flex-shrink-0 w-16 text-center">
-                          <span className="text-indigo-200 text-xs font-semibold">{uniqueDates.length}x</span>
-                        </div>
-                        <div className="flex-shrink-0 w-36">
-                          <span className="text-indigo-200 text-xs">${position.amount.toLocaleString()} • {position.frequency}</span>
-                        </div>
-                        {uniqueDates.length > 0 && (
-                          <div className="flex-1">
-                            <span className="text-xs text-indigo-300/80">
-                              Dates: {formattedDates}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    );
+                    return { ...position, status, uniqueDates };
                   });
+
+                  const activePositions = positionsWithStatus.filter(p => p.status === 'Active');
+                  const unclearPositions = positionsWithStatus.filter(p => p.status === 'Unclear');
+
+                  const activeMonthlyCommitment = activePositions.reduce((sum, p) => {
+                    // Estimate monthly amount based on frequency
+                    let monthlyAmount = 0;
+                    if (p.frequency.toLowerCase().includes('weekly')) {
+                      monthlyAmount = p.amount * 4;
+                    } else if (p.frequency.toLowerCase().includes('daily')) {
+                      monthlyAmount = p.amount * 22; // ~22 business days
+                    } else if (p.frequency.toLowerCase().includes('bi-weekly') || p.frequency.toLowerCase().includes('biweekly')) {
+                      monthlyAmount = p.amount * 2;
+                    } else {
+                      // Assume monthly
+                      monthlyAmount = p.amount;
+                    }
+                    return sum + monthlyAmount;
+                  }, 0);
+
+                  const unclearTotal = unclearPositions.reduce((sum, p) => sum + p.amount, 0);
+
+                  return (
+                    <>
+                      {/* Summary Section */}
+                      {(activePositions.length > 0 || unclearPositions.length > 0) && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 border-b border-gray-700/30">
+                          {activePositions.length > 0 && (
+                            <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                              <div className="text-xs text-green-400 uppercase font-semibold mb-1">Active Monthly Commitment</div>
+                              <div className="text-2xl font-bold text-green-300">
+                                ${Math.round(activeMonthlyCommitment).toLocaleString()}
+                              </div>
+                              <div className="text-xs text-green-400/80 mt-1">
+                                {activePositions.length} active position{activePositions.length !== 1 ? 's' : ''}
+                              </div>
+                            </div>
+                          )}
+                          {unclearPositions.length > 0 && (
+                            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                              <div className="text-xs text-yellow-400 uppercase font-semibold mb-1">Unclear Positions Total</div>
+                              <div className="text-2xl font-bold text-yellow-300">
+                                ${Math.round(unclearTotal).toLocaleString()}
+                              </div>
+                              <div className="text-xs text-yellow-400/80 mt-1">
+                                {unclearPositions.length} unclear position{unclearPositions.length !== 1 ? 's' : ''}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Positions List */}
+                      <div className="space-y-3">
+                        {positionsWithStatus.map((position, idx) => {
+                          const formattedDates = position.uniqueDates.map(formatDate).join(', ');
+                          const status = position.status;
+
+                          // Status badge colors
+                          const statusColors = {
+                            'New': 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+                            'Active': 'bg-green-500/20 text-green-300 border-green-500/30',
+                            'Closed': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+                            'Unclear': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
+                          };
+
+                          return (
+                            <div key={idx} className="group/position flex items-center gap-3 text-sm bg-indigo-500/5 border border-indigo-500/20 rounded-lg p-3 relative isolate">
+                              <span className={`text-xs font-semibold px-2 py-1 rounded border flex-shrink-0 ${statusColors[status]}`}>
+                                {status}
+                              </span>
+                              <span className="font-medium text-indigo-100 text-lg flex-1 min-w-0 max-w-[300px]">{position.lender_name}</span>
+                              <div className="flex items-center gap-3 text-lg flex-shrink-0 relative whitespace-nowrap w-[280px]">
+                                <span className="text-indigo-200 font-medium">{position.uniqueDates.length}x</span>
+                                <span className="text-indigo-200 font-medium">${Math.round(position.amount).toLocaleString()} • {position.frequency}</span>
+                                {position.uniqueDates.length > 0 && (
+                                  <div className="absolute top-full right-0 mt-2 hidden group-hover/position:block bg-gray-800 border border-gray-700 rounded-lg p-2 text-xs text-indigo-300 whitespace-nowrap z-[100] shadow-lg pointer-events-none">
+                                    Dates: {formattedDates}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  );
                 })()}
               </div>
-            </div>
+            </section>
           )}
-        </section>
+        </div>
 
         <section className="bg-gray-800/30 border border-gray-700/30 rounded-xl p-6 space-y-4">
           <div className="flex items-center gap-3">

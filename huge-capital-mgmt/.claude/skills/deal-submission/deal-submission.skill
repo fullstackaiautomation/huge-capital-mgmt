@@ -1,0 +1,420 @@
+# Deal Submission Skill
+
+## Purpose
+Orchestrate the complete new deal submission workflow from document upload through final deal record creation. This skill automates the multi-step process of parsing documents, extracting data, and creating comprehensive deal records in the database.
+
+## When to Use
+- User uploads new deal documents via the web app
+- User clicks "New Deal" or "Submit Deal" button
+- Automating deal intake process
+- Processing batch deal submissions
+
+## Workflow Steps
+
+### Step 1: Upload Documents to Google Drive
+**Action:** Upload all deal documents to Google Drive and create organized folder structure
+- Create folder: `{YYYY-MM-DD}_{BusinessName}` under parent folder ID `1Y_DKpj6FrZ0y1LqCRv1Rd83qB9H7vCQE`
+- Upload all PDF/CSV/image files to the folder
+- Use service account: `huge-deals-page@huge-brain.iam.gserviceaccount.com`
+- Return folder URL and file metadata
+
+**Tools:**
+- Google Drive API via service account
+- Helper: `src/services/googleDrive.ts`
+
+**Output:** `documentsFolder` object with folder URL and file IDs
+
+---
+
+### Step 2: Analyze / Parse Application Document
+**Action:** Extract structured business and owner information from application PDF
+- Call edge function: `parse-application`
+- Extract: legal business name, DBA, EIN, address, business type, owners (1-2), loan details
+- Return structured JSON matching `deals` and `deal_owners` schema
+
+**Edge Function:** `supabase/functions/parse-application/index.ts`
+**Model:** Claude 3.5 Sonnet (vision-enabled for PDF parsing)
+
+**Input:**
+```json
+{
+  "applicationFileUrl": "https://drive.google.com/...",
+  "fileType": "pdf"
+}
+```
+
+**Output:**
+```json
+{
+  "businessInfo": {
+    "legal_business_name": "...",
+    "dba_name": "...",
+    "ein": "...",
+    "address": "...",
+    "city": "...",
+    "state": "...",
+    "zip": "...",
+    "phone": "...",
+    "business_type": "...",
+    "franchise_business": false,
+    "seasonal_business": false,
+    "business_start_date": "2020-01-01",
+    "desired_loan_amount": 50000,
+    "loan_type": "MCA",
+    "reason_for_loan": "..."
+  },
+  "owners": [
+    {
+      "owner_number": 1,
+      "full_name": "...",
+      "street_address": "...",
+      "city": "...",
+      "state": "...",
+      "zip": "...",
+      "phone": "...",
+      "email": "...",
+      "ownership_percent": 100,
+      "date_of_birth": "1980-01-01"
+    }
+  ],
+  "confidence": 0.95
+}
+```
+
+---
+
+### Step 3: Analyze / Parse Bank Statement Documents
+**Action:** Extract financial metrics from 2-4 months of bank statements
+- Call edge function: `parse-bank-statements`
+- Extract per statement: credits, debits, NSFs, overdrafts, average balance, deposit count
+- Detect recurring lender payments (funding positions)
+- Calculate 3-month averages
+
+**Edge Function:** `supabase/functions/parse-bank-statements/index.ts`
+**Model:** Claude 3.5 Sonnet (handles multi-format bank statements)
+
+**Input:**
+```json
+{
+  "statementFileUrls": [
+    "https://drive.google.com/.../statement_jan.pdf",
+    "https://drive.google.com/.../statement_feb.pdf",
+    "https://drive.google.com/.../statement_mar.pdf"
+  ]
+}
+```
+
+**Output:**
+```json
+{
+  "statements": [
+    {
+      "statement_id": "stmt_1",
+      "bank_name": "Chase",
+      "statement_month": "2025-01",
+      "credits": 125000.00,
+      "debits": 98000.00,
+      "nsfs": 0,
+      "overdrafts": 0,
+      "average_daily_balance": 45000.00,
+      "deposit_count": 28
+    },
+    {
+      "statement_id": "stmt_2",
+      "bank_name": "Chase",
+      "statement_month": "2025-02",
+      "credits": 118000.00,
+      "debits": 95000.00,
+      "nsfs": 1,
+      "overdrafts": 0,
+      "average_daily_balance": 42000.00,
+      "deposit_count": 26
+    }
+  ],
+  "fundingPositions": [
+    {
+      "lender_name": "OnDeck",
+      "amount": 1250.00,
+      "frequency": "daily",
+      "detected_dates": ["2025-01-05", "2025-01-06", "2025-01-07"]
+    }
+  ],
+  "threeMonthAverages": {
+    "average_monthly_sales": 121000.00,
+    "average_credits": 121000.00,
+    "average_debits": 96500.00,
+    "total_nsfs": 1,
+    "total_overdrafts": 0
+  },
+  "confidence": 0.92
+}
+```
+
+---
+
+### Step 4: Create Deal in Database & Store Financial Metrics
+**Action:** Insert deal, owners, bank statements, and funding positions into Supabase
+- Insert into `deals` table (business info + financial summary)
+- Insert into `deal_owners` table (1-2 owners)
+- Insert into `deal_bank_statements` table (individual statements)
+- Insert into `deal_funding_positions` table (detected lender payments)
+- Set initial status: "New" or "Analyzing"
+- Store Google Drive folder URL in `documentsFolder` field
+
+**Database Tables:**
+- `deals` - Main deal record
+- `deal_owners` - Owner information
+- `deal_bank_statements` - Monthly statement metrics
+- `deal_funding_positions` - Recurring payments
+
+**SQL Operations:**
+```sql
+-- Insert deal
+INSERT INTO deals (user_id, legal_business_name, ein, address, ..., documentsFolder)
+VALUES (...) RETURNING id;
+
+-- Insert owners
+INSERT INTO deal_owners (deal_id, owner_number, full_name, ...)
+VALUES (...);
+
+-- Insert statements
+INSERT INTO deal_bank_statements (deal_id, statement_id, bank_name, ...)
+VALUES (...) RETURNING id;
+
+-- Insert funding positions
+INSERT INTO deal_funding_positions (statement_id, lender_name, amount, ...)
+VALUES (...);
+```
+
+**Output:**
+```json
+{
+  "dealId": "uuid-here",
+  "status": "New",
+  "message": "Deal created successfully"
+}
+```
+
+---
+
+### Step 5: Lender Recommendations (Future - Not Yet Implemented)
+**Action:** Match deal to suitable lenders based on criteria and AI ranking
+- Call edge function: `match-lenders` or `match-deal-to-lenders`
+- Step 1: Rule-based filtering (loan amount, state, industry, time in business)
+- Step 2: AI ranking with Claude (considers funding positions, cash flow)
+- Return top 3-6 lender matches with scores and reasoning
+
+**Edge Function:** `supabase/functions/match-lenders/index.ts` (exists but needs integration)
+
+**Expected Output:**
+```json
+{
+  "matches": [
+    {
+      "lender_id": "uuid",
+      "lender_name": "OnDeck",
+      "match_score": 95,
+      "reasoning": "Strong cash flow, no negative days, existing relationship...",
+      "loan_terms": "6-18 months, 1.2-1.4 factor rate"
+    }
+  ]
+}
+```
+
+---
+
+### Step 6: Submission (Future - Not Yet Implemented)
+**Action:** Prepare submission packages for selected lenders
+- Call edge function: `prepare-submissions`
+- Generate email templates with deal summary
+- Create submission checklists (required docs)
+- Format professional submission packages
+
+**Edge Function:** `supabase/functions/prepare-submissions/index.ts` (exists but needs integration)
+
+**Expected Output:**
+```json
+{
+  "submissions": [
+    {
+      "lender_name": "OnDeck",
+      "email_subject": "Deal Submission - ABC Company - $50,000",
+      "email_body": "...",
+      "required_docs": ["Application", "3 months statements", "Owner IDs"],
+      "mailto_link": "mailto:submissions@ondeck.com?subject=..."
+    }
+  ]
+}
+```
+
+---
+
+### Step 7: Final Deal Record Update
+**Action:** Update deal status and metadata after successful processing
+- Update `deals` table with final status
+- Set `submission_date` if submitted
+- Add any additional metadata (confidence scores, warnings, notes)
+- Trigger UI refresh to show new deal in pipeline
+
+**SQL Operation:**
+```sql
+UPDATE deals
+SET
+  status = 'Ready for Matching',
+  updated_at = NOW(),
+  -- Store any processing metadata
+WHERE id = $1;
+```
+
+**Output:**
+```json
+{
+  "dealId": "uuid-here",
+  "status": "Ready for Matching",
+  "message": "Deal processing complete"
+}
+```
+
+---
+
+## Error Handling
+
+### Document Upload Failures
+- Retry Google Drive upload up to 3 times
+- Fall back to Supabase Storage if Drive fails
+- Log error and notify user
+
+### Parsing Failures
+- If confidence < 0.7, flag for manual review
+- Store partial data and mark fields as "needs review"
+- Allow user to manually correct before saving
+
+### Database Failures
+- Use transactions to ensure all-or-nothing saves
+- Roll back if any insert fails
+- Return detailed error messages
+
+### Validation Failures
+- Call `validate-deal-data` edge function for cross-checks
+- Flag inconsistencies (e.g., loan amount > 12x monthly sales)
+- Allow user override with warning
+
+---
+
+## Performance Considerations
+
+### Parallel Processing
+- Parse application and bank statements in parallel (Steps 2 & 3)
+- Use Promise.all() for simultaneous edge function calls
+- Estimated time savings: 40-50%
+
+### Caching
+- Cache parsed document text to avoid re-parsing on retries
+- Store intermediate results in session/local storage
+- Only re-parse if user uploads new files
+
+### Progress Updates
+- Emit progress events after each step (1/7, 2/7, etc.)
+- Update UI in real-time with current step
+- Show estimated time remaining
+
+---
+
+## Integration Points
+
+### Frontend (React)
+```typescript
+// Example usage in Deals.tsx or NewDealModal.tsx
+import { useDealSubmission } from '@/hooks/useDealSubmission';
+
+const { submitDeal, progress, error } = useDealSubmission();
+
+const handleSubmit = async (files: File[]) => {
+  const result = await submitDeal(files);
+  if (result.success) {
+    // Navigate to deal detail page
+    navigate(`/deals/${result.dealId}`);
+  }
+};
+
+// Progress tracking
+useEffect(() => {
+  console.log(`Step ${progress.step}/7: ${progress.message}`);
+}, [progress]);
+```
+
+### Edge Functions
+All edge functions are in `supabase/functions/`:
+- `parse-application/index.ts`
+- `parse-bank-statements/index.ts`
+- `validate-deal-data/index.ts`
+- `match-lenders/index.ts` (future)
+- `prepare-submissions/index.ts` (future)
+
+### Database Schema
+Tables used:
+- `deals` - Main deal record
+- `deal_owners` - Owner information (1-2 per deal)
+- `deal_bank_statements` - Statement metrics
+- `deal_funding_positions` - Recurring payments
+- `deal_lender_matches` - Match results (future)
+
+---
+
+## Testing
+
+### Test with Sample Documents
+```bash
+# Test application parsing
+curl -X POST https://[project].supabase.co/functions/v1/parse-application \
+  -H "Authorization: Bearer [token]" \
+  -d '{"applicationFileUrl": "..."}'
+
+# Test bank statement parsing
+curl -X POST https://[project].supabase.co/functions/v1/parse-bank-statements \
+  -H "Authorization: Bearer [token]" \
+  -d '{"statementFileUrls": [...]}'
+```
+
+### End-to-End Test
+1. Upload 1 application + 3 bank statements
+2. Verify all data extracted correctly
+3. Check database records created
+4. Validate Google Drive folder structure
+5. Confirm UI updates with new deal
+
+---
+
+## Success Metrics
+- Document parsing accuracy: >90%
+- Time to create deal: <60 seconds (vs 45 min manual)
+- Required manual corrections: <3 fields per deal
+- User satisfaction: Broker feedback survey
+
+---
+
+## Notes
+- **Current Status:** Steps 1-4 are implemented and functional
+- **Future Work:** Steps 5-6 need UI integration
+- **Dependencies:** Google Drive service account, Claude API key, Supabase setup
+- **Cost Estimate:** ~$0.50-1.00 per deal (Claude API calls)
+
+---
+
+## Skill Invocation
+
+When the user triggers a new deal submission:
+1. Collect uploaded files from form
+2. Call this skill with file array
+3. Show progress indicator (7 steps)
+4. Handle success/error states
+5. Navigate to deal detail page on completion
+
+**Example Call:**
+```typescript
+const result = await invokeDealSubmissionSkill({
+  files: uploadedFiles,
+  userId: currentUser.id,
+  loanType: 'MCA' // or 'Business LOC'
+});
+```

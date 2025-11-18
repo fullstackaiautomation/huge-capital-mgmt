@@ -1,0 +1,66 @@
+# Upload Documents Sub-Skill
+
+## Purpose
+Upload deal documents to Google Drive and create organized folder structure.
+
+## When to Use
+- User uploads files via drag-and-drop or file picker
+- Need to re-upload documents for existing deal
+- Batch upload multiple deals
+
+## Process
+
+### Input
+```typescript
+{
+  files: File[],           // Array of uploaded files
+  businessName: string,    // For folder naming
+  userId: string          // For tracking
+}
+```
+
+### Steps
+
+1. **Create folder name:**
+   - Format: `{YYYY-MM-DD}_{BusinessName}`
+   - Example: `2025-11-17_ABC_Company_LLC`
+
+2. **Create Google Drive folder:**
+   - Parent folder ID: `1Y_DKpj6FrZ0y1LqCRv1Rd83qB9H7vCQE`
+   - Service account: `huge-deals-page@huge-brain.iam.gserviceaccount.com`
+   - Use helper: `src/services/googleDrive.ts`
+
+3. **Upload files:**
+   - Upload each file to the created folder
+   - Preserve original filenames
+   - Set appropriate MIME types
+
+4. **Return metadata:**
+   ```json
+   {
+     "folderId": "drive-folder-id",
+     "folderUrl": "https://drive.google.com/drive/folders/...",
+     "files": [
+       {
+         "fileId": "file-id-1",
+         "fileName": "application.pdf",
+         "fileUrl": "https://drive.google.com/file/d/...",
+         "size": 1048576
+       }
+     ]
+   }
+   ```
+
+## Error Handling
+- Retry upload up to 3 times on network errors
+- Fall back to Supabase Storage if Drive fails
+- Log all upload attempts for debugging
+
+## Usage Example
+```typescript
+const { folderId, folderUrl, files } = await uploadDocuments({
+  files: uploadedFiles,
+  businessName: "ABC Company LLC",
+  userId: user.id
+});
+```
