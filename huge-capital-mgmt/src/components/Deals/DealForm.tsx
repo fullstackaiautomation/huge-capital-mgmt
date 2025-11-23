@@ -11,12 +11,14 @@ interface DealFormProps {
   onSubmit: (data: { deal: DealFormData; owners: OwnerFormData[] }) => void;
   isLoading?: boolean;
   initialData?: Partial<DealFormData>;
+  initialOwners?: OwnerFormData[];
 }
 
 export default function DealForm({
   onSubmit,
   isLoading = false,
   initialData,
+  initialOwners,
 }: DealFormProps) {
   const [step, setStep] = useState(1);
   const [dealData, setDealData] = useState<DealFormData>({
@@ -43,22 +45,26 @@ export default function DealForm({
     loan_type: initialData?.loan_type || 'MCA',
   });
 
-  const [owners, setOwners] = useState<OwnerFormData[]>([
-    {
-      owner_number: 1,
-      full_name: '',
-      street_address: '',
-      city: '',
-      state: '',
-      zip: '',
-      phone: '',
-      email: '',
-      ownership_percent: '',
-      drivers_license_number: '',
-      date_of_birth: '',
-      ssn: '',
-    },
-  ]);
+  const [owners, setOwners] = useState<OwnerFormData[]>(
+    initialOwners && initialOwners.length > 0
+      ? initialOwners
+      : [
+          {
+            owner_number: 1,
+            full_name: '',
+            street_address: '',
+            city: '',
+            state: '',
+            zip: '',
+            phone: '',
+            email: '',
+            ownership_percent: '',
+            drivers_license_number: '',
+            date_of_birth: '',
+            ssn: '',
+          },
+        ]
+  );
 
   const handleDealChange = (field: keyof DealFormData, value: any) => {
     setDealData((prev) => ({

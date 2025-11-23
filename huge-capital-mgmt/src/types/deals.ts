@@ -102,6 +102,9 @@ export interface DealBankStatement {
   average_daily_balance: number | null;
   deposit_count: number | null;
 
+  // Relations
+  deal_funding_positions?: DealFundingPosition[];
+
   created_at: string;
   updated_at: string;
 }

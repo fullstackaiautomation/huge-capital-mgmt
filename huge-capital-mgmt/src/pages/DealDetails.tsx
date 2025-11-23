@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Loader, AlertCircle, Building2, DollarSign, MapPin, FileText, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Loader, AlertCircle, Building2, DollarSign, MapPin, FileText, ChevronRight, Pencil } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Deal } from '../types/deals';
+import EditDealModal from '../components/Deals/EditDealModal';
 
 interface DealOwner {
   id: string;
@@ -55,56 +56,57 @@ export default function DealDetails() {
   const [deal, setDeal] = useState<DealWithRelations | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  useEffect(() => {
+  const fetchDeal = useCallback(async () => {
     if (!id) return;
 
-    const fetchDeal = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+    try {
+      setLoading(true);
+      setError(null);
 
-        const { data, error: fetchError } = await supabase
-          .from('deals')
-          .select(`
-            *,
-            deal_owners(*),
-            deal_bank_statements(*, deal_funding_positions(*)),
-            deal_lender_matches(*)
-          `)
-          .eq('id', id)
-          .single();
+      const { data, error: fetchError } = await supabase
+        .from('deals')
+        .select(`
+          *,
+          deal_owners(*),
+          deal_bank_statements(*, deal_funding_positions(*)),
+          deal_lender_matches(*)
+        `)
+        .eq('id', id)
+        .single();
 
-        if (fetchError) throw fetchError;
+      if (fetchError) throw fetchError;
 
-        // Fetch broker email for this deal
-        if (data?.user_id) {
-          try {
-            const { data: brokerEmail } = await supabase.rpc('get_user_email', { user_uuid: data.user_id });
-            const brokerName = brokerEmail?.split('@')[0] || 'Unknown';
+      // Fetch broker email for this deal
+      if (data?.user_id) {
+        try {
+          const { data: brokerEmail } = await supabase.rpc('get_user_email', { user_uuid: data.user_id });
+          const brokerName = brokerEmail?.split('@')[0] || 'Unknown';
 
-            setDeal({
-              ...data,
-              broker_email: brokerEmail,
-              broker_name: brokerName
-            } as DealWithRelations);
-          } catch (e) {
-            console.error('Failed to fetch broker email:', e);
-            setDeal(data as DealWithRelations);
-          }
-        } else {
+          setDeal({
+            ...data,
+            broker_email: brokerEmail,
+            broker_name: brokerName
+          } as DealWithRelations);
+        } catch (e) {
+          console.error('Failed to fetch broker email:', e);
           setDeal(data as DealWithRelations);
         }
-      } catch (err) {
-        console.error('Failed to load deal details:', err);
-        setError('Unable to load deal details.');
-      } finally {
-        setLoading(false);
+      } else {
+        setDeal(data as DealWithRelations);
       }
-    };
-
-    fetchDeal();
+    } catch (err) {
+      console.error('Failed to load deal details:', err);
+      setError('Unable to load deal details.');
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
+
+  useEffect(() => {
+    fetchDeal();
+  }, [fetchDeal]);
 
 
   if (loading) {
@@ -137,13 +139,23 @@ export default function DealDetails() {
   return (
     <div className="min-h-screen bg-gray-900 pb-20">
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
-        <button
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 text-sm text-indigo-300 hover:text-indigo-200 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Deals
-        </button>
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-2 text-sm text-indigo-300 hover:text-indigo-200 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Deals
+          </button>
+
+          <button
+            onClick={() => setIsEditModalOpen(true)}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-all font-medium"
+          >
+            <Pencil className="w-4 h-4" />
+            Edit Deal
+          </button>
+        </div>
 
         <div className="bg-gray-800/40 border border-gray-700/40 rounded-xl p-6 space-y-4">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -660,6 +672,13 @@ export default function DealDetails() {
           )}
         </section>
       </div>
+
+      <EditDealModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        deal={deal}
+        onSuccess={fetchDeal}
+      />
     </div>
   );
 }
