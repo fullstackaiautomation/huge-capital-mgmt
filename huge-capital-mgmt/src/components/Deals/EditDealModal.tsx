@@ -126,7 +126,7 @@ export default function EditDealModal({ isOpen, onClose, deal, onSuccess }: Edit
                 // Find which owner number is missing
                 const submittedOwnerNumbers = data.owners.map(o => o.owner_number);
                 const existingOwnerNumbers = deal.deal_owners.map((o: any) => o.owner_number);
-                const toDelete = existingOwnerNumbers.filter((n: number) => !submittedOwnerNumbers.includes(n));
+                const toDelete = existingOwnerNumbers.filter((n: number) => !(submittedOwnerNumbers as number[]).includes(n));
 
                 if (toDelete.length > 0) {
                     await supabase
