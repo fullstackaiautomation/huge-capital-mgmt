@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Loader, AlertCircle, Building2, DollarSign, MapPin, FileText, ChevronRight, Pencil } from 'lucide-react';
+import { ArrowLeft, Loader, AlertCircle, Building2, DollarSign, MapPin, FileText, ChevronRight, Pencil, Star, TrendingUp, CheckCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Deal } from '../types/deals';
 import EditDealModal from '../components/Deals/EditDealModal';
@@ -44,6 +44,8 @@ interface DealWithRelations extends Deal {
   deal_lender_matches: Array<{
     id: string;
     lender_name: string;
+    lender_table: string;
+    is_ifs: boolean;
     match_score: number | null;
     match_reasoning: string | null;
     selected_by_broker: boolean;
@@ -352,8 +354,8 @@ export default function DealDetails() {
                           <td className="px-4 py-3 text-center text-white">
                             {statement.nsfs ?? 0}
                           </td>
-                          <td className={`px-4 py-3 text-center ${(statement.negative_days ?? 0) > 0 ? 'text-orange-400' : 'text-white'}`}>
-                            {(statement.negative_days ?? 0) > 0 ? statement.negative_days : ''}
+                          <td className={`px-4 py-3 text-center ${Number(statement.negative_days || 0) > 0 ? 'text-orange-400' : 'text-white'}`}>
+                            {Number(statement.negative_days || 0) > 0 ? statement.negative_days : ''}
                           </td>
                           <td className="px-4 py-3 text-center text-white">
                             {statement.deposit_count ?? statement.overdrafts ?? 'N/A'}
@@ -379,8 +381,8 @@ export default function DealDetails() {
                           <td className="px-4 py-3 text-center text-white">
                             {avg3Month.nsfs}
                           </td>
-                          <td className={`px-4 py-3 text-center ${avg3Month.negativeDays > 0 ? 'text-orange-300' : 'text-white'}`}>
-                            {avg3Month.negativeDays > 0 ? avg3Month.negativeDays : ''}
+                          <td className={`px-4 py-3 text-center ${Number(avg3Month.negativeDays || 0) > 0 ? 'text-orange-300' : 'text-white'}`}>
+                            {Number(avg3Month.negativeDays || 0) > 0 ? avg3Month.negativeDays : ''}
                           </td>
                           <td className="px-4 py-3 text-center text-white">
                             {avg3Month.deposits}
@@ -406,8 +408,8 @@ export default function DealDetails() {
                           <td className="px-4 py-3 text-center text-white">
                             {avg6Month.nsfs}
                           </td>
-                          <td className={`px-4 py-3 text-center ${avg6Month.negativeDays > 0 ? 'text-orange-300' : 'text-white'}`}>
-                            {avg6Month.negativeDays > 0 ? avg6Month.negativeDays : ''}
+                          <td className={`px-4 py-3 text-center ${Number(avg6Month.negativeDays || 0) > 0 ? 'text-orange-300' : 'text-white'}`}>
+                            {Number(avg6Month.negativeDays || 0) > 0 ? avg6Month.negativeDays : ''}
                           </td>
                           <td className="px-4 py-3 text-center text-white">
                             {avg6Month.deposits}
@@ -652,35 +654,229 @@ export default function DealDetails() {
           )}
         </div>
 
-        <section className="bg-gray-800/30 border border-gray-700/30 rounded-xl p-6 space-y-4">
-          <div className="flex items-center gap-3">
-            <ChevronRight className="w-6 h-6 text-indigo-300" />
-            <div>
-              <h2 className="text-xl font-semibold text-white">Lender Matches</h2>
-              <p className="text-gray-400 text-sm">Recommendations generated for this deal.</p>
+        {/* Recommended Lenders Section */}
+        <section className="bg-gray-800/30 border border-gray-700/30 rounded-xl overflow-hidden mb-8">
+          <div className="p-6 border-b border-gray-700/30 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <TrendingUp className="w-6 h-6 text-indigo-400" />
+              <div>
+                <h2 className="text-xl font-semibold text-white">Recommended Lenders</h2>
+                <p className="text-gray-400 text-sm">AI-matched lenders for this deal based on criteria fit.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {deal.deal_lender_matches.length > 0 && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full">
+                  <span className="text-xs font-medium text-indigo-300">
+                    {deal.deal_lender_matches.length} match{deal.deal_lender_matches.length !== 1 ? 'es' : ''}
+                  </span>
+                </div>
+              )}
+              <button
+                onClick={async () => {
+                  try {
+                    setLoading(true);
+                    const { error } = await supabase.functions.invoke('match-deal-to-lenders', {
+                      body: {
+                        dealId: deal.id,
+                        deal: {
+                          deal: {
+                            legal_business_name: deal.legal_business_name,
+                            desired_loan_amount: deal.desired_loan_amount,
+                            average_monthly_sales: deal.average_monthly_sales,
+                            average_monthly_card_sales: deal.average_monthly_card_sales,
+                            business_type: deal.business_type,
+                            product_service_sold: deal.product_service_sold,
+                            business_start_date: deal.business_start_date,
+                            city: deal.city,
+                            state: deal.state,
+                            loan_type: deal.loan_type,
+                          },
+                          owners: deal.deal_owners,
+                          statements: deal.deal_bank_statements,
+                          fundingPositions: deal.deal_bank_statements.flatMap(s => s.deal_funding_positions),
+                        },
+                        loanType: deal.loan_type || 'MCA',
+                      }
+                    });
+
+                    if (error) throw error;
+                    await fetchDeal();
+                  } catch (e) {
+                    console.error('Failed to generate recommendations:', e);
+                    setError('Failed to generate recommendations. Please try again.');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors"
+              >
+                <TrendingUp className="w-4 h-4" />
+                {deal.deal_lender_matches.length === 0 ? 'Generate Recommendations' : 'Refresh Matches'}
+              </button>
             </div>
           </div>
 
           {deal.deal_lender_matches.length === 0 ? (
-            <p className="text-gray-400 text-sm">No lender matches recorded yet.</p>
+            <div className="p-6 text-center">
+              <p className="text-gray-400 text-sm mb-4">No lender matches recorded yet.</p>
+              <button
+                onClick={async () => {
+                  try {
+                    setLoading(true);
+                    const { error } = await supabase.functions.invoke('match-deal-to-lenders', {
+                      body: {
+                        dealId: deal.id,
+                        deal: {
+                          deal: {
+                            legal_business_name: deal.legal_business_name,
+                            desired_loan_amount: deal.desired_loan_amount,
+                            average_monthly_sales: deal.average_monthly_sales,
+                            average_monthly_card_sales: deal.average_monthly_card_sales,
+                            business_type: deal.business_type,
+                            product_service_sold: deal.product_service_sold,
+                            business_start_date: deal.business_start_date,
+                            city: deal.city,
+                            state: deal.state,
+                            loan_type: deal.loan_type,
+                          },
+                          owners: deal.deal_owners,
+                          statements: deal.deal_bank_statements,
+                          fundingPositions: deal.deal_bank_statements.flatMap(s => s.deal_funding_positions),
+                        },
+                        loanType: deal.loan_type || 'MCA',
+                      }
+                    });
+
+                    if (error) throw error;
+                    await fetchDeal();
+                  } catch (e) {
+                    console.error('Failed to generate recommendations:', e);
+                    setError('Failed to generate recommendations. Please try again.');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition-colors"
+              >
+                <TrendingUp className="w-4 h-4" />
+                Generate Recommendations Now
+              </button>
+            </div>
           ) : (
-            <div className="space-y-3">
-              {deal.deal_lender_matches.map((match) => (
-                <div key={match.id} className="bg-gray-900/40 border border-gray-700/40 rounded-lg p-4">
-                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <h3 className="text-lg text-white font-semibold">{match.lender_name}</h3>
-                      <p className="text-sm text-gray-400">Status: {match.submission_status}</p>
+            <div className="p-6">
+              {/* Top Lender Highlight */}
+              {(() => {
+                const sortedMatches = [...deal.deal_lender_matches].sort((a, b) => (b.match_score ?? 0) - (a.match_score ?? 0));
+                const topMatch = sortedMatches[0];
+
+                return topMatch && (topMatch.match_score ?? 0) >= 70 && (
+                  <div className="mb-6 p-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Star className="w-5 h-5 text-yellow-400" />
+                      <span className="text-sm font-semibold text-green-300">Top Recommendation</span>
                     </div>
-                    <div className="text-sm text-indigo-200">
-                      Score: {match.match_score ?? '—'}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-xl font-bold text-white">{topMatch.lender_name}</h3>
+                        {topMatch.is_ifs && (
+                          <span className="text-xs px-2 py-0.5 bg-orange-500/20 text-orange-300 rounded mt-1 inline-block">IFS Partner</span>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <div className="text-3xl font-bold text-green-400">{topMatch.match_score}</div>
+                        <div className="text-xs text-green-300">Match Score</div>
+                      </div>
                     </div>
                   </div>
-                  {match.match_reasoning && (
-                    <p className="text-sm text-gray-300 mt-2">{match.match_reasoning}</p>
-                  )}
-                </div>
-              ))}
+                );
+              })()}
+
+              {/* Lender Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[...deal.deal_lender_matches]
+                  .sort((a, b) => (b.match_score ?? 0) - (a.match_score ?? 0))
+                  .slice(0, 5)
+                  .map((match, index) => {
+                    const score = match.match_score ?? 0;
+                    const scoreColor = score >= 80 ? 'text-green-400 bg-green-500/20 border-green-500/30'
+                      : score >= 60 ? 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30'
+                        : 'text-red-400 bg-red-500/20 border-red-500/30';
+
+                    const probabilityLabel = score >= 90 ? 'Very High'
+                      : score >= 70 ? 'High'
+                        : score >= 50 ? 'Medium'
+                          : 'Low';
+
+                    const probabilityColor = score >= 90 ? 'bg-green-500/20 text-green-300 border-green-500/30'
+                      : score >= 70 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                        : score >= 50 ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
+                          : 'bg-red-500/20 text-red-300 border-red-500/30';
+
+                    return (
+                      <div
+                        key={match.id}
+                        className={`relative bg-gray-900/40 border rounded-lg p-4 transition-all hover:border-gray-600/50 ${match.selected_by_broker ? 'border-indigo-500/50 ring-1 ring-indigo-500/30' : 'border-gray-700/40'
+                          }`}
+                      >
+                        {/* Rank Badge */}
+                        <div className={`absolute -top-2 -left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${index === 0 ? 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/50' : 'bg-gray-700/50 text-gray-400 border border-gray-600/50'
+                          }`}>
+                          {index + 1}
+                        </div>
+
+                        {/* Selected Badge */}
+                        {match.selected_by_broker && (
+                          <div className="absolute -top-2 -right-2">
+                            <CheckCircle className="w-5 h-5 text-indigo-400" />
+                          </div>
+                        )}
+
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <Building2 className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                              <h3 className="font-semibold text-white truncate">{match.lender_name}</h3>
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              {match.is_ifs && (
+                                <span className="text-xs px-1.5 py-0.5 bg-orange-500/20 text-orange-300 rounded">IFS</span>
+                              )}
+                              <span className={`text-xs px-1.5 py-0.5 border rounded ${probabilityColor}`}>
+                                {probabilityLabel}
+                              </span>
+                            </div>
+                          </div>
+                          <div className={`flex-shrink-0 w-12 h-12 rounded-lg border flex items-center justify-center ${scoreColor}`}>
+                            <span className="text-lg font-bold">{score}</span>
+                          </div>
+                        </div>
+
+                        {match.match_reasoning && (
+                          <p className="text-xs text-gray-400 leading-relaxed line-clamp-3 mb-3">
+                            {match.match_reasoning}
+                          </p>
+                        )}
+
+                        <div className="flex items-center justify-between pt-3 border-t border-gray-700/30">
+                          <span className={`text-xs px-2 py-1 rounded ${match.submission_status === 'Approved' ? 'bg-green-500/20 text-green-300' :
+                              match.submission_status === 'Submitted' ? 'bg-blue-500/20 text-blue-300' :
+                                match.submission_status === 'Declined' ? 'bg-red-500/20 text-red-300' :
+                                  'bg-gray-700/50 text-gray-400'
+                            }`}>
+                            {match.submission_status || 'Not Started'}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+
+              {deal.deal_lender_matches.length > 5 && (
+                <p className="text-xs text-gray-500 mt-4 text-center">
+                  Showing top 5 of {deal.deal_lender_matches.length} matched lenders
+                </p>
+              )}
             </div>
           )}
         </section>

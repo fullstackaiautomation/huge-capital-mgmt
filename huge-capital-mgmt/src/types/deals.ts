@@ -138,6 +138,7 @@ export interface DealLenderMatch {
   // Match Information
   match_score: number;
   match_reasoning: string | null;
+  approval_probability?: 'very_high' | 'high' | 'medium' | 'low';
 
   // Submission Tracking
   selected_by_broker: boolean;

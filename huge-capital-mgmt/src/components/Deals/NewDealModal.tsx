@@ -1178,7 +1178,9 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
                               <td className="px-4 py-3 text-right text-green-400 font-medium">${(statement.credits as number)?.toLocaleString() ?? 'N/A'}</td>
                               <td className="px-4 py-3 text-right text-red-400 font-medium">${(statement.debits as number)?.toLocaleString() ?? 'N/A'}</td>
                               <td className="px-4 py-3 text-center text-white">{(statement.nsfs as number) ?? 0}</td>
-                              <td className="px-4 py-3 text-center text-orange-400">{(statement.negative_days as number) ?? 0}</td>
+                              <td className={`px-4 py-3 text-center ${Number(statement.negative_days || 0) > 0 ? 'text-orange-400' : 'text-white'}`}>
+                                {Number(statement.negative_days || 0) > 0 ? statement.negative_days : ''}
+                              </td>
                               <td className="px-4 py-3 text-center text-white">{(statement.deposit_count as number) ?? (statement.overdrafts as number) ?? 'N/A'}</td>
                               <td className="px-4 py-3 text-right text-blue-400 font-medium">${(statement.average_daily_balance as number)?.toLocaleString() ?? 'N/A'}</td>
                             </tr>

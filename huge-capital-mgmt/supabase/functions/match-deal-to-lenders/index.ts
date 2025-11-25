@@ -129,7 +129,7 @@ const LENDER_TABLES = [
   { type: "Conventional TL/LOC", table: "lenders_conventional_tl_loc", isIfs: false },
 ];
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   // Handle CORS
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -233,7 +233,6 @@ Deno.serve(async (req) => {
     const { data: lenders, error: lenderError } = await supabase
       .from(lenderTableConfig.table)
       .select("*")
-      .eq("status", "active")
       .limit(50);
 
     if (lenderError) {
@@ -320,14 +319,14 @@ Output:
 - Kalamata: Score 95 (very_high)
 - Balboa: Score 87 (high)
 - [Other lenders]
-→ "Excellent fit for MCA with strong monthly revenue"
+- "Excellent fit for MCA with strong monthly revenue"
 
 Example 2: Challenged Deal
 Input: $50K LOC, $35K monthly revenue, 3 months old, seasonal
 Output:
 - Lender A: Score 65 (medium)
 - Lender B: Score 62 (medium)
-→ "Limited options, may need additional documentation or time"`;
+- "Limited options, may need additional documentation or time"`;
 
     const dealSummary = `
 DEAL INFORMATION:
@@ -338,14 +337,13 @@ Monthly Revenue: $${deal.deal.average_monthly_sales?.toLocaleString() || "Unknow
 Business Type: ${deal.deal.business_type || "Unknown"}
 Industry: ${deal.deal.product_service_sold || "Unknown"}
 Location: ${deal.deal.city}, ${deal.deal.state}
-Time in Business: ${
-      deal.deal.business_start_date
+Time in Business: ${deal.deal.business_start_date
         ? Math.floor(
-            (new Date().getTime() - new Date(deal.deal.business_start_date).getTime()) /
-              (1000 * 60 * 60 * 24 * 30)
-          ) + " months"
+          (new Date().getTime() - new Date(deal.deal.business_start_date).getTime()) /
+          (1000 * 60 * 60 * 24 * 30)
+        ) + " months"
         : "Unknown"
-    }
+      }
 
 OWNERS:
 ${deal.owners.map((o: any) => `- ${o.full_name} (${o.ownership_percent || "?"}% ownership)`).join("\n")}
@@ -357,18 +355,19 @@ BANK STATEMENTS:
 - Overdrafts (Total): ${deal.statements.reduce((sum: number, s: any) => sum + s.overdrafts, 0)}
 
 EXISTING FUNDING:
-${
-  deal.fundingPositions && deal.fundingPositions.length > 0
-    ? deal.fundingPositions
-        .map((f: any) => `- ${f.lender_name}: $${f.amount.toLocaleString()} ${f.frequency}`)
-        .join("\n")
-    : "None identified"
-}
+${deal.fundingPositions && deal.fundingPositions.length > 0
+        ? deal.fundingPositions
+          .map((f: any) => `- ${f.lender_name}: $${f.amount.toLocaleString()} ${f.frequency}`)
+          .join("\n")
+        : "None identified"
+      }
 
 AVAILABLE LENDERS (${lenderList.length} total):
 ${lenderList
-  .map((l: LenderCriteria) => `- ${l.lender_name} ${l.is_ifs ? "(IFS)" : "(Huge Capital)"}`)
-  .join("\n")}
+        .map((l: LenderCriteria) => `- ID: ${l.id} | ${l.lender_name} ${l.is_ifs ? "(IFS)" : "(Huge Capital)"}`)
+        .join("\n")}
+
+IMPORTANT: When returning recommendations, you MUST use the exact lender ID (UUID) provided above for each lender.
 
 BROKER PREFERENCES:
 ${brokerPreferences ? JSON.stringify(brokerPreferences, null, 2) : "None specified"}
@@ -429,6 +428,15 @@ MATCHING STRATEGY:
       }
     }
 
+    // Find the last closing brace/bracket to trim trailing text
+    const lastBrace = jsonStr.lastIndexOf('}');
+    const lastBracket = jsonStr.lastIndexOf(']');
+    const jsonEnd = Math.max(lastBrace, lastBracket);
+
+    if (jsonEnd !== -1) {
+      jsonStr = jsonStr.substring(0, jsonEnd + 1);
+    }
+
     // Parse Claude's response
     let recommendations: RecommendationsResponse;
     try {
@@ -441,6 +449,80 @@ MATCHING STRATEGY:
     // Add dealId to response
     recommendations.dealId = dealId;
 
+    // ------------------------------------------------------------------
+    // NEW LOGIC: Validate lender IDs and fallback to fuzzy matching
+    // ------------------------------------------------------------------
+
+    // Create a map of known lender IDs for quick lookup
+    const lenderIdSet = new Set(lenderList.map(l => l.id));
+
+    // Create a map of normalized lender names to their info for fuzzy matching
+    const lenderNameToInfo = new Map<string, LenderCriteria>();
+    lenderList.forEach(l => {
+      if (l.lender_name) {
+        lenderNameToInfo.set(l.lender_name.toLowerCase().trim(), l);
+      }
+    });
+
+    // Process each recommendation to ensure it has valid data
+    if (recommendations.recommendations && Array.isArray(recommendations.recommendations)) {
+      recommendations.recommendations = recommendations.recommendations.map(match => {
+        let lenderId = match.lenderId;
+        let lenderName = match.lenderName;
+        let lenderTable = match.lenderTable;
+
+        // 1. Validate ID if provided
+        if (lenderId && lenderIdSet.has(lenderId)) {
+          // ID is valid and exists in our list
+          const known = lenderList.find(l => l.id === lenderId);
+          if (known) {
+            lenderTable = known.table_name;
+            lenderName = known.lender_name; // Use canonical name from DB
+          }
+        } else {
+          // ID is invalid, missing, or hallucinated. Try to match by name.
+          const normalizedMatchName = (match.lenderName || "").toLowerCase().trim();
+
+          // A. Exact match
+          let lookup = lenderNameToInfo.get(normalizedMatchName);
+
+          // B. Fuzzy/Partial match if exact fails
+          if (!lookup && normalizedMatchName) {
+            // Try to find a lender name that contains the match name or vice versa
+            for (const [name, info] of lenderNameToInfo.entries()) {
+              if (name.includes(normalizedMatchName) || normalizedMatchName.includes(name)) {
+                lookup = info;
+                break;
+              }
+              // Handle common variations like "LLC", "Inc", "Capital", "Funding"
+              const cleanName = name.replace(/(\sllc|\sinc|\scapital|\sfunding|\sfinancial)/g, "");
+              const cleanMatch = normalizedMatchName.replace(/(\sllc|\sinc|\scapital|\sfunding|\sfinancial)/g, "");
+              if (cleanName.includes(cleanMatch) || cleanMatch.includes(cleanName)) {
+                lookup = info;
+                break;
+              }
+            }
+          }
+
+          if (lookup) {
+            lenderId = lookup.id;
+            lenderName = lookup.lender_name;
+            lenderTable = lookup.table_name;
+          } else {
+            // If we still can't find a match, we might need to skip this recommendation or flag it
+            console.warn(`Could not match lender: ${match.lenderName} (${match.lenderId})`);
+          }
+        }
+
+        return {
+          ...match,
+          lenderId,
+          lenderName,
+          lenderTable
+        };
+      }).filter(r => r.lenderId && lenderIdSet.has(r.lenderId)); // Only keep valid matches
+    }
+
     responsePayload = recommendations;
 
     const duration = Math.round(performance.now() - startTime);
@@ -451,87 +533,63 @@ MATCHING STRATEGY:
     logId =
       (await logAgentRun(supabaseAdmin, {
         agent_name: 'lending-expert-agent',
-        agent_stage: 'lender_match',
-        invocation_source: 'edge_function',
         user_id: userId,
-        deal_id: dealId,
-        request_payload: requestPayload,
-        request_summary: requestSummary,
-        response_payload: recommendations,
-        response_summary: responseSummary,
-        success: true,
-        duration_ms: duration,
-      })) ?? logId;
+        deal_id: dealIdForLog,
+        metadata: {
+          request: requestPayload,
+          response: responsePayload,
+          duration_ms: duration,
+        },
+        summary: responseSummary,
+        status: 'success',
+      })) || logId;
 
-    // Store recommendations in database
-    if (recommendations.recommendations && recommendations.recommendations.length > 0) {
-      const matchRecords = recommendations.recommendations.map((match: MatchResult) => ({
+    // Save matches to database
+    if (recommendations.recommendations.length > 0) {
+      const matchesToInsert = recommendations.recommendations.map((rec) => ({
         deal_id: dealId,
-        lender_id: match.lenderId,
-        lender_name: match.lenderName,
-        lender_table: match.lenderTable,
-        is_ifs: match.isIfs,
-        match_score: match.matchScore,
-        match_reasoning: match.reasoning,
+        lender_id: rec.lenderId,
+        match_score: rec.matchScore,
+        approval_probability: rec.approvalProbability,
+        notes: rec.reasoning,
+        lender_name: rec.lenderName, // Store name for easy display
+        lender_type: loanType,
       }));
 
       const { error: insertError } = await supabase
         .from("deal_lender_matches")
-        .insert(matchRecords);
+        .insert(matchesToInsert);
 
       if (insertError) {
-        console.error("Error storing match results:", insertError);
-        // Don't fail the request if storage fails
+        console.error("Error saving matches:", insertError);
+        // We don't throw here to ensure we still return the recommendations to the UI
       }
     }
 
-    return new Response(JSON.stringify({ ...recommendations, logId }), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
+    return new Response(JSON.stringify(recommendations), {
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
     });
-  } catch (error) {
-    console.error("Error matching deal to lenders:", error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("Error in match-deal-to-lenders:", error);
 
-    const duration = Math.round(performance.now() - startTime);
-    logId =
-      (await logAgentRun(supabaseAdmin, {
+    if (supabaseAdmin) {
+      await logAgentRun(supabaseAdmin, {
         agent_name: 'lending-expert-agent',
-        agent_stage: 'lender_match',
-        invocation_source: 'edge_function',
         user_id: userId,
         deal_id: dealIdForLog,
-        request_payload: requestPayload,
-        request_summary: requestSummary,
-        response_payload: responsePayload,
-        response_summary: 'Error during lender matching',
-        success: false,
-        error_message: error instanceof Error ? error.message : 'Unknown error',
-        duration_ms: duration,
-      })) ?? logId;
+        metadata: {
+          request: requestPayload,
+          error: errorMessage,
+        },
+        summary: `Error: ${errorMessage}`,
+        status: 'error',
+      });
+    }
 
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : "Unknown error",
-        logId,
-        recommendations: [],
-        summary: {
-          totalLendersMatched: 0,
-          topChoice: "Error",
-          hugecapitalLenders: 0,
-          ifsLenders: 0,
-          nextSteps: ["Try again or contact support"],
-        },
-      }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      }
-    );
+    return new Response(JSON.stringify({ error: errorMessage }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+    });
   }
 });

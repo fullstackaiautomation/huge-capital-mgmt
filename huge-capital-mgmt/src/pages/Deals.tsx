@@ -17,17 +17,19 @@ import {
   FileText,
   MapPin,
   ExternalLink,
+  Star,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import NewDealModal from '../components/Deals/NewDealModal';
 import FundingPositionsModal from '../components/Deals/FundingPositionsModal';
-import type { Deal, DealStatus, DealOwner, DealBankStatement, DealFundingPosition } from '../types/deals';
+import type { Deal, DealStatus, DealOwner, DealBankStatement, DealFundingPosition, DealLenderMatch } from '../types/deals';
 
 interface DealWithOwners extends Deal {
   broker_name?: string;
   owner_count?: number;
   owners?: DealOwner[];
   statements?: DealBankStatement[];
+  deal_lender_matches?: DealLenderMatch[];
 }
 
 interface StatusSummary {
@@ -63,6 +65,7 @@ export default function Deals() {
   const [copiedEmailId, setCopiedEmailId] = useState<string | null>(null);
   const [expandedDealId, setExpandedDealId] = useState<string | null>(null);
   const [fundingModalData, setFundingModalData] = useState<Array<DealFundingPosition & { statement_month: string; status: string }> | null>(null);
+  const [generatingDealId, setGeneratingDealId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const handleOpenFundingModal = (deal: DealWithOwners) => {
@@ -152,9 +155,9 @@ export default function Deals() {
     fetchDeals();
   }, []);
 
-  const fetchDeals = async () => {
+  const fetchDeals = async (background = false) => {
     try {
-      setLoading(true);
+      if (!background) setLoading(true);
       setError(null);
 
       const { data: dealsData, error: dealsError } = await supabase
@@ -183,7 +186,7 @@ export default function Deals() {
       // Fetch owner counts, owners, and statements for each deal
       const dealsWithOwners = await Promise.all(
         (dealsData || []).map(async (deal) => {
-          const [{ count }, { data: owners }, { data: statements }] = await Promise.all([
+          const [{ count }, { data: owners }, { data: statements }, { data: matches }] = await Promise.all([
             supabase
               .from('deal_owners')
               .select('*', { count: 'exact', head: true })
@@ -201,6 +204,11 @@ export default function Deals() {
               `)
               .eq('deal_id', deal.id)
               .order('statement_month', { ascending: false }),
+            supabase
+              .from('deal_lender_matches')
+              .select('*')
+              .eq('deal_id', deal.id)
+              .order('match_score', { ascending: false }),
           ]);
 
           const rawBrokerName = brokerMap.get(deal.user_id) ? brokerMap.get(deal.user_id)!.split('@')[0] : 'Unknown';
@@ -211,6 +219,7 @@ export default function Deals() {
             owner_count: count || 0,
             owners: owners || [],
             statements: statements || [],
+            deal_lender_matches: matches || [],
             broker_name: brokerName,
           };
         })
@@ -742,8 +751,8 @@ export default function Deals() {
                                         <td className="px-4 py-2 text-center text-white">
                                           {statement.nsfs ?? 0}
                                         </td>
-                                        <td className="px-4 py-2 text-center text-orange-400">
-                                          {statement.negative_days ?? 0}
+                                        <td className={`px-4 py-2 text-center ${Number(statement.negative_days || 0) > 0 ? 'text-orange-400' : 'text-white'}`}>
+                                          {Number(statement.negative_days || 0) > 0 ? statement.negative_days : ''}
                                         </td>
                                         <td className="px-4 py-2 text-center text-white">
                                           {statement.deposit_count ?? statement.overdrafts ?? 'N/A'}
@@ -812,6 +821,131 @@ export default function Deals() {
                               </div>
                             );
                           })()}
+                        </section>
+
+                        {/* Recommended Lenders Section */}
+                        <section className="bg-gray-800/30 border border-gray-700/30 rounded-xl overflow-hidden mt-6">
+                          <div className="p-6 border-b border-gray-700/30 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <TrendingUp className="w-6 h-6 text-indigo-400" />
+                              <div>
+                                <h2 className="text-xl font-semibold text-white">Recommended Lenders</h2>
+                                <p className="text-gray-400 text-sm">AI-matched lenders for this deal.</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {deal.deal_lender_matches && deal.deal_lender_matches.length > 0 && (
+                                <div className="flex items-center gap-2 px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full">
+                                  <span className="text-xs font-medium text-indigo-300">
+                                    {deal.deal_lender_matches.length} match{deal.deal_lender_matches.length !== 1 ? 'es' : ''}
+                                  </span>
+                                </div>
+                              )}
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  try {
+                                    setGeneratingDealId(deal.id);
+                                    const { error } = await supabase.functions.invoke('match-deal-to-lenders', {
+                                      body: {
+                                        dealId: deal.id,
+                                        deal: {
+                                          deal: {
+                                            legal_business_name: deal.legal_business_name,
+                                            desired_loan_amount: deal.desired_loan_amount,
+                                            average_monthly_sales: deal.average_monthly_sales,
+                                            average_monthly_card_sales: deal.average_monthly_card_sales,
+                                            business_type: deal.business_type,
+                                            product_service_sold: deal.product_service_sold,
+                                            business_start_date: deal.business_start_date,
+                                            city: deal.city,
+                                            state: deal.state,
+                                            loan_type: deal.loan_type,
+                                          },
+                                          owners: deal.owners,
+                                          statements: deal.statements,
+                                          fundingPositions: deal.statements?.flatMap(s => s.deal_funding_positions || []),
+                                        },
+                                        loanType: deal.loan_type || 'MCA',
+                                      }
+                                    });
+
+                                    if (error) throw error;
+                                    await fetchDeals(true);
+                                  } catch (e) {
+                                    console.error('Failed to generate recommendations:', e);
+                                    alert('Failed to generate recommendations. Please try again.');
+                                  } finally {
+                                    setGeneratingDealId(null);
+                                  }
+                                }}
+                                disabled={generatingDealId === deal.id}
+                                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors ${generatingDealId === deal.id ? 'opacity-75 cursor-not-allowed' : ''
+                                  }`}
+                              >
+                                {generatingDealId === deal.id ? (
+                                  <Loader className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <TrendingUp className="w-4 h-4" />
+                                )}
+                                {generatingDealId === deal.id
+                                  ? 'Generating...'
+                                  : deal.deal_lender_matches && deal.deal_lender_matches.length > 0
+                                    ? 'Refresh'
+                                    : 'Generate'}
+                              </button>
+                            </div>
+                          </div>
+
+                          {!deal.deal_lender_matches || deal.deal_lender_matches.length === 0 ? (
+                            <div className="p-6 text-center">
+                              <p className="text-gray-400 text-sm mb-4">No lender matches recorded yet.</p>
+                            </div>
+                          ) : (
+                            <div className="divide-y divide-gray-700/30">
+                              {deal.deal_lender_matches.slice(0, 5).map((match, index) => (
+                                <div key={match.id} className="p-4 hover:bg-gray-700/10 transition-colors">
+                                  <div className="flex items-start justify-between gap-4">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${index === 0 ? 'bg-yellow-500/30 text-yellow-300' : 'bg-gray-700/50 text-gray-400'
+                                          }`}>
+                                          {index + 1}
+                                        </div>
+                                        <h4 className="font-semibold text-white">{match.lender_name}</h4>
+                                        {match.match_score >= 90 && (
+                                          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-500/20 text-green-300 border border-green-500/30">
+                                            <Star className="w-3 h-3 fill-current" />
+                                            Best Match
+                                          </div>
+                                        )}
+                                      </div>
+                                      <p className="text-sm text-gray-400 line-clamp-2">{match.match_reasoning}</p>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="flex items-center justify-end gap-1 mb-1">
+                                        <span className={`text-lg font-bold ${match.match_score >= 80 ? 'text-green-400' :
+                                          match.match_score >= 60 ? 'text-yellow-400' : 'text-red-400'
+                                          }`}>
+                                          {match.match_score}
+                                        </span>
+                                        <span className="text-xs text-gray-500">/100</span>
+                                      </div>
+                                      <div className="flex items-center justify-end gap-1">
+                                        <span className={`text-xs px-1.5 py-0.5 rounded ${match.approval_probability === 'very_high' ? 'bg-green-500/10 text-green-400' :
+                                          match.approval_probability === 'high' ? 'bg-emerald-500/10 text-emerald-400' :
+                                            match.approval_probability === 'medium' ? 'bg-yellow-500/10 text-yellow-400' :
+                                              'bg-red-500/10 text-red-400'
+                                          }`}>
+                                          {match.approval_probability?.replace('_', ' ').toUpperCase()}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </section>
 
                         {/* Funding Positions Section */}
