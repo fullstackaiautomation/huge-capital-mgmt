@@ -507,18 +507,19 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
       setDealRecord(insertedDeal);
 
       // Insert owners in PARALLEL
+      // Only require full_name - other fields can be partial/missing
       if (owners.length > 0) {
         const ownerInserts = owners
-          .filter((owner) => owner?.full_name && owner.street_address && owner.city && owner.state && owner.zip)
+          .filter((owner) => owner?.full_name)
           .map((owner) =>
             supabase.from('deal_owners').insert({
               deal_id: insertedDeal.id,
               owner_number: owner.owner_number ?? 1,
               full_name: owner.full_name,
-              street_address: owner.street_address,
-              city: owner.city,
-              state: owner.state,
-              zip: owner.zip,
+              street_address: owner.street_address || 'Unknown',
+              city: owner.city || 'Unknown',
+              state: owner.state || 'Unknown',
+              zip: owner.zip || '00000',
               phone: owner.phone || null,
               email: owner.email || null,
               ownership_percent: numberOrNull(owner.ownership_percent),
@@ -577,15 +578,106 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
       }
 
       if (fundingPositions.length > 0 && statementIds.length > 0) {
-        const fundingInserts = fundingPositions.map((funding, idx) => {
+        // Build a map of statement_month -> statement DB id
+        const statementMonthToId = new Map<string, string>();
+        statements.forEach((stmt, idx) => {
+          const month = (stmt.statement_month as string) || '';
+          if (month && statementIds[idx]) {
+            statementMonthToId.set(month, statementIds[idx]);
+          }
+        });
+
+        // Analyze frequency patterns based on ALL detected dates for each lender+amount
+        // Key: "lender_name|amount" -> array of all detected dates
+        const lenderAmountToDates = new Map<string, string[]>();
+        fundingPositions.forEach((funding) => {
+          const lender = ((funding.lender_name as string) || '').toLowerCase().trim();
+          const amount = numberOrNull(funding.amount) ?? 0;
+          const dates = (funding.detected_dates as string[]) || [];
+          if (lender && amount > 0) {
+            const key = `${lender}|${amount}`;
+            if (!lenderAmountToDates.has(key)) {
+              lenderAmountToDates.set(key, []);
+            }
+            const allDates = lenderAmountToDates.get(key)!;
+            dates.forEach(d => {
+              if (d && !allDates.includes(d)) {
+                allDates.push(d);
+              }
+            });
+          }
+        });
+
+        // Determine inferred frequency based on date patterns
+        const inferFrequency = (lenderName: string, amount: number, originalFreq: string | null): string => {
+          const key = `${(lenderName || '').toLowerCase().trim()}|${amount}`;
+          const dates = lenderAmountToDates.get(key) || [];
+
+          if (dates.length < 2) {
+            // Not enough data to determine pattern, use AI's guess
+            return originalFreq || 'daily';
+          }
+
+          // Sort dates and calculate average gap between payments
+          const sortedDates = dates
+            .map(d => new Date(d).getTime())
+            .filter(t => !isNaN(t))
+            .sort((a, b) => a - b);
+
+          if (sortedDates.length < 2) {
+            return originalFreq || 'daily';
+          }
+
+          // Calculate gaps between consecutive payments
+          const gaps: number[] = [];
+          for (let i = 1; i < sortedDates.length; i++) {
+            const gapDays = (sortedDates[i] - sortedDates[i - 1]) / (1000 * 60 * 60 * 24);
+            gaps.push(gapDays);
+          }
+
+          const avgGap = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+
+          // Determine frequency based on average gap
+          // Daily: 1-4 days average gap
+          // Weekly: 5-10 days average gap
+          // Bi-weekly: 11-18 days average gap (treat as weekly for DB)
+          // Monthly: 19+ days average gap
+          if (avgGap <= 4) {
+            return 'daily';
+          } else if (avgGap <= 18) {
+            return 'weekly'; // Covers weekly (5-10) and bi-weekly (11-18)
+          } else {
+            return 'monthly';
+          }
+        };
+
+        const fundingInserts = fundingPositions.map((funding) => {
           const amountValue = numberOrNull(funding.amount) ?? 0;
-          const targetStatementId = statementIds[Math.min(idx, statementIds.length - 1)];
+          const lenderName = (funding.lender_name as string) || 'Unknown Lender';
+
+          // Try to match funding position to correct statement by statement_month
+          let targetStatementId = statementIds[0]; // fallback to first statement
+
+          const fundingMonth = (funding.statement_month as string) || '';
+          if (fundingMonth && statementMonthToId.has(fundingMonth)) {
+            targetStatementId = statementMonthToId.get(fundingMonth)!;
+          } else if (funding.detected_dates && Array.isArray(funding.detected_dates) && funding.detected_dates.length > 0) {
+            // Try to derive month from detected_dates if statement_month not provided
+            const firstDate = funding.detected_dates[0] as string;
+            const derivedMonth = firstDate?.substring(0, 7); // "2025-10-22" -> "2025-10"
+            if (derivedMonth && statementMonthToId.has(derivedMonth)) {
+              targetStatementId = statementMonthToId.get(derivedMonth)!;
+            }
+          }
+
+          // Infer frequency based on cross-month pattern analysis
+          const inferredFrequency = inferFrequency(lenderName, amountValue, funding.frequency as string | null);
 
           return supabase.from('deal_funding_positions').insert({
             statement_id: targetStatementId,
-            lender_name: funding.lender_name || 'Unknown Lender',
+            lender_name: lenderName,
             amount: amountValue,
-            frequency: funding.frequency || 'daily',
+            frequency: inferredFrequency,
             detected_dates: (funding?.detected_dates && Array.isArray(funding.detected_dates)) ? funding.detected_dates : [],
           });
         });

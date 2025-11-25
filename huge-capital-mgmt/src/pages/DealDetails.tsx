@@ -353,7 +353,7 @@ export default function DealDetails() {
                             {statement.nsfs ?? 0}
                           </td>
                           <td className="px-4 py-3 text-center text-orange-400">
-                            {statement.negative_days ?? 0}
+                            {(statement.negative_days ?? 0) > 0 ? statement.negative_days : ''}
                           </td>
                           <td className="px-4 py-3 text-center text-white">
                             {statement.deposit_count ?? statement.overdrafts ?? 'N/A'}
@@ -380,7 +380,7 @@ export default function DealDetails() {
                             {avg3Month.nsfs}
                           </td>
                           <td className="px-4 py-3 text-center text-orange-300">
-                            {avg3Month.negativeDays}
+                            {avg3Month.negativeDays > 0 ? avg3Month.negativeDays : ''}
                           </td>
                           <td className="px-4 py-3 text-center text-white">
                             {avg3Month.deposits}
@@ -407,7 +407,7 @@ export default function DealDetails() {
                             {avg6Month.nsfs}
                           </td>
                           <td className="px-4 py-3 text-center text-orange-300">
-                            {avg6Month.negativeDays}
+                            {avg6Month.negativeDays > 0 ? avg6Month.negativeDays : ''}
                           </td>
                           <td className="px-4 py-3 text-center text-white">
                             {avg6Month.deposits}

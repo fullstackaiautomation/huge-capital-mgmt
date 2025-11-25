@@ -204,6 +204,14 @@ Extract the following fields and return valid JSON:
 3. Confidence scores (0-100) for deal and each owner
 4. Missing fields and warnings
 
+CRITICAL - OWNER EXTRACTION:
+- Look for sections labeled "Owner 1", "Owner 2", "Owner Information", "Personal Information", or similar
+- Extract FULL NAME from fields like "Full Name", "Name", "Owner Name"
+- For address fields labeled "City, State, Zip" - parse them into separate city, state, and zip fields
+- The state should be a 2-letter abbreviation (e.g., CA, NY, TX)
+- ALWAYS include owners if their full_name is present, even if other fields are missing
+- Look for ownership_percent (labeled as "Ownership %" or similar) - this is a number from 0-100
+
 CRITICAL MONETARY CONVERSION RULES:
 - For desired_loan_amount, average_monthly_sales, and average_monthly_card_sales:
   - Convert "$50K" or "50K" to 50000 (multiply by 1000)

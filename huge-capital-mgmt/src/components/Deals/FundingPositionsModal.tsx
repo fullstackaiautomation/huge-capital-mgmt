@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { X, Activity } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { X, Activity, ChevronUp, ChevronDown } from 'lucide-react';
 import type { DealFundingPosition } from '../../types/deals';
 
 interface FundingPositionsModalProps {
@@ -8,25 +8,65 @@ interface FundingPositionsModalProps {
     positions: Array<DealFundingPosition & { statement_month: string; status: string }>;
 }
 
+type SortColumn = 'date' | 'status' | 'lender' | 'amount' | 'frequency' | 'month';
+type SortDirection = 'asc' | 'desc';
+
 export default function FundingPositionsModal({ isOpen, onClose, positions }: FundingPositionsModalProps) {
     const [filterStatus, setFilterStatus] = useState<'All' | 'Active' | 'New' | 'Unclear' | 'Closed'>('All');
+    const [sortColumn, setSortColumn] = useState<SortColumn>('date');
+    const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
     if (!isOpen) return null;
 
+    const handleSort = (column: SortColumn) => {
+        if (sortColumn === column) {
+            setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortColumn(column);
+            setSortDirection(column === 'amount' ? 'desc' : 'asc');
+        }
+    };
+
     // Flatten positions into individual transactions based on detected_dates
-    const transactions = positions.flatMap(position =>
-        position.detected_dates.map(date => ({
-            date,
-            lender: position.lender_name,
-            amount: position.amount,
-            frequency: position.frequency,
-            month: position.statement_month,
-            status: position.status,
-            originalPosition: position
-        }))
-    )
-        .filter(tx => filterStatus === 'All' || tx.status === filterStatus)
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const transactions = useMemo(() => {
+        const flat = positions.flatMap(position =>
+            position.detected_dates.map(date => ({
+                date,
+                lender: position.lender_name,
+                amount: position.amount,
+                frequency: position.frequency,
+                month: position.statement_month,
+                status: position.status,
+                originalPosition: position
+            }))
+        ).filter(tx => filterStatus === 'All' || tx.status === filterStatus);
+
+        // Sort based on current sort settings
+        return flat.sort((a, b) => {
+            let comparison = 0;
+            switch (sortColumn) {
+                case 'date':
+                    comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+                    break;
+                case 'status':
+                    comparison = a.status.localeCompare(b.status);
+                    break;
+                case 'lender':
+                    comparison = a.lender.localeCompare(b.lender);
+                    break;
+                case 'amount':
+                    comparison = a.amount - b.amount;
+                    break;
+                case 'frequency':
+                    comparison = (a.frequency || '').localeCompare(b.frequency || '');
+                    break;
+                case 'month':
+                    comparison = (a.month || '').localeCompare(b.month || '');
+                    break;
+            }
+            return sortDirection === 'asc' ? comparison : -comparison;
+        });
+    }, [positions, filterStatus, sortColumn, sortDirection]);
 
     const totalAmount = transactions.reduce((sum, t) => sum + t.amount, 0);
 
@@ -39,6 +79,27 @@ export default function FundingPositionsModal({ isOpen, onClose, positions }: Fu
             default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
         }
     };
+
+    const SortIcon = ({ column }: { column: SortColumn }) => {
+        if (sortColumn !== column) {
+            return <ChevronUp className="w-3 h-3 opacity-30" />;
+        }
+        return sortDirection === 'asc'
+            ? <ChevronUp className="w-3 h-3 text-indigo-400" />
+            : <ChevronDown className="w-3 h-3 text-indigo-400" />;
+    };
+
+    const ColumnHeader = ({ column, label, align = 'left' }: { column: SortColumn; label: string; align?: 'left' | 'right' }) => (
+        <th
+            className={`px-4 py-3 cursor-pointer hover:bg-gray-700/50 transition-colors select-none ${align === 'right' ? 'text-right' : ''}`}
+            onClick={() => handleSort(column)}
+        >
+            <div className={`flex items-center gap-1 ${align === 'right' ? 'justify-end' : ''}`}>
+                {label}
+                <SortIcon column={column} />
+            </div>
+        </th>
+    );
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm">
@@ -88,17 +149,17 @@ export default function FundingPositionsModal({ isOpen, onClose, positions }: Fu
                         <table className="w-full text-sm text-left">
                             <thead className="bg-gray-800 text-gray-400 font-medium uppercase text-xs">
                                 <tr>
-                                    <th className="px-4 py-3">Date</th>
-                                    <th className="px-4 py-3">Status</th>
-                                    <th className="px-4 py-3">Lender</th>
-                                    <th className="px-4 py-3 text-right">Amount</th>
-                                    <th className="px-4 py-3">Frequency</th>
-                                    <th className="px-4 py-3">Statement</th>
+                                    <ColumnHeader column="date" label="Date" />
+                                    <ColumnHeader column="status" label="Status" />
+                                    <ColumnHeader column="lender" label="Lender" />
+                                    <ColumnHeader column="amount" label="Amount" align="right" />
+                                    <ColumnHeader column="frequency" label="Frequency" />
+                                    <ColumnHeader column="month" label="Statement" />
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-700 bg-gray-900/50">
                                 {transactions.map((tx, i) => (
-                                    <tr key={`${tx.date} -${i} `} className="hover:bg-gray-800/50 transition-colors">
+                                    <tr key={`${tx.date}-${i}`} className="hover:bg-gray-800/50 transition-colors">
                                         <td className="px-4 py-3 text-white font-mono">
                                             {new Date(tx.date).toLocaleDateString('en-US', {
                                                 month: '2-digit',
@@ -140,7 +201,7 @@ export default function FundingPositionsModal({ isOpen, onClose, positions }: Fu
                 {/* Footer */}
                 <div className="p-4 border-t border-gray-700 bg-gray-800/30 rounded-b-xl flex justify-between items-center">
                     <div className="text-xs text-gray-500">
-                        Sorted by date (newest first)
+                        Click column headers to sort
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                         <span className="text-gray-400">Total Detected Volume:</span>

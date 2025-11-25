@@ -235,6 +235,7 @@ async function analyzeBankDocument(
     "amount": number;
     "frequency": "daily" | "weekly" | "monthly" | null;
     "detected_dates": string[]; // YYYY-MM-DD
+    "statement_month": string; // YYYY-MM - the month of the statement this position was found in
   }>;
   "confidence": {
     "statements": number[]; // 0-100 per extracted statement
@@ -256,13 +257,17 @@ IMPORTANT INSTRUCTIONS:
 
 5. If a field is missing, use null EXCEPT for fundingPositions.amount which must be a number.
 
+6. CRITICAL for fundingPositions.statement_month: Set this to the YYYY-MM of the bank statement where the transaction was found. For example, if the statement is dated "October 31, 2025" and shows transactions from October 2025, set statement_month to "2025-10". You can derive this from:
+   - The statement header/date on the page
+   - The dates of the transactions (e.g., if detected_dates are ["2025-10-22", "2025-10-23"], statement_month should be "2025-10")
+
 Always return valid JSON only.`;
 
     const systemPrompt = `You are an expert financial statement analyzer for a business lending company.
 
 Extract ONLY bank statement and funding position data from the provided document. Return a JSON object with:
 - statements: array of statements with statement_id, bank_name, statement_month (YYYY-MM), credits, debits, nsfs, overdrafts, negative_days (number of days account was in the negative/below zero), average_daily_balance, deposit_count.
-- fundingPositions: array with lender_name, amount (REQUIRED - must be the actual dollar amount from the transaction), frequency (daily|weekly|monthly), detected_dates (YYYY-MM-DD).
+- fundingPositions: array with lender_name, amount (REQUIRED - must be the actual dollar amount from the transaction), frequency (daily|weekly|monthly), detected_dates (YYYY-MM-DD), statement_month (YYYY-MM - derive from the detected_dates or the statement header).
 - confidence: object with statements (array of confidence scores 0-100).
 - warnings: array of strings for any issues encountered.
 
