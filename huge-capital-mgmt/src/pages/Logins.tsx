@@ -301,11 +301,11 @@ export const Logins = () => {
   }
 
   return (
-    <div className="space-y-6 w-full px-10">
+    <div className="w-full px-10 space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Key className="w-8 h-8 text-white" />
-          <h1 className="text-3xl font-bold text-gray-100">Logins</h1>
+          <h1 className="text-3xl font-bold text-white">Logins</h1>
         </div>
         <div className="flex gap-2">
           {logins.length === 0 && (

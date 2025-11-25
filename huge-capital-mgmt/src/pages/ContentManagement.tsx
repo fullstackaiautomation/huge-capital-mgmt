@@ -16,6 +16,7 @@ import {
   BookOpen,
   User,
   PenTool,
+  CalendarDays,
 } from 'lucide-react';
 import { ContentEditor } from '../components/ContentPlanner/ContentEditor';
 import { ContentCalendar } from '../components/ContentPlanner/ContentCalendar';
@@ -276,10 +277,13 @@ export const ContentManagement = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="w-full px-10 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-blue-primary">Content Planner</h1>
+        <div className="flex items-center gap-3">
+          <CalendarDays className="w-8 h-8 text-white" />
+          <h1 className="text-3xl font-bold text-white">Content Planner</h1>
+        </div>
 
         {/* Person Selector - Compact in Header */}
         <div className="flex items-center gap-3">
@@ -401,63 +405,73 @@ export const ContentManagement = () => {
           })}
         </div>
 
-        {/* View Mode Selector - Sleek Segmented Control */}
-        <div className="flex gap-1 bg-gray-900/60 backdrop-blur-xl p-1.5 rounded-2xl border border-gray-700/40 shadow-xl">
-          <button
-            onClick={() => setCurrentView('editor')}
-            className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 ${
-              currentView === 'editor'
-                ? 'bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30 scale-105'
-                : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
-            }`}
-          >
-            <PenTool className="w-4 h-4" />
-            <span className="text-sm font-semibold">Planner</span>
-          </button>
-          <button
-            onClick={() => setCurrentView('calendar')}
-            className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 ${
-              currentView === 'calendar'
-                ? 'bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30 scale-105'
-                : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
-            }`}
-          >
-            <Calendar className="w-4 h-4" />
-            <span className="text-sm font-semibold">Scheduler</span>
-          </button>
-          <button
-            onClick={() => setCurrentView('stories')}
-            className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 ${
-              currentView === 'stories'
-                ? 'bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30 scale-105'
-                : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
-            }`}
-          >
-            <BookOpen className="w-4 h-4" />
-            <span className="text-sm font-semibold">Vault</span>
-          </button>
-          <button
-            onClick={() => setCurrentView('profile')}
-            className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 ${
-              currentView === 'profile'
-                ? 'bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30 scale-105'
-                : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
-            }`}
-          >
-            <User className="w-4 h-4" />
-            <span className="text-sm font-semibold">Profile</span>
-          </button>
-          <button
-            onClick={() => setCurrentView('analytics')}
-            className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 ${
-              currentView === 'analytics'
-                ? 'bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30 scale-105'
-                : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
-            }`}
-          >
-            <BarChart3 className="w-4 h-4" />
-            <span className="text-sm font-semibold">Analytics</span>
-          </button>
+        {/* View Mode Selector - Two Groups */}
+        <div className="flex items-center gap-3">
+          {/* Content Creation Group */}
+          <div className="flex gap-1 bg-gray-900/60 backdrop-blur-xl p-1.5 rounded-2xl border border-gray-700/40 shadow-xl">
+            <button
+              onClick={() => setCurrentView('editor')}
+              className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 ${
+                currentView === 'editor'
+                  ? 'bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30 scale-105'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+              }`}
+            >
+              <PenTool className="w-4 h-4" />
+              <span className="text-sm font-semibold">Planner</span>
+            </button>
+            <button
+              onClick={() => setCurrentView('calendar')}
+              className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 ${
+                currentView === 'calendar'
+                  ? 'bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30 scale-105'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+              }`}
+            >
+              <Calendar className="w-4 h-4" />
+              <span className="text-sm font-semibold">Scheduler</span>
+            </button>
+          </div>
+
+          {/* Divider */}
+          <div className="h-8 w-px bg-gray-700/50" />
+
+          {/* Resources Group */}
+          <div className="flex gap-1 bg-gray-900/60 backdrop-blur-xl p-1.5 rounded-2xl border border-gray-700/40 shadow-xl">
+            <button
+              onClick={() => setCurrentView('stories')}
+              className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 ${
+                currentView === 'stories'
+                  ? 'bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30 scale-105'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+              }`}
+            >
+              <BookOpen className="w-4 h-4" />
+              <span className="text-sm font-semibold">Vault</span>
+            </button>
+            <button
+              onClick={() => setCurrentView('profile')}
+              className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 ${
+                currentView === 'profile'
+                  ? 'bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30 scale-105'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+              }`}
+            >
+              <User className="w-4 h-4" />
+              <span className="text-sm font-semibold">Profile</span>
+            </button>
+            <button
+              onClick={() => setCurrentView('analytics')}
+              className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 ${
+                currentView === 'analytics'
+                  ? 'bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30 scale-105'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4" />
+              <span className="text-sm font-semibold">Analytics</span>
+            </button>
+          </div>
         </div>
       </div>
 

@@ -486,13 +486,13 @@ export const DillonDaily = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-[1800px] mx-auto">
+    <div className="w-full px-10 space-y-6">
       {/* Header with View Toggle */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-        <h1 className="text-4xl font-bold text-gray-100 flex items-center gap-3">
-          <ClipboardCheck className="w-10 h-10 text-brand-500" />
-          {getPageTitle()}
-        </h1>
+        <div className="flex items-center gap-3">
+          <ClipboardCheck className="w-8 h-8 text-white" />
+          <h1 className="text-3xl font-bold text-white">{getPageTitle()}</h1>
+        </div>
 
         {/* View Toggle - Matching Task Tracker Style */}
         <div className="flex items-center gap-4">

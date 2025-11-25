@@ -289,116 +289,110 @@ export default function Deals() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f]">
+    <div className="w-full px-10 space-y-6">
       {/* Header */}
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        <div className="flex items-center justify-between">
-          {/* Title */}
-          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <TrendingUp className="w-8 h-8 text-indigo-400" />
-            Deals
-          </h1>
+      <div className="flex items-center justify-between">
+        {/* Title */}
+        <div className="flex items-center gap-3">
+          <TrendingUp className="w-8 h-8 text-white" />
+          <h1 className="text-3xl font-bold text-white">Deals</h1>
+        </div>
 
-          {/* Broker Filter Toggles */}
-          <div className="flex items-center gap-3">
-            {['Dillon', 'Luke', 'Zac', 'Taylor'].map((broker) => {
-              const count = deals.filter(d => d.broker_name === broker).length;
-              const isActive = filterBroker === broker;
-              return (
-                <button
-                  key={broker}
-                  onClick={() => setFilterBroker(isActive ? 'All' : broker)}
-                  className={`px-5 py-2.5 rounded-lg text-base font-semibold transition-all ${
-                    isActive
-                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/25'
-                      : 'bg-gray-800/60 text-gray-300 hover:bg-gray-700/60 hover:text-white'
-                  }`}
-                >
-                  {broker} <span className={`ml-1 ${isActive ? 'text-indigo-200' : 'text-gray-500'}`}>({count})</span>
-                </button>
-              );
-            })}
-          </div>
+        {/* Broker Filter Toggles */}
+        <div className="flex items-center gap-3">
+          {['Dillon', 'Luke', 'Zac', 'Taylor'].map((broker) => {
+            const count = deals.filter(d => d.broker_name === broker).length;
+            const isActive = filterBroker === broker;
+            return (
+              <button
+                key={broker}
+                onClick={() => setFilterBroker(isActive ? 'All' : broker)}
+                className={`px-5 py-2.5 rounded-lg text-base font-semibold transition-all ${
+                  isActive
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/25'
+                    : 'bg-gray-800/60 text-gray-300 hover:bg-gray-700/60 hover:text-white'
+                }`}
+              >
+                {broker} <span className={`ml-1 ${isActive ? 'text-indigo-200' : 'text-gray-500'}`}>({count})</span>
+              </button>
+            );
+          })}
+        </div>
 
-          {/* New Deal Button */}
-          <button
-            onClick={() => setShowNewDealModal(true)}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg transition-all font-bold text-lg"
+        {/* New Deal Button */}
+        <button
+          onClick={() => setShowNewDealModal(true)}
+          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg transition-all font-bold text-lg"
+        >
+          <Plus className="w-6 h-6" />
+          New Deal
+        </button>
+      </div>
+
+      {/* Controls */}
+      <div className="flex gap-4 flex-col sm:flex-row">
+        {/* Search */}
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Search by business name, DBA, or EIN..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-gray-800/50 border border-gray-700/30 rounded-lg pl-10 pr-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+
+        {/* Filters */}
+        <div className="flex gap-2">
+          <select
+            value={filterLoanType}
+            onChange={(e) => setFilterLoanType(e.target.value as any)}
+            className="bg-gray-800/50 border border-gray-700/30 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            <Plus className="w-6 h-6" />
-            New Deal
-          </button>
+            <option value="All">All Loan Types</option>
+            <option value="MCA">MCA</option>
+            <option value="Business LOC">Business LOC</option>
+          </select>
+
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            className="bg-gray-800/50 border border-gray-700/30 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="created">Newest First</option>
+            <option value="amount">Highest Amount</option>
+            <option value="status">By Status</option>
+          </select>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-4">
-        {/* Controls */}
-        <div className="flex flex-col gap-4 mb-6">
-          <div className="flex gap-4 flex-col sm:flex-row">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-              <input
-                type="text"
-                placeholder="Search by business name, DBA, or EIN..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-gray-800/50 border border-gray-700/30 rounded-lg pl-10 pr-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <Loader className="w-8 h-8 text-indigo-400 animate-spin" />
+        </div>
+      )}
 
-            {/* Filters */}
-            <div className="flex gap-2">
-              <select
-                value={filterLoanType}
-                onChange={(e) => setFilterLoanType(e.target.value as any)}
-                className="bg-gray-800/50 border border-gray-700/30 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="All">All Loan Types</option>
-                <option value="MCA">MCA</option>
-                <option value="Business LOC">Business LOC</option>
-              </select>
-
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-gray-800/50 border border-gray-700/30 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="created">Newest First</option>
-                <option value="amount">Highest Amount</option>
-                <option value="status">By Status</option>
-              </select>
-            </div>
+      {/* Error State */}
+      {error && (
+        <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+          <div>
+            <h3 className="text-red-400 font-medium">Error</h3>
+            <p className="text-red-300/80 text-sm">{error}</p>
           </div>
         </div>
+      )}
 
-        {/* Loading State */}
-        {loading && (
-          <div className="flex items-center justify-center py-12">
-            <Loader className="w-8 h-8 text-indigo-400 animate-spin" />
-          </div>
-        )}
-
-        {/* Error State */}
-        {error && (
-          <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
-            <div>
-              <h3 className="text-red-400 font-medium">Error</h3>
-              <p className="text-red-300/80 text-sm">{error}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Deals Grid */}
-        {!loading && !error && filteredDeals.length > 0 && (
-          <div className="grid gap-4">
-            {filteredDeals.map((deal) => (
-              <div
-                key={deal.id}
-                className="bg-gray-800/30 backdrop-blur-sm border border-gray-700/30 rounded-lg p-5 hover:border-gray-700/50 transition-all group"
-              >
+      {/* Deals Grid */}
+      {!loading && !error && filteredDeals.length > 0 && (
+        <div className="grid gap-4">
+          {filteredDeals.map((deal) => (
+            <div
+              key={deal.id}
+              className="bg-gray-800/30 backdrop-blur-sm border border-gray-700/30 rounded-lg p-5 hover:border-gray-700/50 transition-all group"
+            >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4">
                     {/* Business Name Column */}
@@ -1151,28 +1145,27 @@ export default function Deals() {
           </div>
         )}
 
-        {/* Empty State */}
-        {!loading && !error && filteredDeals.length === 0 && (
-          <div className="text-center py-12">
-            <Building2 className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-gray-400 mb-1">No deals found</h3>
-            <p className="text-gray-500 mb-6">
-              {searchTerm || filterStatus !== 'All' || filterLoanType !== 'All'
-                ? 'Try adjusting your filters'
-                : 'Create your first deal to get started'}
-            </p>
-            {!searchTerm && filterStatus === 'All' && filterLoanType === 'All' && (
-              <button
-                onClick={() => setShowNewDealModal(true)}
-                className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-all font-medium"
-              >
-                <Plus className="w-5 h-5" />
-                Create First Deal
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      {/* Empty State */}
+      {!loading && !error && filteredDeals.length === 0 && (
+        <div className="text-center py-12">
+          <Building2 className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+          <h3 className="text-lg font-medium text-gray-400 mb-1">No deals found</h3>
+          <p className="text-gray-500 mb-6">
+            {searchTerm || filterStatus !== 'All' || filterLoanType !== 'All'
+              ? 'Try adjusting your filters'
+              : 'Create your first deal to get started'}
+          </p>
+          {!searchTerm && filterStatus === 'All' && filterLoanType === 'All' && (
+            <button
+              onClick={() => setShowNewDealModal(true)}
+              className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-all font-medium"
+            >
+              <Plus className="w-5 h-5" />
+              Create First Deal
+            </button>
+          )}
+        </div>
+      )}
 
       {/* New Deal Modal */}
       <NewDealModal

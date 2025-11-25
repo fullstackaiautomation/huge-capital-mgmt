@@ -43,10 +43,10 @@ export const BugsIdeas = () => {
   };
 
   return (
-    <div className="space-y-6 w-full px-10">
+    <div className="w-full px-10 space-y-6">
       <div className="flex items-center gap-3">
         <Lightbulb className="w-8 h-8 text-white" />
-        <h1 className="text-3xl font-bold text-gray-100">Bugs & Requests</h1>
+        <h1 className="text-3xl font-bold text-white">Bugs & Requests</h1>
       </div>
 
       {/* Submission Form */}

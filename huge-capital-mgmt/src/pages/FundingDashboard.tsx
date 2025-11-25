@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { DollarSign, TrendingUp, BarChart3, Percent, RefreshCw, AlertCircle } from 'lucide-react';
+import { DollarSign, TrendingUp, BarChart3, Percent, RefreshCw, AlertCircle, LayoutDashboard } from 'lucide-react';
 import { fetchFundingData, formatCurrency, formatPercentage } from '../lib/googleSheets';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { cleanDealType, getBrokerColor, formatDate } from '../utils/formatters';
@@ -341,9 +341,12 @@ export const FundingDashboard = () => {
     .slice(0, 6); // Show top 6 deal types
 
   return (
-    <div className="space-y-6">
+    <div className="w-full px-10 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-blue-primary">Funding Dashboard</h1>
+        <div className="flex items-center gap-3">
+          <LayoutDashboard className="w-8 h-8 text-white" />
+          <h1 className="text-3xl font-bold text-white">Funding Dashboard</h1>
+        </div>
         <div className="text-right">
           <button
             onClick={loadData}

@@ -484,12 +484,12 @@ export const AIAutomationTasks = () => {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="w-full px-10 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-100 flex items-center gap-3">
-          <Bot className="w-8 h-8 text-brand-500" />
-          AI Roadmap
-        </h1>
+        <div className="flex items-center gap-3">
+          <Bot className="w-8 h-8 text-white" />
+          <h1 className="text-3xl font-bold text-white">AI Roadmap</h1>
+        </div>
         {hasLocalStorageData && (
           <button
             onClick={handleMigration}

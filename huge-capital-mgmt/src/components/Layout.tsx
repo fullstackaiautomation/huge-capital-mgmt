@@ -1,44 +1,38 @@
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { LayoutDashboard, Bot, CalendarDays, LogOut, CheckSquare, Users, Building2, Briefcase, Folder, Lightbulb, Key, ClipboardCheck, ChevronRight, TrendingUp } from 'lucide-react';
-import { useState } from 'react';
+import { LayoutDashboard, Bot, CalendarDays, LogOut, CheckSquare, Building2, Folder, Lightbulb, Key, ClipboardCheck, TrendingUp } from 'lucide-react';
 import logo from '../assets/logo.webp';
 
 export const Layout = () => {
   const { user, signOut } = useAuth();
   const location = useLocation();
-  const [isTaskTrackerExpanded, setIsTaskTrackerExpanded] = useState(false);
 
-  const topNavigation = [
+  // Deal Flow section
+  const dealFlowNavigation = [
     { name: 'Funding Dashboard', href: '/', icon: LayoutDashboard },
-    {
-      name: 'Task Tracker',
-      href: '/tracker',
-      icon: CheckSquare,
-      hasSubmenu: true,
-      submenu: [
-        { name: "Dillon's Daily", href: '/tracker/dillon-daily', icon: ClipboardCheck }
-      ]
-    },
-    { name: 'Content Planner', href: '/content', icon: CalendarDays },
     { name: 'Deals', href: '/deals', icon: TrendingUp },
     { name: 'Lenders', href: '/lenders', icon: Building2 },
   ];
 
-  const middleNavigation = [
-    { name: 'AI Roadmap', href: '/tasks', icon: Bot },
-    { name: 'AI Projects', href: '/projects', icon: Folder },
+  // Team section
+  const teamNavigation = [
+    { name: 'Task Tracker', href: '/tracker', icon: CheckSquare },
+    { name: "Dillon's Daily", href: '/tracker/dillon-daily', icon: ClipboardCheck },
+    { name: 'Logins', href: '/logins', icon: Key },
   ];
 
-  const bottomNavigation = [
-    { name: 'Logins', href: '/logins', icon: Key },
+  // Marketing section
+  const marketingNavigation = [
+    { name: 'Content Planner', href: '/content', icon: CalendarDays },
+  ];
+
+  // Full Stack section
+  const fullStackNavigation = [
+    { name: 'AI Roadmap', href: '/tasks', icon: Bot },
+    { name: 'AI Projects', href: '/projects', icon: Folder },
     { name: 'Bugs & Requests', href: '/bugs', icon: Lightbulb },
   ];
 
-  const comingSoonItems = [
-    { name: 'Affiliates', icon: Users },
-    { name: 'Deals', icon: Briefcase },
-  ];
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -53,84 +47,12 @@ export const Layout = () => {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-            {/* Top Navigation */}
-            {topNavigation.map((item) => {
-              const Icon = item.icon;
-              const isItemActive = isActive(item.href);
-              const hasActiveSubmenu = item.submenu?.some(sub => isActive(sub.href));
-
-              return (
-                <div key={item.name}>
-                  {item.hasSubmenu ? (
-                    <>
-                      <div className="flex items-center">
-                        <Link
-                          to={item.href}
-                          className={`flex-1 flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
-                            isItemActive || hasActiveSubmenu
-                              ? 'bg-brand-500/10 text-brand-500 border border-brand-500/20'
-                              : 'text-gray-400 hover:bg-dark-hover hover:text-gray-200'
-                          }`}
-                        >
-                          <Icon className="w-5 h-5 mr-3" />
-                          {item.name}
-                        </Link>
-                        <button
-                          onClick={() => setIsTaskTrackerExpanded(!isTaskTrackerExpanded)}
-                          className={`p-2 text-gray-400 hover:text-gray-200 transition-all ${
-                            isItemActive || hasActiveSubmenu ? 'text-brand-500' : ''
-                          }`}
-                        >
-                          <ChevronRight className={`w-4 h-4 transition-transform ${
-                            isTaskTrackerExpanded ? 'rotate-90' : ''
-                          }`} />
-                        </button>
-                      </div>
-                      {isTaskTrackerExpanded && item.submenu && (
-                        <div className="ml-4 mt-1 space-y-1">
-                          {item.submenu.map((subItem) => {
-                            const SubIcon = subItem.icon;
-                            return (
-                              <Link
-                                key={subItem.name}
-                                to={subItem.href}
-                                className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${
-                                  isActive(subItem.href)
-                                    ? 'bg-brand-500/10 text-brand-500 border border-brand-500/20'
-                                    : 'text-gray-400 hover:bg-dark-hover hover:text-gray-200'
-                                }`}
-                              >
-                                <SubIcon className="w-4 h-4 mr-3" />
-                                {subItem.name}
-                              </Link>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <Link
-                      to={item.href}
-                      className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
-                        isItemActive
-                          ? 'bg-brand-500/10 text-brand-500 border border-brand-500/20'
-                          : 'text-gray-400 hover:bg-dark-hover hover:text-gray-200'
-                      }`}
-                    >
-                      <Icon className="w-5 h-5 mr-3" />
-                      {item.name}
-                    </Link>
-                  )}
-                </div>
-              );
-            })}
-
-            {/* Spacer */}
-            <div className="pt-4 mt-4 border-t border-dark-border"></div>
-
-            {/* Middle Navigation */}
-            {middleNavigation.map((item) => {
+          <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+            {/* Deal Flow Section */}
+            <h3 className="px-4 text-xs font-semibold text-white uppercase tracking-wider mb-2">
+              Deal Flow
+            </h3>
+            {dealFlowNavigation.map((item) => {
               const Icon = item.icon;
               return (
                 <Link
@@ -148,29 +70,11 @@ export const Layout = () => {
               );
             })}
 
-            {/* Coming Soon Section */}
-            <div className="pt-8 mt-4 border-t border-dark-border">
-              <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                Coming Soon
-              </h3>
-              {comingSoonItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <div
-                    key={item.name}
-                    className="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-500 cursor-not-allowed opacity-70"
-                  >
-                    <Icon className="w-5 h-5 mr-3" />
-                    {item.name}
-                  </div>
-                );
-              })}
-            </div>
-          </nav>
-
-          {/* Bottom Navigation */}
-          <div className="px-4 pb-4">
-            {bottomNavigation.map((item) => {
+            {/* Team Section */}
+            <h3 className="px-4 pt-6 text-xs font-semibold text-white uppercase tracking-wider mb-2">
+              Team
+            </h3>
+            {teamNavigation.map((item) => {
               const Icon = item.icon;
               return (
                 <Link
@@ -178,7 +82,7 @@ export const Layout = () => {
                   to={item.href}
                   className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
                     isActive(item.href)
-                      ? 'bg-brand-500/10 text-brand-500'
+                      ? 'bg-brand-500/10 text-brand-500 border border-brand-500/20'
                       : 'text-gray-400 hover:bg-dark-hover hover:text-gray-200'
                   }`}
                 >
@@ -187,7 +91,52 @@ export const Layout = () => {
                 </Link>
               );
             })}
-          </div>
+
+            {/* Marketing Section */}
+            <h3 className="px-4 pt-6 text-xs font-semibold text-white uppercase tracking-wider mb-2">
+              Marketing
+            </h3>
+            {marketingNavigation.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
+                    isActive(item.href)
+                      ? 'bg-brand-500/10 text-brand-500 border border-brand-500/20'
+                      : 'text-gray-400 hover:bg-dark-hover hover:text-gray-200'
+                  }`}
+                >
+                  <Icon className="w-5 h-5 mr-3" />
+                  {item.name}
+                </Link>
+              );
+            })}
+
+            {/* Full Stack Section */}
+            <h3 className="px-4 pt-6 text-xs font-semibold text-white uppercase tracking-wider mb-2">
+              Full Stack
+            </h3>
+            {fullStackNavigation.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
+                    isActive(item.href)
+                      ? 'bg-brand-500/10 text-brand-500 border border-brand-500/20'
+                      : 'text-gray-400 hover:bg-dark-hover hover:text-gray-200'
+                  }`}
+                >
+                  <Icon className="w-5 h-5 mr-3" />
+                  {item.name}
+                </Link>
+              );
+            })}
+
+          </nav>
 
           {/* User info and logout */}
           <div className="p-4 border-t border-dark-border">
