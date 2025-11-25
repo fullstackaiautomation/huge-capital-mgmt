@@ -352,7 +352,7 @@ export default function DealDetails() {
                           <td className="px-4 py-3 text-center text-white">
                             {statement.nsfs ?? 0}
                           </td>
-                          <td className="px-4 py-3 text-center text-orange-400">
+                          <td className={`px-4 py-3 text-center ${(statement.negative_days ?? 0) > 0 ? 'text-orange-400' : 'text-white'}`}>
                             {(statement.negative_days ?? 0) > 0 ? statement.negative_days : ''}
                           </td>
                           <td className="px-4 py-3 text-center text-white">
@@ -379,7 +379,7 @@ export default function DealDetails() {
                           <td className="px-4 py-3 text-center text-white">
                             {avg3Month.nsfs}
                           </td>
-                          <td className="px-4 py-3 text-center text-orange-300">
+                          <td className={`px-4 py-3 text-center ${avg3Month.negativeDays > 0 ? 'text-orange-300' : 'text-white'}`}>
                             {avg3Month.negativeDays > 0 ? avg3Month.negativeDays : ''}
                           </td>
                           <td className="px-4 py-3 text-center text-white">
@@ -406,7 +406,7 @@ export default function DealDetails() {
                           <td className="px-4 py-3 text-center text-white">
                             {avg6Month.nsfs}
                           </td>
-                          <td className="px-4 py-3 text-center text-orange-300">
+                          <td className={`px-4 py-3 text-center ${avg6Month.negativeDays > 0 ? 'text-orange-300' : 'text-white'}`}>
                             {avg6Month.negativeDays > 0 ? avg6Month.negativeDays : ''}
                           </td>
                           <td className="px-4 py-3 text-center text-white">
