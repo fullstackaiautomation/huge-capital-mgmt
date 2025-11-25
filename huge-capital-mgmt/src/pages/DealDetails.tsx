@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Loader, AlertCircle, Building2, DollarSign, MapPin, FileText, ChevronRight, Pencil, Star, TrendingUp, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Loader, AlertCircle, Building2, DollarSign, MapPin, FileText, Pencil, Star, TrendingUp, CheckCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Deal } from '../types/deals';
 import EditDealModal from '../components/Deals/EditDealModal';
@@ -860,9 +860,9 @@ export default function DealDetails() {
 
                         <div className="flex items-center justify-between pt-3 border-t border-gray-700/30">
                           <span className={`text-xs px-2 py-1 rounded ${match.submission_status === 'Approved' ? 'bg-green-500/20 text-green-300' :
-                              match.submission_status === 'Submitted' ? 'bg-blue-500/20 text-blue-300' :
-                                match.submission_status === 'Declined' ? 'bg-red-500/20 text-red-300' :
-                                  'bg-gray-700/50 text-gray-400'
+                            match.submission_status === 'Submitted' ? 'bg-blue-500/20 text-blue-300' :
+                              match.submission_status === 'Declined' ? 'bg-red-500/20 text-red-300' :
+                                'bg-gray-700/50 text-gray-400'
                             }`}>
                             {match.submission_status || 'Not Started'}
                           </span>

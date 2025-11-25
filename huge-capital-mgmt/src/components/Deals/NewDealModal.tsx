@@ -712,11 +712,11 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
         warnings: warningsArray,
         documentsFolder: folder
           ? {
-              id: folder.id,
-              name: folder.name,
-              webViewLink: folder.webViewLink,
-              files: accumulatedDriveFiles,
-            }
+            id: folder.id,
+            name: folder.name,
+            webViewLink: folder.webViewLink,
+            files: accumulatedDriveFiles,
+          }
           : undefined,
       };
 
@@ -933,18 +933,18 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
     const uploadIcon = file.status === 'success'
       ? <CheckCircle className="w-4 h-4 text-green-400" />
       : file.status === 'uploading'
-      ? <Loader className="w-4 h-4 text-indigo-400 animate-spin" />
-      : file.status === 'error'
-      ? <AlertCircle className="w-4 h-4 text-red-400" />
-      : <div className="w-4 h-4 rounded border-2 border-gray-600" />;
+        ? <Loader className="w-4 h-4 text-indigo-400 animate-spin" />
+        : file.status === 'error'
+          ? <AlertCircle className="w-4 h-4 text-red-400" />
+          : <div className="w-4 h-4 rounded border-2 border-gray-600" />;
 
     const parsingIcon = file.parsingStatus === 'success'
       ? <CheckCircle className="w-4 h-4 text-green-400" />
       : file.parsingStatus === 'in_progress'
-      ? <Loader className="w-4 h-4 text-indigo-400 animate-spin" />
-      : file.parsingStatus === 'error'
-      ? <AlertCircle className="w-4 h-4 text-red-400" />
-      : <div className="w-4 h-4 rounded-full border-2 border-gray-600" />;
+        ? <Loader className="w-4 h-4 text-indigo-400 animate-spin" />
+        : file.parsingStatus === 'error'
+          ? <AlertCircle className="w-4 h-4 text-red-400" />
+          : <div className="w-4 h-4 rounded-full border-2 border-gray-600" />;
 
     return (
       <div key={file.id} className="flex items-center gap-2 bg-gray-800/50 border border-gray-700/30 rounded-lg p-2.5">
@@ -1179,7 +1179,7 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
                               <td className="px-4 py-3 text-right text-red-400 font-medium">${(statement.debits as number)?.toLocaleString() ?? 'N/A'}</td>
                               <td className="px-4 py-3 text-center text-white">{(statement.nsfs as number) ?? 0}</td>
                               <td className={`px-4 py-3 text-center ${Number(statement.negative_days || 0) > 0 ? 'text-orange-400' : 'text-white'}`}>
-                                {Number(statement.negative_days || 0) > 0 ? statement.negative_days : ''}
+                                {Number(statement.negative_days || 0) > 0 ? String(statement.negative_days) : ''}
                               </td>
                               <td className="px-4 py-3 text-center text-white">{(statement.deposit_count as number) ?? (statement.overdrafts as number) ?? 'N/A'}</td>
                               <td className="px-4 py-3 text-right text-blue-400 font-medium">${(statement.average_daily_balance as number)?.toLocaleString() ?? 'N/A'}</td>
@@ -1248,11 +1248,10 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
                       return (
                         <div
                           key={lender.lenderId}
-                          className={`border rounded-lg p-4 transition-all cursor-pointer ${
-                            isSelected
+                          className={`border rounded-lg p-4 transition-all cursor-pointer ${isSelected
                               ? 'border-indigo-500/50 bg-indigo-500/10'
                               : 'border-gray-700/40 bg-gray-900/30 hover:border-gray-600/50'
-                          }`}
+                            }`}
                           onClick={() => {
                             setSelectedLenders((prev) => {
                               const next = new Set(prev);
@@ -1268,9 +1267,8 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-3 mb-2">
-                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                                  index === 0 ? 'bg-yellow-500/30 text-yellow-300' : 'bg-gray-700/50 text-gray-400'
-                                }`}>
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${index === 0 ? 'bg-yellow-500/30 text-yellow-300' : 'bg-gray-700/50 text-gray-400'
+                                  }`}>
                                   {index + 1}
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -1311,9 +1309,8 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
                               <span className={`text-xs px-2 py-1 border rounded-full ${probabilityColors[lender.approvalProbability]}`}>
                                 {lender.approvalProbability.replace('_', ' ')}
                               </span>
-                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                                isSelected ? 'border-indigo-500 bg-indigo-500' : 'border-gray-600'
-                              }`}>
+                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isSelected ? 'border-indigo-500 bg-indigo-500' : 'border-gray-600'
+                                }`}>
                                 {isSelected && <CheckCircle className="w-3 h-3 text-white" />}
                               </div>
                             </div>
