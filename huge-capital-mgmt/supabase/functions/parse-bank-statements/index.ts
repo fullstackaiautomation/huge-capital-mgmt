@@ -232,7 +232,7 @@ async function analyzeBankDocument(
   }>;
   "fundingPositions": Array<{
     "lender_name": string;
-    "amount": number | null;
+    "amount": number;
     "frequency": "daily" | "weekly" | "monthly" | null;
     "detected_dates": string[]; // YYYY-MM-DD
   }>;
@@ -242,21 +242,35 @@ async function analyzeBankDocument(
   "warnings": string[];
 }
 
-IMPORTANT: For negative_days, count the number of days during the statement period where the account balance went below zero (negative). Look for daily balance summaries or any indication of days with negative balances.
+IMPORTANT INSTRUCTIONS:
 
-If a field is missing, use null. Always return valid JSON only.`;
+1. For negative_days, count the number of days during the statement period where the account balance went below zero (negative). Look for daily balance summaries or any indication of days with negative balances.
+
+2. For fundingPositions: Look for DEPOSITS (credits) from known MCA lenders and financing companies in the transaction list. These are typically recurring payments with similar amounts. Common lender names include: Terrace Finance, Kafene, AmericanFirstFin, CAN Capital, OnDeck, Fundbox, Credibly, Kabbage, BlueVine, Rapid Finance, Greenbox, Capytal, Forward Financing, Mulligan Funding, Fora Financial, Libertas, PayPal Working Capital, Square Capital, Shopify Capital, Stripe Capital, Amazon Lending, etc.
+
+3. CRITICAL for fundingPositions amount: Each entry in fundingPositions should have the ACTUAL AMOUNT from the transaction. Look at the deposit/credit column and extract the exact dollar amount. For example, if you see "TERRACE FINANCE ... 2,500.00", the amount should be 2500. DO NOT return null or 0 for amount - extract the actual transaction value.
+
+4. If the same lender appears multiple times with DIFFERENT amounts, create SEPARATE entries for each unique amount. For example:
+   - If Terrace Finance appears with $2,500.00 on dates 09/25 and 09/29, create ONE entry with amount: 2500 and detected_dates: ["2025-09-25", "2025-09-29"]
+   - If Terrace Finance appears with $2,423.25 on date 09/25, create a SEPARATE entry with amount: 2423.25 and detected_dates: ["2025-09-25"]
+
+5. If a field is missing, use null EXCEPT for fundingPositions.amount which must be a number.
+
+Always return valid JSON only.`;
 
     const systemPrompt = `You are an expert financial statement analyzer for a business lending company.
 
 Extract ONLY bank statement and funding position data from the provided document. Return a JSON object with:
 - statements: array of statements with statement_id, bank_name, statement_month (YYYY-MM), credits, debits, nsfs, overdrafts, negative_days (number of days account was in the negative/below zero), average_daily_balance, deposit_count.
-- fundingPositions: array with lender_name, amount, frequency (daily|weekly|monthly), detected_dates (YYYY-MM-DD).
+- fundingPositions: array with lender_name, amount (REQUIRED - must be the actual dollar amount from the transaction), frequency (daily|weekly|monthly), detected_dates (YYYY-MM-DD).
 - confidence: object with statements (array of confidence scores 0-100).
 - warnings: array of strings for any issues encountered.
 
+CRITICAL: For fundingPositions, you MUST extract the actual transaction amount from the bank statement. Look at the credits/deposits column. The amount field is REQUIRED and cannot be null or 0 - it must be the actual dollar value from the transaction (e.g., 2500.00, 1295.99, 900.00).
+
 For negative_days: Count days where the account balance was below $0. Look for daily balance tables, ledger balance summaries, or any indicator of negative balances throughout the statement period.
 
-If information is missing, use nulls. Always respond with valid JSON.`;
+If information is missing, use nulls EXCEPT for fundingPositions.amount which must always be the actual transaction amount. Always respond with valid JSON.`;
 
     const userContent: any[] = [
       {

@@ -402,10 +402,41 @@ export function useAllLenders(filterType?: string) {
       }
 
       // Sort by sort_order (if set), then by lender name
+      // For MCA lenders, also sort by paper type
       filtered.sort((a, b) => {
         if (a.sort_order !== 0 || b.sort_order !== 0) {
           return a.sort_order - b.sort_order;
         }
+
+        // Apply exact ranking for MCA lenders based on spreadsheet order
+        if (a.lender_type === 'MCA' && b.lender_type === 'MCA') {
+          // Exact ranking order from spreadsheet
+          const exactRanking: Record<string, number> = {
+            'Credibly': 1,
+            'IOU Financial': 2,
+            'Rapid': 3,
+            'Kalamata': 4,
+            'Fundworks': 5,
+            'TMRnow': 6,
+            'TVT Capital': 7,
+            'Fintegra': 8,
+            'Fresh Funding': 9,
+            'Fintap': 10,
+            'Legend Advance': 11,
+            'Fox': 12,
+            'Mantis': 13,
+            'Emmy Capital': 14,
+            'Fintoro Capital': 15,
+          };
+
+          const rankA = exactRanking[a.lender_name] || 999;
+          const rankB = exactRanking[b.lender_name] || 999;
+
+          if (rankA !== rankB) {
+            return rankA - rankB;
+          }
+        }
+
         return a.lender_name.localeCompare(b.lender_name);
       });
 

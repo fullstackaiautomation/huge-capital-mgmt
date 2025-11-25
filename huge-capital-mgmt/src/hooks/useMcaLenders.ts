@@ -13,11 +13,36 @@ export function useMcaLenders() {
       setError(null);
       const { data, error: fetchError } = await supabase
         .from('lenders_mca')
-        .select('*')
-        .order('lender_name', { ascending: true });
+        .select('*');
 
       if (fetchError) throw fetchError;
-      setLenders(data || []);
+
+      // Sort by paper type (A Paper, A-B Paper, B Paper, C-D Paper) then by lender name
+      const paperOrder: Record<string, number> = {
+        'A Paper': 1,
+        'A-B Paper': 2,
+        'A Paper / B Paper': 2,
+        'A/B Paper': 2,
+        'B Paper': 3,
+        'B/C Paper': 3.5,
+        'C-D Paper': 4,
+        'C Paper / D Paper': 4,
+        'A/C Paper': 2.5,
+        'A/B/C Paper': 2.5,
+      };
+
+      const sortedData = (data || []).sort((a, b) => {
+        const paperA = paperOrder[a.paper || ''] || 999;
+        const paperB = paperOrder[b.paper || ''] || 999;
+
+        if (paperA !== paperB) {
+          return paperA - paperB;
+        }
+
+        return (a.lender_name || '').localeCompare(b.lender_name || '');
+      });
+
+      setLenders(sortedData);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch lenders';
       setError(message);
@@ -37,9 +62,29 @@ export function useMcaLenders() {
 
       if (insertError) throw insertError;
       if (data) {
-        setLenders(prev => [...prev, data].sort((a, b) =>
-          a.lender_name.localeCompare(b.lender_name)
-        ));
+        const paperOrder: Record<string, number> = {
+          'A Paper': 1,
+          'A-B Paper': 2,
+          'A Paper / B Paper': 2,
+          'A/B Paper': 2,
+          'B Paper': 3,
+          'B/C Paper': 3.5,
+          'C-D Paper': 4,
+          'C Paper / D Paper': 4,
+          'A/C Paper': 2.5,
+          'A/B/C Paper': 2.5,
+        };
+
+        setLenders(prev => [...prev, data].sort((a, b) => {
+          const paperA = paperOrder[a.paper || ''] || 999;
+          const paperB = paperOrder[b.paper || ''] || 999;
+
+          if (paperA !== paperB) {
+            return paperA - paperB;
+          }
+
+          return (a.lender_name || '').localeCompare(b.lender_name || '');
+        }));
       }
       return data;
     } catch (err) {
@@ -60,9 +105,31 @@ export function useMcaLenders() {
 
       if (updateError) throw updateError;
       if (data) {
+        const paperOrder: Record<string, number> = {
+          'A Paper': 1,
+          'A-B Paper': 2,
+          'A Paper / B Paper': 2,
+          'A/B Paper': 2,
+          'B Paper': 3,
+          'B/C Paper': 3.5,
+          'C-D Paper': 4,
+          'C Paper / D Paper': 4,
+          'A/C Paper': 2.5,
+          'A/B/C Paper': 2.5,
+        };
+
         setLenders(prev =>
           prev.map(l => (l.id === id ? data : l))
-            .sort((a, b) => a.lender_name.localeCompare(b.lender_name))
+            .sort((a, b) => {
+              const paperA = paperOrder[a.paper || ''] || 999;
+              const paperB = paperOrder[b.paper || ''] || 999;
+
+              if (paperA !== paperB) {
+                return paperA - paperB;
+              }
+
+              return (a.lender_name || '').localeCompare(b.lender_name || '');
+            })
         );
       }
       return data;

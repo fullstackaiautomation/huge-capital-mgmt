@@ -10,10 +10,32 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { X, Loader, AlertCircle, CheckCircle, Info, ChevronRight } from 'lucide-react';
+import { X, Loader, AlertCircle, CheckCircle, Info, ChevronRight, Star, Building2, TrendingUp } from 'lucide-react';
 import DocumentUpload, { type DealUploadFileDisplay, type DealUploadStatus } from './DocumentUpload';
 import { supabase } from '../../lib/supabase';
 import type { ExtractedDealData } from '../../types/deals';
+
+// Lender recommendation types from the Lending Guru Agent
+interface LenderRecommendation {
+  lenderId: string;
+  lenderName: string;
+  lenderTable: string;
+  isIfs: boolean;
+  matchScore: number;
+  approvalProbability: 'very_high' | 'high' | 'medium' | 'low';
+  approvalCriteria: string[];
+  documentationNeeded: string[];
+  redFlags: string[];
+  reasoning: string;
+}
+
+interface LenderMatchSummary {
+  totalLendersMatched: number;
+  topChoice: string;
+  hugecapitalLenders: number;
+  ifsLenders: number;
+  nextSteps: string[];
+}
 
 interface NewDealModalProps {
   isOpen: boolean;
@@ -151,6 +173,9 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
   const [extractedData, setExtractedData] = useState<ExtractedDealData | null>(null);
   const [globalWarnings, setGlobalWarnings] = useState<string[]>([]);
   const [matchWarning, setMatchWarning] = useState<string | null>(null);
+  const [lenderRecommendations, setLenderRecommendations] = useState<LenderRecommendation[]>([]);
+  const [lenderMatchSummary, setLenderMatchSummary] = useState<LenderMatchSummary | null>(null);
+  const [selectedLenders, setSelectedLenders] = useState<Set<string>>(new Set());
 
   const displayFiles = useMemo<DealUploadFileDisplay[]>(
     () => files.map(({ file, driveFile, ...rest }) => ({ ...rest })),
@@ -167,6 +192,9 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
     setDealRecord(null);
     setDriveFolder(null);
     setExtractedData(null);
+    setLenderRecommendations([]);
+    setLenderMatchSummary(null);
+    setSelectedLenders(new Set());
     setFiles((prev) => prev.map((file) => ({ ...file, status: 'pending', progress: 0, error: undefined })));
   }, []);
 
@@ -601,6 +629,110 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
       };
 
       setExtractedData(mergedExtractedData);
+
+      // ============================================================
+      // STEP 5: Lending Guru Agent - Match deal to lenders
+      // ============================================================
+      currentStage = 'lenderOptions';
+      updateStage('lenderOptions', {
+        status: 'in_progress',
+        detail: 'Analyzing deal for lender matches...',
+      });
+
+      try {
+        const lenderMatchPayload = {
+          dealId: insertedDeal.id,
+          loanType,
+          deal: {
+            deal: {
+              legal_business_name: legalBusinessName,
+              dba_name: dealData.dba_name,
+              ein: einValue,
+              business_type: dealData.business_type,
+              address: addressValue,
+              city: cityValue,
+              state: stateValue,
+              zip: zipValue,
+              average_monthly_sales: averageMonthlySales,
+              average_monthly_card_sales: averageMonthlyCardSales,
+              desired_loan_amount: desiredLoanAmount,
+              reason_for_loan: dealData.reason_for_loan,
+              business_start_date: businessStartDate,
+              product_service_sold: dealData.product_service_sold,
+              seasonal_business: Boolean(dealData.seasonal_business),
+              franchise_business: Boolean(dealData.franchise_business),
+            },
+            owners: owners.map((o: Record<string, unknown>) => ({
+              full_name: o.full_name,
+              email: o.email,
+              phone: o.phone,
+              ownership_percent: o.ownership_percent,
+            })),
+            statements: statements.map((s: Record<string, unknown>) => ({
+              bank_name: s.bank_name,
+              statement_month: s.statement_month,
+              credits: s.credits,
+              debits: s.debits,
+              nsfs: s.nsfs ?? 0,
+              overdrafts: s.overdrafts ?? 0,
+              average_daily_balance: s.average_daily_balance,
+              deposit_count: s.deposit_count,
+            })),
+            fundingPositions: fundingPositions.map((f: Record<string, unknown>) => ({
+              lender_name: f.lender_name,
+              amount: f.amount,
+              frequency: f.frequency,
+            })),
+          },
+        };
+
+        console.log('🎯 Calling Lending Guru Agent with payload:', lenderMatchPayload);
+
+        const { data: lenderMatchResult, error: lenderMatchError } = await supabase.functions.invoke(
+          'match-deal-to-lenders',
+          { body: lenderMatchPayload }
+        );
+
+        if (lenderMatchError) {
+          console.error('Lending Guru Agent error:', lenderMatchError);
+          updateStage('lenderOptions', {
+            status: 'error',
+            detail: 'Could not get lender recommendations. You can still proceed with the deal.',
+          });
+          warningSet.add('Lender matching failed - manual lender selection may be required.');
+        } else if (lenderMatchResult) {
+          console.log('✅ Lending Guru Agent recommendations:', lenderMatchResult);
+
+          const recommendations = lenderMatchResult.recommendations || [];
+          const summary = lenderMatchResult.summary || null;
+
+          setLenderRecommendations(recommendations);
+          setLenderMatchSummary(summary);
+
+          // Auto-select top lender if score is high enough
+          if (recommendations.length > 0 && recommendations[0].matchScore >= 70) {
+            setSelectedLenders(new Set([recommendations[0].lenderId]));
+          }
+
+          updateStage('lenderOptions', {
+            status: 'success',
+            detail: `Found ${recommendations.length} lender${recommendations.length === 1 ? '' : 's'}${summary?.topChoice ? `. Top: ${summary.topChoice}` : ''}`,
+          });
+        }
+      } catch (lenderError) {
+        console.error('Lending Guru Agent exception:', lenderError);
+        updateStage('lenderOptions', {
+          status: 'error',
+          detail: 'Lender matching encountered an error.',
+        });
+      }
+
+      // Mark submit stage as pending (future feature)
+      updateStage('submitDeal', {
+        status: 'pending',
+        detail: 'Ready for broker review and submission.',
+      });
+
       setIsWorking(false);
       setMode('review');
       onSuccess?.();
@@ -987,6 +1119,145 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
                   </div>
                 );
               })()}
+
+              {/* Lending Guru Agent - Lender Recommendations */}
+              {lenderRecommendations.length > 0 && (
+                <div className="border border-gray-800 rounded-lg bg-gray-800/40 overflow-hidden">
+                  <div className="px-5 py-4 border-b border-gray-700/50 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <TrendingUp className="w-5 h-5 text-indigo-400" />
+                      <h4 className="text-sm font-semibold text-white uppercase tracking-wide">Lender Recommendations</h4>
+                      {lenderMatchSummary && (
+                        <span className="text-xs text-gray-400">
+                          {lenderMatchSummary.hugecapitalLenders} Huge Capital, {lenderMatchSummary.ifsLenders} IFS
+                        </span>
+                      )}
+                    </div>
+                    {lenderMatchSummary?.topChoice && (
+                      <div className="flex items-center gap-2 px-3 py-1 bg-green-500/20 border border-green-500/30 rounded-full">
+                        <Star className="w-3.5 h-3.5 text-green-400" />
+                        <span className="text-xs font-medium text-green-300">Top: {lenderMatchSummary.topChoice}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-4 space-y-3">
+                    {lenderRecommendations.slice(0, 5).map((lender, index) => {
+                      const isSelected = selectedLenders.has(lender.lenderId);
+                      const probabilityColors = {
+                        very_high: 'text-green-400 bg-green-500/20 border-green-500/30',
+                        high: 'text-emerald-400 bg-emerald-500/20 border-emerald-500/30',
+                        medium: 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30',
+                        low: 'text-red-400 bg-red-500/20 border-red-500/30',
+                      };
+                      const scoreColor = lender.matchScore >= 80 ? 'text-green-400' : lender.matchScore >= 60 ? 'text-yellow-400' : 'text-red-400';
+
+                      return (
+                        <div
+                          key={lender.lenderId}
+                          className={`border rounded-lg p-4 transition-all cursor-pointer ${
+                            isSelected
+                              ? 'border-indigo-500/50 bg-indigo-500/10'
+                              : 'border-gray-700/40 bg-gray-900/30 hover:border-gray-600/50'
+                          }`}
+                          onClick={() => {
+                            setSelectedLenders((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(lender.lenderId)) {
+                                next.delete(lender.lenderId);
+                              } else {
+                                next.add(lender.lenderId);
+                              }
+                              return next;
+                            });
+                          }}
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-3 mb-2">
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                  index === 0 ? 'bg-yellow-500/30 text-yellow-300' : 'bg-gray-700/50 text-gray-400'
+                                }`}>
+                                  {index + 1}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Building2 className="w-4 h-4 text-gray-400" />
+                                  <span className="font-semibold text-white">{lender.lenderName}</span>
+                                  {lender.isIfs && (
+                                    <span className="text-xs px-1.5 py-0.5 bg-orange-500/20 text-orange-300 rounded">IFS</span>
+                                  )}
+                                </div>
+                              </div>
+                              <p className="text-sm text-gray-400 leading-relaxed mb-3">{lender.reasoning}</p>
+
+                              {lender.redFlags && lender.redFlags.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 mb-2">
+                                  {lender.redFlags.map((flag, i) => (
+                                    <span key={i} className="text-xs px-2 py-0.5 bg-red-500/20 text-red-300 rounded">
+                                      {flag}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+
+                              {lender.approvalCriteria && lender.approvalCriteria.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {lender.approvalCriteria.slice(0, 3).map((criteria, i) => (
+                                    <span key={i} className="text-xs px-2 py-0.5 bg-gray-700/50 text-gray-300 rounded">
+                                      {criteria}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex flex-col items-end gap-2">
+                              <div className={`text-2xl font-bold ${scoreColor}`}>
+                                {lender.matchScore}
+                              </div>
+                              <span className={`text-xs px-2 py-1 border rounded-full ${probabilityColors[lender.approvalProbability]}`}>
+                                {lender.approvalProbability.replace('_', ' ')}
+                              </span>
+                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                                isSelected ? 'border-indigo-500 bg-indigo-500' : 'border-gray-600'
+                              }`}>
+                                {isSelected && <CheckCircle className="w-3 h-3 text-white" />}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {lenderMatchSummary?.nextSteps && lenderMatchSummary.nextSteps.length > 0 && (
+                    <div className="px-5 py-3 bg-gray-900/50 border-t border-gray-700/30">
+                      <p className="text-xs font-medium text-gray-400 mb-2">Next Steps:</p>
+                      <ul className="text-xs text-gray-300 space-y-1">
+                        {lenderMatchSummary.nextSteps.map((step, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <ChevronRight className="w-3 h-3 text-indigo-400 mt-0.5 flex-shrink-0" />
+                            {step}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {lenderRecommendations.length === 0 && stages.find(s => s.key === 'lenderOptions')?.status === 'error' && (
+                <div className="border border-yellow-500/40 bg-yellow-500/10 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-yellow-200">Lender matching unavailable</p>
+                      <p className="text-xs text-yellow-300/80 mt-1">
+                        The Lending Guru Agent could not generate recommendations. You can still view this deal and manually select lenders from the Deal Details page.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {(() => {
                 const CRITICAL_WARNING_PATTERNS = [
