@@ -33,6 +33,7 @@ export const ContentManagement = () => {
     profiles,
     tags,
     stories,
+    ideas,
     loading,
     savePost,
     approvePost,
@@ -41,12 +42,17 @@ export const ContentManagement = () => {
     updateStory,
     deleteStory,
     approveStory,
+    addBulkIdeas,
+    dismissIdea,
+    approveIdea,
+    getIdeasForPerson,
   } = useContentPlanner();
 
   const [selectedPerson, setSelectedPerson] = useState<Person>('Zac');
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('LinkedIn');
   const [currentView, setCurrentView] = useState<ViewMode>('editor');
   const [selectedPost, setSelectedPost] = useState<Partial<ContentPost>>({});
+  const [isGeneratingIdeas, setIsGeneratingIdeas] = useState(false);
 
   // Platform configuration for each person
   const getPlatformsForPerson = (person: Person) => {
@@ -135,6 +141,132 @@ export const ContentManagement = () => {
       await approvePost(post.id);
     }
   };
+
+  // Generate AI content ideas
+  const handleGenerateIdeas = async (person: Person, platform: Platform) => {
+    setIsGeneratingIdeas(true);
+    try {
+      // Get content pillars for this person
+      const pillars = CONTENT_PILLARS[person] || [];
+
+      // Generate 10 ideas distributed across pillars
+      const ideasToGenerate: Omit<ContentIdea, 'id' | 'createdAt' | 'updatedAt'>[] = [];
+
+      // Sample idea templates for each pillar type
+      const ideaTemplates: Record<string, string[]> = {
+        'Client Success Stories': [
+          'Behind the scenes: How we helped [Client] secure $X in funding',
+          'From rejection to approval: A client success story',
+          'The deal that almost didn\'t happen - and how we made it work',
+          'What separates successful funding applications from failures',
+          'Client spotlight: [Industry] business owner shares their journey',
+        ],
+        'Educational / Legal Updates': [
+          'New SBA guidelines you need to know about in 2024',
+          '5 common mistakes business owners make when applying for funding',
+          'Understanding the difference between MCA and traditional loans',
+          'How to prepare your financials for a loan application',
+          'The truth about credit scores and business funding',
+        ],
+        'Educational / Myth-Busting': [
+          'Myth: You need perfect credit to get business funding',
+          'The real cost of MCA - breaking down the numbers',
+          'Why banks reject good businesses (and what to do about it)',
+          '3 funding myths that are costing you money',
+          'What lenders actually look for in your application',
+        ],
+        'Entrepreneur Spotlights': [
+          'Interview: How this entrepreneur grew from $0 to $1M',
+          'Lessons from a serial entrepreneur in [Industry]',
+          'The mindset shift that changed everything for this business owner',
+          'From side hustle to full-time: An entrepreneur\'s journey',
+          'What I wish I knew before starting my business',
+        ],
+        'Personal Brand Building': [
+          'Why I got into the funding industry (my story)',
+          'A day in my life as a funding consultant',
+          'The values that drive how I do business',
+          'Lessons I\'ve learned after 7+ years in funding',
+          'What makes our approach different',
+        ],
+        'Personal Brand & Leadership': [
+          'Leadership lessons from the trenches of business funding',
+          'How I build trust with clients (and why it matters)',
+          'The importance of relationships in business',
+          'My philosophy on client success',
+          'Why I believe in the businesses we fund',
+        ],
+        'Business funding solutions': [
+          'Complete guide to SBA loan options for your business',
+          'When MCA makes sense vs traditional financing',
+          'How to choose the right funding solution for your needs',
+          'Understanding term loans: Pros, cons, and best uses',
+          'Equipment financing explained: Everything you need to know',
+        ],
+        'Capital expertise': [
+          'Market insights: Current lending trends you should know',
+          'How we evaluate funding opportunities for clients',
+          'The art of matching businesses with the right lenders',
+          'Industry spotlight: Funding options for [Industry]',
+          'Expert tips for navigating the funding landscape',
+        ],
+        'Client success': [
+          'Case study: How we funded [Type] of business',
+          'Success metrics: What our clients achieve post-funding',
+          'The impact of proper funding on business growth',
+          'Client testimonials: Real stories of transformation',
+          'Partnership spotlight: Growing together with our clients',
+        ],
+      };
+
+      // Distribute ideas across pillars
+      const ideasPerPillar = Math.ceil(10 / pillars.length);
+
+      pillars.forEach((pillar, pillarIndex) => {
+        const pillarName = typeof pillar === 'string' ? pillar : pillar.name;
+        const cleanPillarName = pillarName.replace(/\s*\(\d+%\)/, ''); // Remove percentage if present
+        const templates = ideaTemplates[cleanPillarName] || ideaTemplates['Client Success Stories'];
+
+        const numIdeas = pillarIndex === pillars.length - 1
+          ? 10 - ideasToGenerate.length
+          : Math.min(ideasPerPillar, 10 - ideasToGenerate.length);
+
+        for (let i = 0; i < numIdeas && ideasToGenerate.length < 10; i++) {
+          const template = templates[i % templates.length];
+          ideasToGenerate.push({
+            personName: person,
+            platform: platform,
+            ideaTitle: template,
+            ideaDescription: `Content idea for ${cleanPillarName} pillar. Customize this idea to match your voice and current events.`,
+            contentPillar: cleanPillarName,
+            status: 'pending',
+            generatedBy: 'ai',
+          });
+        }
+      });
+
+      // Add the ideas to the database
+      await addBulkIdeas(ideasToGenerate);
+    } catch (error) {
+      console.error('Error generating ideas:', error);
+    } finally {
+      setIsGeneratingIdeas(false);
+    }
+  };
+
+  // Handle using an idea to start a post
+  const handleUseIdea = (idea: ContentIdea) => {
+    setSelectedPost({
+      personName: idea.personName,
+      platform: idea.platform,
+      content: `# ${idea.ideaTitle}\n\n${idea.ideaDescription || ''}`,
+      contentPillar: idea.contentPillar,
+      status: 'draft',
+    });
+  };
+
+  // Get ideas for current person/platform
+  const currentIdeas = getIdeasForPerson(selectedPerson, selectedPlatform);
 
   if (loading) {
     return (
@@ -333,18 +465,34 @@ export const ContentManagement = () => {
       {/* Main Content Area */}
       <div className="bg-blue-900/20 rounded-lg shadow-xl border border-blue-700/30 p-6 hover:border-blue-500/50 transition-all backdrop-blur-sm">
         {currentView === 'editor' && (
-          <ContentEditor
-            post={selectedPost}
-            platform={selectedPlatform}
-            person={selectedPerson}
-            profile={currentProfile}
-            stories={stories}
-            onSave={handleSave}
-            onSchedule={handleSchedule}
-            onApprove={handleApprove}
-            tags={tags.map(t => t.tagName)}
-            pillars={contentPillars}
-          />
+          <div className="space-y-6">
+            {/* Content Ideas Section */}
+            <ContentIdeas
+              person={selectedPerson}
+              platform={selectedPlatform}
+              ideas={currentIdeas}
+              profile={currentProfile}
+              onDismiss={dismissIdea}
+              onApprove={approveIdea}
+              onGenerateIdeas={handleGenerateIdeas}
+              onUseIdea={handleUseIdea}
+              isGenerating={isGeneratingIdeas}
+            />
+
+            {/* Content Editor */}
+            <ContentEditor
+              post={selectedPost}
+              platform={selectedPlatform}
+              person={selectedPerson}
+              profile={currentProfile}
+              stories={stories}
+              onSave={handleSave}
+              onSchedule={handleSchedule}
+              onApprove={handleApprove}
+              tags={tags.map(t => t.tagName)}
+              pillars={contentPillars}
+            />
+          </div>
         )}
 
         {currentView === 'calendar' && (
