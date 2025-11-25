@@ -9,6 +9,7 @@ interface ExtractedStatementsData {
     debits: number | null;
     nsfs: number;
     overdrafts: number;
+    negative_days: number;
     average_daily_balance: number | null;
     deposit_count: number | null;
   }>;
@@ -225,6 +226,7 @@ async function analyzeBankDocument(
     "debits": number | null;
     "nsfs": number | null;
     "overdrafts": number | null;
+    "negative_days": number | null; // Number of days the account balance was negative
     "average_daily_balance": number | null;
     "deposit_count": number | null;
   }>;
@@ -240,15 +242,19 @@ async function analyzeBankDocument(
   "warnings": string[];
 }
 
+IMPORTANT: For negative_days, count the number of days during the statement period where the account balance went below zero (negative). Look for daily balance summaries or any indication of days with negative balances.
+
 If a field is missing, use null. Always return valid JSON only.`;
 
     const systemPrompt = `You are an expert financial statement analyzer for a business lending company.
 
 Extract ONLY bank statement and funding position data from the provided document. Return a JSON object with:
-- statements: array of statements with statement_id, bank_name, statement_month (YYYY-MM), credits, debits, nsfs, overdrafts, average_daily_balance, deposit_count.
+- statements: array of statements with statement_id, bank_name, statement_month (YYYY-MM), credits, debits, nsfs, overdrafts, negative_days (number of days account was in the negative/below zero), average_daily_balance, deposit_count.
 - fundingPositions: array with lender_name, amount, frequency (daily|weekly|monthly), detected_dates (YYYY-MM-DD).
 - confidence: object with statements (array of confidence scores 0-100).
 - warnings: array of strings for any issues encountered.
+
+For negative_days: Count days where the account balance was below $0. Look for daily balance tables, ledger balance summaries, or any indicator of negative balances throughout the statement period.
 
 If information is missing, use nulls. Always respond with valid JSON.`;
 

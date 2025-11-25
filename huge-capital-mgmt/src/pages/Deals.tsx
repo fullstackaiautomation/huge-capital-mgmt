@@ -689,20 +689,22 @@ export default function Deals() {
 
                             const calculateAverage = (statements: typeof sortedStatements) => {
                               const count = statements.length;
-                              if (count === 0) return { credits: null, debits: null, nsfs: 0, deposits: null, avgBal: null };
+                              if (count === 0) return { credits: null, debits: null, nsfs: 0, negativeDays: 0, deposits: null, avgBal: null };
 
                               const totals = statements.reduce((acc, stmt) => ({
                                 credits: acc.credits + (stmt.credits || 0),
                                 debits: acc.debits + (stmt.debits || 0),
                                 nsfs: acc.nsfs + (stmt.nsfs || 0),
+                                negativeDays: acc.negativeDays + (stmt.negative_days || 0),
                                 deposits: acc.deposits + (stmt.deposit_count || 0),
                                 avgBal: acc.avgBal + (stmt.average_daily_balance || 0),
-                              }), { credits: 0, debits: 0, nsfs: 0, deposits: 0, avgBal: 0 });
+                              }), { credits: 0, debits: 0, nsfs: 0, negativeDays: 0, deposits: 0, avgBal: 0 });
 
                               return {
                                 credits: Math.round(totals.credits / count),
                                 debits: Math.round(totals.debits / count),
                                 nsfs: Math.round(totals.nsfs / count),
+                                negativeDays: Math.round(totals.negativeDays / count),
                                 deposits: Math.round(totals.deposits / count),
                                 avgBal: Math.round(totals.avgBal / count),
                               };
@@ -720,6 +722,7 @@ export default function Deals() {
                                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Credits</th>
                                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Debits</th>
                                       <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">NSFs</th>
+                                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">NEG</th>
                                       <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Dep</th>
                                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Ave Bal</th>
                                     </tr>
@@ -738,6 +741,9 @@ export default function Deals() {
                                         </td>
                                         <td className="px-4 py-2 text-center text-white">
                                           {statement.nsfs ?? 0}
+                                        </td>
+                                        <td className="px-4 py-2 text-center text-orange-400">
+                                          {statement.negative_days ?? 0}
                                         </td>
                                         <td className="px-4 py-2 text-center text-white">
                                           {statement.deposit_count ?? statement.overdrafts ?? 'N/A'}
@@ -763,6 +769,9 @@ export default function Deals() {
                                         <td className="px-4 py-2 text-center text-white">
                                           {avg3Month.nsfs}
                                         </td>
+                                        <td className="px-4 py-2 text-center text-orange-300">
+                                          {avg3Month.negativeDays}
+                                        </td>
                                         <td className="px-4 py-2 text-center text-white">
                                           {avg3Month.deposits}
                                         </td>
@@ -786,6 +795,9 @@ export default function Deals() {
                                         </td>
                                         <td className="px-4 py-2 text-center text-white">
                                           {avg6Month.nsfs}
+                                        </td>
+                                        <td className="px-4 py-2 text-center text-orange-300">
+                                          {avg6Month.negativeDays}
                                         </td>
                                         <td className="px-4 py-2 text-center text-white">
                                           {avg6Month.deposits}

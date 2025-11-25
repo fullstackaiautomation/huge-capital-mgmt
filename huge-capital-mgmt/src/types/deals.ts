@@ -99,6 +99,7 @@ export interface DealBankStatement {
   debits: number | null;
   nsfs: number;
   overdrafts: number;
+  negative_days: number;
   average_daily_balance: number | null;
   deposit_count: number | null;
 
