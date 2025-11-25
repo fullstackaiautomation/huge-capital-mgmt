@@ -32,23 +32,6 @@ interface DealWithOwners extends Deal {
   deal_lender_matches?: DealLenderMatch[];
 }
 
-interface StatusSummary {
-  status: DealStatus;
-  count: number;
-  color: string;
-}
-
-const STATUS_COLORS: Record<DealStatus, string> = {
-  New: 'bg-gray-500/20 text-gray-400',
-  Analyzing: 'bg-blue-500/20 text-blue-400',
-  Matched: 'bg-purple-500/20 text-purple-400',
-  Submitted: 'bg-yellow-500/20 text-yellow-400',
-  Pending: 'bg-orange-500/20 text-orange-400',
-  Approved: 'bg-green-500/20 text-green-400',
-  Funded: 'bg-emerald-500/20 text-emerald-400',
-  Declined: 'bg-red-500/20 text-red-400',
-};
-
 const BROKER_NAMES: Record<string, string> = {
   'tgrassmick': 'Taylor',
 };
@@ -67,7 +50,7 @@ export default function Deals() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<DealStatus | 'All'>('All');
+  const [filterStatus] = useState<DealStatus | 'All'>('All');
   const [filterLoanType, setFilterLoanType] = useState<'All' | 'MCA' | 'Business LOC'>('All');
   const [filterBroker, setFilterBroker] = useState<string | 'All'>('All');
   const [showNewDealModal, setShowNewDealModal] = useState(false);
@@ -291,26 +274,6 @@ export default function Deals() {
     };
     filteredDeals.sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
   }
-
-  // Calculate status summary
-  const statusSummary: StatusSummary[] = (
-    [
-      'New',
-      'Analyzing',
-      'Matched',
-      'Submitted',
-      'Pending',
-      'Approved',
-      'Funded',
-      'Declined',
-    ] as DealStatus[]
-  )
-    .map((status) => ({
-      status,
-      count: deals.filter((d) => d.status === status).length,
-      color: STATUS_COLORS[status],
-    }))
-    .filter((s) => s.count > 0);
 
   const handleDeleteDeal = async (dealId: string) => {
     if (!confirm('Are you sure you want to delete this deal?')) return;

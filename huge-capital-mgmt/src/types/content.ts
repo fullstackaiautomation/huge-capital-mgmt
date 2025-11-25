@@ -4,6 +4,7 @@ export type Person = 'Zac' | 'Luke' | 'Huge Capital';
 export type Platform = 'LinkedIn' | 'Twitter' | 'Facebook' | 'Instagram' | 'Blog' | 'Newsletter' | 'ISO Newsletter' | 'Skool';
 export type ContentStatus = 'draft' | 'scheduled' | 'published' | 'failed';
 export type Sentiment = 'positive' | 'negative' | 'neutral';
+export type IdeaStatus = 'pending' | 'approved' | 'dismissed' | 'used';
 
 // Content Profile with AI learning context
 export interface ContentProfile {
@@ -202,6 +203,23 @@ export interface ContentComment {
   requiresResponse?: boolean;
   sentiment?: Sentiment;
   createdAt: string;
+}
+
+// Content Idea (AI-generated or manual)
+export interface ContentIdea {
+  id: string;
+  personName: Person;
+  platform: Platform;
+  ideaTitle: string;
+  ideaDescription?: string;
+  contentPillar?: string;
+  status: IdeaStatus;
+  generatedBy: 'ai' | 'manual';
+  postId?: string;
+  createdAt: string;
+  updatedAt: string;
+  dismissedAt?: string;
+  usedAt?: string;
 }
 
 // AI Learning patterns

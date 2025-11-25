@@ -6,6 +6,7 @@ import type {
   ContentTag,
   PostingGoal,
   ContentTemplate,
+  ContentIdea,
   Person,
   Platform,
   TwitterThread,
@@ -19,6 +20,7 @@ export const useContentPlanner = () => {
   const [templates, setTemplates] = useState<ContentTemplate[]>([]);
   const [postingGoals, setPostingGoals] = useState<PostingGoal[]>([]);
   const [stories, setStories] = useState<Story[]>([]);
+  const [ideas, setIdeas] = useState<ContentIdea[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Fetch all content posts
