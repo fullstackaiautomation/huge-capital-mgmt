@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { TwitterThreadBuilder } from './TwitterThreadBuilder';
 import { AIContentSuggestions } from './AIContentSuggestions';
+import { PlatformPreview } from './PlatformPreview';
 import { generateAIContent } from '../../services/aiContentGenerator';
 import { PLATFORM_LIMITS, PLATFORM_COLORS, type Platform, type ContentPost, type TwitterThread, type ContentSource, type Person, type ContentProfile } from '../../types/content';
 import type { Story } from '../../types/story';
@@ -204,42 +205,44 @@ export const ContentEditor = ({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Platform Header */}
-      <div
-        className="flex items-center justify-between p-3 rounded-lg"
-        style={{ backgroundColor: `${PLATFORM_COLORS[platform]}20` }}
-      >
-        <div className="flex items-center gap-3">
-          <h3 className="text-lg font-semibold text-gray-100">
-            {platform} Post Editor
-          </h3>
-          {/* Auto-save indicator */}
-          {isSaving ? (
-            <span className="text-xs text-gray-400 flex items-center gap-1">
-              <span className="animate-spin">⏳</span> Saving...
-            </span>
-          ) : lastSaved ? (
-            <span className="text-xs text-gray-500">
-              Saved {lastSaved.toLocaleTimeString()}
-            </span>
-          ) : hasUnsavedChanges ? (
-            <span className="text-xs text-yellow-500">Unsaved changes</span>
-          ) : null}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Left Column - Editor */}
+      <div className="space-y-6">
+        {/* Platform Header */}
+        <div
+          className="flex items-center justify-between p-3 rounded-lg"
+          style={{ backgroundColor: `${PLATFORM_COLORS[platform]}20` }}
+        >
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-semibold text-gray-100">
+              {platform} Post Editor
+            </h3>
+            {/* Auto-save indicator */}
+            {isSaving ? (
+              <span className="text-xs text-gray-400 flex items-center gap-1">
+                <span className="animate-spin">⏳</span> Saving...
+              </span>
+            ) : lastSaved ? (
+              <span className="text-xs text-gray-500">
+                Saved {lastSaved.toLocaleTimeString()}
+              </span>
+            ) : hasUnsavedChanges ? (
+              <span className="text-xs text-yellow-500">Unsaved changes</span>
+            ) : null}
+          </div>
+          {supportsThreads && (
+            <button
+              onClick={() => setIsThread(!isThread)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                isThread
+                  ? 'bg-sky-500 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+            >
+              {isThread ? 'Thread Mode' : 'Single Post'}
+            </button>
+          )}
         </div>
-        {supportsThreads && (
-          <button
-            onClick={() => setIsThread(!isThread)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              isThread
-                ? 'bg-sky-500 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-          >
-            {isThread ? 'Thread Mode' : 'Single Post'}
-          </button>
-        )}
-      </div>
 
       {/* Content Editor */}
       {isThread && supportsThreads ? (
@@ -427,63 +430,88 @@ export const ContentEditor = ({
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex items-center justify-between">
-        <div className="flex gap-2">
-          <button
-            onClick={handleCopy}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors"
-          >
-            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            {copied ? 'Copied!' : 'Copy'}
-          </button>
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleSave('draft')}
-            disabled={isSaving}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
-          >
-            <Save className="w-4 h-4" />
-            Save Draft
-          </button>
-
-          {scheduledDate && (
+        {/* Action Buttons */}
+        <div className="flex items-center justify-between">
+          <div className="flex gap-2">
             <button
-              onClick={() => handleSave('scheduled')}
-              disabled={isSaving}
-              className="flex items-center gap-2 px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors disabled:opacity-50"
+              onClick={handleCopy}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors"
             >
-              <Calendar className="w-4 h-4" />
-              Schedule
+              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              {copied ? 'Copied!' : 'Copy'}
             </button>
-          )}
+          </div>
 
-          <button
-            onClick={handleApprove}
-            disabled={isSaving || isOverLimit}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-          >
-            <Check className="w-4 h-4" />
-            Approve & Post
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleSave('draft')}
+              disabled={isSaving}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
+            >
+              <Save className="w-4 h-4" />
+              Save Draft
+            </button>
+
+            {scheduledDate && (
+              <button
+                onClick={() => handleSave('scheduled')}
+                disabled={isSaving}
+                className="flex items-center gap-2 px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors disabled:opacity-50"
+              >
+                <Calendar className="w-4 h-4" />
+                Schedule
+              </button>
+            )}
+
+            <button
+              onClick={handleApprove}
+              disabled={isSaving || isOverLimit}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+            >
+              <Check className="w-4 h-4" />
+              Approve & Post
+            </button>
+          </div>
         </div>
+
+        {/* Status Badge */}
+        {post.status && (
+          <div className="flex justify-end">
+            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+              post.status === 'published' ? 'bg-green-500/20 text-green-400' :
+              post.status === 'scheduled' ? 'bg-blue-500/20 text-blue-400' :
+              post.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+              'bg-yellow-500/20 text-yellow-400'
+            }`}>
+              {post.status.charAt(0).toUpperCase() + post.status.slice(1)}
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Status Badge */}
-      {post.status && (
-        <div className="flex justify-end">
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-            post.status === 'published' ? 'bg-green-500/20 text-green-400' :
-            post.status === 'scheduled' ? 'bg-blue-500/20 text-blue-400' :
-            post.status === 'failed' ? 'bg-red-500/20 text-red-400' :
-            'bg-yellow-500/20 text-yellow-400'
-          }`}>
-            {post.status.charAt(0).toUpperCase() + post.status.slice(1)}
-          </span>
+      {/* Right Column - Preview */}
+      <div className="space-y-4">
+        <div
+          className="p-3 rounded-lg border-2"
+          style={{
+            backgroundColor: `${PLATFORM_COLORS[platform]}10`,
+            borderColor: `${PLATFORM_COLORS[platform]}40`,
+          }}
+        >
+          <h3 className="text-lg font-semibold text-gray-100 mb-1">Platform Preview</h3>
+          <p className="text-xs text-gray-400">See how your post will look on {platform}</p>
         </div>
-      )}
+
+        <div className="sticky top-6">
+          <PlatformPreview
+            platform={platform}
+            person={person}
+            content={isThread ? threadHook : content}
+            threadParts={isThread ? threadParts : undefined}
+            isThread={isThread}
+          />
+        </div>
+      </div>
 
       {/* AI Prompt Modal */}
       {showAIPromptModal && (

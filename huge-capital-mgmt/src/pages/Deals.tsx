@@ -53,6 +53,15 @@ const BROKER_NAMES: Record<string, string> = {
   'tgrassmick': 'Taylor',
 };
 
+// Helper to capitalize first letter of each word
+const formatBrokerName = (name: string): string => {
+  if (!name) return 'Unknown';
+  // Check explicit mapping first
+  if (BROKER_NAMES[name]) return BROKER_NAMES[name];
+  // Capitalize first letter
+  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+};
+
 export default function Deals() {
   const [deals, setDeals] = useState<DealWithOwners[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,6 +69,7 @@ export default function Deals() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<DealStatus | 'All'>('All');
   const [filterLoanType, setFilterLoanType] = useState<'All' | 'MCA' | 'Business LOC'>('All');
+  const [filterBroker, setFilterBroker] = useState<string | 'All'>('All');
   const [showNewDealModal, setShowNewDealModal] = useState(false);
   const [sortBy, setSortBy] = useState<'created' | 'amount' | 'status'>('created');
   const [copiedEmailId, setCopiedEmailId] = useState<string | null>(null);
@@ -211,8 +221,8 @@ export default function Deals() {
               .order('match_score', { ascending: false }),
           ]);
 
-          const rawBrokerName = brokerMap.get(deal.user_id) ? brokerMap.get(deal.user_id)!.split('@')[0] : 'Unknown';
-          const brokerName = BROKER_NAMES[rawBrokerName] || rawBrokerName;
+          const rawBrokerName = brokerMap.get(deal.user_id) ? brokerMap.get(deal.user_id)!.split('@')[0] : '';
+          const brokerName = formatBrokerName(rawBrokerName);
 
           return {
             ...deal,
@@ -259,6 +269,10 @@ export default function Deals() {
 
   if (filterLoanType !== 'All') {
     filteredDeals = filteredDeals.filter((d) => d.loan_type === filterLoanType);
+  }
+
+  if (filterBroker !== 'All') {
+    filteredDeals = filteredDeals.filter((d) => d.broker_name === filterBroker);
   }
 
   // Sort deals
@@ -312,49 +326,50 @@ export default function Deals() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen bg-[#0a0a0f]">
       {/* Header */}
-      <div className="border-b border-gray-700/30 bg-gray-800/50 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between gap-6">
-            {/* Title */}
-            <div>
-              <h1 className="text-3xl font-bold text-white flex items-center gap-2">
-                <TrendingUp className="w-8 h-8 text-indigo-400" />
-                Deals Pipeline
-              </h1>
-              <p className="text-gray-400 mt-1">Manage and track deal submissions</p>
-            </div>
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        <div className="flex items-center justify-between">
+          {/* Title */}
+          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+            <TrendingUp className="w-8 h-8 text-indigo-400" />
+            Deals
+          </h1>
 
-            {/* Status Cards */}
-            <div className="flex gap-3">
-              {statusSummary.slice(0, 2).map((item) => (
+          {/* Broker Filter Toggles */}
+          <div className="flex items-center gap-3">
+            {['Dillon', 'Luke', 'Zac', 'Taylor'].map((broker) => {
+              const count = deals.filter(d => d.broker_name === broker).length;
+              const isActive = filterBroker === broker;
+              return (
                 <button
-                  key={item.status}
-                  onClick={() => setFilterStatus(filterStatus === item.status ? 'All' : item.status)}
-                  className={`p-3 rounded-lg text-center transition-all min-w-[100px] ${filterStatus === item.status ? item.color : 'bg-gray-700/30 text-gray-400'
-                    }`}
+                  key={broker}
+                  onClick={() => setFilterBroker(isActive ? 'All' : broker)}
+                  className={`px-5 py-2.5 rounded-lg text-base font-semibold transition-all ${
+                    isActive
+                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/25'
+                      : 'bg-gray-800/60 text-gray-300 hover:bg-gray-700/60 hover:text-white'
+                  }`}
                 >
-                  <div className="text-2xl font-bold">{item.count}</div>
-                  <div className="text-sm">{item.status}</div>
+                  {broker} <span className={`ml-1 ${isActive ? 'text-indigo-200' : 'text-gray-500'}`}>({count})</span>
                 </button>
-              ))}
-            </div>
-
-            {/* New Deal Button */}
-            <button
-              onClick={() => setShowNewDealModal(true)}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg transition-all font-bold text-lg"
-            >
-              <Plus className="w-8 h-8" />
-              New Deal
-            </button>
+              );
+            })}
           </div>
+
+          {/* New Deal Button */}
+          <button
+            onClick={() => setShowNewDealModal(true)}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg transition-all font-bold text-lg"
+          >
+            <Plus className="w-6 h-6" />
+            New Deal
+          </button>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-6 py-4">
         {/* Controls */}
         <div className="flex flex-col gap-4 mb-6">
           <div className="flex gap-4 flex-col sm:flex-row">

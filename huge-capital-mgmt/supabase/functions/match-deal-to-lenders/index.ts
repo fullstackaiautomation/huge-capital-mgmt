@@ -328,16 +328,21 @@ Output:
 - Lender B: Score 62 (medium)
 - "Limited options, may need additional documentation or time"`;
 
+    // Safely extract arrays with fallbacks
+    const owners = Array.isArray(deal.owners) ? deal.owners : [];
+    const statements = Array.isArray(deal.statements) ? deal.statements : [];
+    const fundingPositions = Array.isArray(deal.fundingPositions) ? deal.fundingPositions : [];
+
     const dealSummary = `
 DEAL INFORMATION:
-Business: ${deal.deal.legal_business_name}
+Business: ${deal.deal?.legal_business_name || "Unknown"}
 Loan Type: ${loanType}
-Loan Amount Requested: $${deal.deal.desired_loan_amount?.toLocaleString() || "Unknown"}
-Monthly Revenue: $${deal.deal.average_monthly_sales?.toLocaleString() || "Unknown"}
-Business Type: ${deal.deal.business_type || "Unknown"}
-Industry: ${deal.deal.product_service_sold || "Unknown"}
-Location: ${deal.deal.city}, ${deal.deal.state}
-Time in Business: ${deal.deal.business_start_date
+Loan Amount Requested: $${deal.deal?.desired_loan_amount?.toLocaleString() || "Unknown"}
+Monthly Revenue: $${deal.deal?.average_monthly_sales?.toLocaleString() || "Unknown"}
+Business Type: ${deal.deal?.business_type || "Unknown"}
+Industry: ${deal.deal?.product_service_sold || "Unknown"}
+Location: ${deal.deal?.city || "Unknown"}, ${deal.deal?.state || "Unknown"}
+Time in Business: ${deal.deal?.business_start_date
         ? Math.floor(
           (new Date().getTime() - new Date(deal.deal.business_start_date).getTime()) /
           (1000 * 60 * 60 * 24 * 30)
@@ -346,18 +351,21 @@ Time in Business: ${deal.deal.business_start_date
       }
 
 OWNERS:
-${deal.owners.map((o: any) => `- ${o.full_name} (${o.ownership_percent || "?"}% ownership)`).join("\n")}
+${owners.length > 0
+        ? owners.map((o: any) => `- ${o.full_name || "Unknown"} (${o.ownership_percent || "?"}% ownership)`).join("\n")
+        : "No owner information available"
+      }
 
 BANK STATEMENTS:
-- Months Available: ${deal.statements.length}
-- Average Daily Balance: $${deal.statements[0]?.average_daily_balance?.toLocaleString() || "N/A"}
-- NSF Incidents (Total): ${deal.statements.reduce((sum: number, s: any) => sum + s.nsfs, 0)}
-- Overdrafts (Total): ${deal.statements.reduce((sum: number, s: any) => sum + s.overdrafts, 0)}
+- Months Available: ${statements.length}
+- Average Daily Balance: $${statements[0]?.average_daily_balance?.toLocaleString() || "N/A"}
+- NSF Incidents (Total): ${statements.reduce((sum: number, s: any) => sum + (s.nsfs || 0), 0)}
+- Overdrafts (Total): ${statements.reduce((sum: number, s: any) => sum + (s.overdrafts || 0), 0)}
 
 EXISTING FUNDING:
-${deal.fundingPositions && deal.fundingPositions.length > 0
-        ? deal.fundingPositions
-          .map((f: any) => `- ${f.lender_name}: $${f.amount.toLocaleString()} ${f.frequency}`)
+${fundingPositions.length > 0
+        ? fundingPositions
+          .map((f: any) => `- ${f.lender_name || "Unknown"}: $${(f.amount || 0).toLocaleString()} ${f.frequency || "unknown frequency"}`)
           .join("\n")
         : "None identified"
       }

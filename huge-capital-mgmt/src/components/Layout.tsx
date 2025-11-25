@@ -21,8 +21,8 @@ export const Layout = () => {
       ]
     },
     { name: 'Content Planner', href: '/content', icon: CalendarDays },
-    { name: 'Lenders', href: '/lenders', icon: Building2 },
     { name: 'Deals', href: '/deals', icon: TrendingUp },
+    { name: 'Lenders', href: '/lenders', icon: Building2 },
   ];
 
   const middleNavigation = [
