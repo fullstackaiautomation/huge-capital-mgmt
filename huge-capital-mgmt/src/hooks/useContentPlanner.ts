@@ -123,6 +123,24 @@ export const useContentPlanner = () => {
     }
   }, []);
 
+  // Fetch content ideas
+  const fetchIdeas = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('content_ideas')
+        .select('*')
+        .in('status', ['pending', 'approved'])
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const formattedIdeas = (data || []).map(transformIdea);
+      setIdeas(formattedIdeas);
+    } catch (error) {
+      console.error('Error fetching ideas:', error);
+    }
+  }, []);
+
   // Initial fetch
   useEffect(() => {
     const loadData = async () => {
@@ -134,6 +152,7 @@ export const useContentPlanner = () => {
         fetchTemplates(),
         fetchPostingGoals(),
         fetchStories(),
+        fetchIdeas(),
       ]);
       setLoading(false);
     };
@@ -606,6 +625,144 @@ export const useContentPlanner = () => {
     }
   };
 
+  // Content Ideas management
+  const addIdea = async (idea: Omit<ContentIdea, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const ideaData = {
+        person_name: idea.personName,
+        platform: idea.platform,
+        idea_title: idea.ideaTitle,
+        idea_description: idea.ideaDescription,
+        content_pillar: idea.contentPillar,
+        status: idea.status || 'pending',
+        generated_by: idea.generatedBy || 'ai',
+      };
+
+      const { data, error } = await supabase
+        .from('content_ideas')
+        .insert(ideaData)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const formattedIdea = transformIdea(data);
+      setIdeas(prev => [formattedIdea, ...prev]);
+
+      return formattedIdea;
+    } catch (error) {
+      console.error('Error adding idea:', error);
+      throw error;
+    }
+  };
+
+  const addBulkIdeas = async (ideasToAdd: Omit<ContentIdea, 'id' | 'createdAt' | 'updatedAt'>[]) => {
+    try {
+      const ideasData = ideasToAdd.map(idea => ({
+        person_name: idea.personName,
+        platform: idea.platform,
+        idea_title: idea.ideaTitle,
+        idea_description: idea.ideaDescription,
+        content_pillar: idea.contentPillar,
+        status: idea.status || 'pending',
+        generated_by: idea.generatedBy || 'ai',
+      }));
+
+      const { data, error } = await supabase
+        .from('content_ideas')
+        .insert(ideasData)
+        .select();
+
+      if (error) throw error;
+
+      const formattedIdeas = (data || []).map(transformIdea);
+      setIdeas(prev => [...formattedIdeas, ...prev]);
+
+      return formattedIdeas;
+    } catch (error) {
+      console.error('Error adding bulk ideas:', error);
+      throw error;
+    }
+  };
+
+  const dismissIdea = async (id: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('content_ideas')
+        .update({
+          status: 'dismissed',
+          dismissed_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Remove from local state (dismissed ideas are filtered out)
+      setIdeas(prev => prev.filter(i => i.id !== id));
+
+      return transformIdea(data);
+    } catch (error) {
+      console.error('Error dismissing idea:', error);
+      throw error;
+    }
+  };
+
+  const approveIdea = async (id: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('content_ideas')
+        .update({ status: 'approved' })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const formattedIdea = transformIdea(data);
+      setIdeas(prev => prev.map(i => i.id === id ? formattedIdea : i));
+
+      return formattedIdea;
+    } catch (error) {
+      console.error('Error approving idea:', error);
+      throw error;
+    }
+  };
+
+  const useIdea = async (id: string, postId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('content_ideas')
+        .update({
+          status: 'used',
+          post_id: postId,
+          used_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Remove from local state (used ideas are filtered out)
+      setIdeas(prev => prev.filter(i => i.id !== id));
+
+      return transformIdea(data);
+    } catch (error) {
+      console.error('Error marking idea as used:', error);
+      throw error;
+    }
+  };
+
+  const getIdeasForPerson = useCallback((person: Person, platform?: Platform) => {
+    return ideas.filter(idea => {
+      if (idea.personName !== person) return false;
+      if (platform && idea.platform !== platform) return false;
+      return true;
+    });
+  }, [ideas]);
+
   return {
     // Data
     posts,
@@ -614,6 +771,7 @@ export const useContentPlanner = () => {
     templates,
     postingGoals,
     stories,
+    ideas,
     loading,
 
     // Actions
@@ -631,10 +789,16 @@ export const useContentPlanner = () => {
     updateStory,
     deleteStory,
     approveStory,
+    addIdea,
+    addBulkIdeas,
+    dismissIdea,
+    approveIdea,
+    useIdea,
 
     // Queries
     getCalendarPosts,
     getPostingStats,
+    getIdeasForPerson,
 
     // Refresh
     refetch: {
@@ -644,6 +808,7 @@ export const useContentPlanner = () => {
       templates: fetchTemplates,
       postingGoals: fetchPostingGoals,
       stories: fetchStories,
+      ideas: fetchIdeas,
     },
   };
 };
@@ -752,5 +917,23 @@ function transformStory(data: any): Story {
     usageNotes: data.usage_notes,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
+  };
+}
+
+function transformIdea(data: any): ContentIdea {
+  return {
+    id: data.id,
+    personName: data.person_name,
+    platform: data.platform,
+    ideaTitle: data.idea_title,
+    ideaDescription: data.idea_description,
+    contentPillar: data.content_pillar,
+    status: data.status,
+    generatedBy: data.generated_by,
+    postId: data.post_id,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+    dismissedAt: data.dismissed_at,
+    usedAt: data.used_at,
   };
 }

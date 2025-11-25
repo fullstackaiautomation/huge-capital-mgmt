@@ -20,8 +20,9 @@ import {
 import { ContentEditor } from '../components/ContentPlanner/ContentEditor';
 import { ContentCalendar } from '../components/ContentPlanner/ContentCalendar';
 import { StoryLibrary } from '../components/ContentPlanner/StoryLibrary';
+import { ContentIdeas } from '../components/ContentPlanner/ContentIdeas';
 import { useContentPlanner } from '../hooks/useContentPlanner';
-import type { Person, Platform, ContentPost } from '../types/content';
+import type { Person, Platform, ContentPost, ContentIdea } from '../types/content';
 import { PLATFORM_COLORS, PERSON_COLORS, CONTENT_PILLARS } from '../types/content';
 
 type ViewMode = 'editor' | 'calendar' | 'analytics' | 'goals' | 'stories' | 'profile';
