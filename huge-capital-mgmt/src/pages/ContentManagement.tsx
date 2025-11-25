@@ -33,7 +33,6 @@ export const ContentManagement = () => {
     profiles,
     tags,
     stories,
-    ideas,
     loading,
     savePost,
     approvePost,
