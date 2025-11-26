@@ -22,6 +22,7 @@ import {
 } from '../../services/skillsRunner';
 import type { Person, Platform } from '../../types/content';
 import { SchedulingModal } from './SchedulingModal';
+import { PlatformPreview } from './PlatformPreview';
 import { saveMultipleToLibrary } from '../../services/contentLibraryService';
 
 interface BatchContentGeneratorProps {
@@ -594,11 +595,26 @@ export const BatchContentGenerator = ({
                         </button>
                       </div>
 
-                      {/* Content */}
-                      <div>
-                        <label className="text-sm font-medium text-gray-400 mb-2 block">Content</label>
-                        <div className="bg-gray-900/50 rounded-lg p-4 text-sm text-gray-300 whitespace-pre-wrap">
-                          {content.content}
+                      {/* Content and Preview - Side by Side */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {/* Raw Content */}
+                        <div>
+                          <label className="text-sm font-medium text-gray-400 mb-2 block">Content</label>
+                          <div className="bg-gray-900/50 rounded-lg p-4 text-sm text-gray-300 whitespace-pre-wrap max-h-80 overflow-y-auto">
+                            {content.content}
+                          </div>
+                        </div>
+
+                        {/* Platform Preview */}
+                        <div>
+                          <label className="text-sm font-medium text-gray-400 mb-2 block">Platform Preview</label>
+                          <div className="bg-gray-900/30 rounded-lg p-3 border border-gray-700/30">
+                            <PlatformPreview
+                              platform={content.metadata.platform}
+                              person={content.metadata.persona}
+                              content={content.content}
+                            />
+                          </div>
                         </div>
                       </div>
 
