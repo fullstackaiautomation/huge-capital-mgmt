@@ -27,6 +27,7 @@ interface DocumentUploadProps {
   acceptedTypes?: string[];
   disabled?: boolean;
   helperText?: string | null;
+  rightSlot?: React.ReactNode;
 }
 
 export default function DocumentUpload({
@@ -37,6 +38,7 @@ export default function DocumentUpload({
   acceptedTypes = ['.pdf', '.csv', '.png', '.jpg', '.jpeg'],
   disabled = false,
   helperText = null,
+  rightSlot,
 }: DocumentUploadProps) {
   const [localError, setLocalError] = useState<string | null>(null);
   const [isDraggingApp, setIsDraggingApp] = useState(false);
@@ -219,11 +221,13 @@ export default function DocumentUpload({
       )}
 
       {/* Upload zones */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className={`grid grid-cols-1 gap-3 ${rightSlot ? 'md:grid-cols-[auto_1fr_1fr]' : 'md:grid-cols-2'}`}>
+        {rightSlot}
+
         {renderUploadZone(
           'application',
-          'Application Documents',
-          'Upload loan application and supporting business documents',
+          'Application',
+          'Upload loan application docs',
           isDraggingApp,
           setIsDraggingApp,
           appInputRef,
@@ -232,7 +236,7 @@ export default function DocumentUpload({
         {renderUploadZone(
           'statements',
           'Bank Statements',
-          'Upload at least 3 recent months of bank statements',
+          'Upload 3+ months of statements',
           isDraggingStmt,
           setIsDraggingStmt,
           stmtInputRef,

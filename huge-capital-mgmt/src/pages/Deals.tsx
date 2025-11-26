@@ -17,19 +17,18 @@ import {
   FileText,
   MapPin,
   ExternalLink,
-  Star,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import NewDealModal from '../components/Deals/NewDealModal';
 import FundingPositionsModal from '../components/Deals/FundingPositionsModal';
-import type { Deal, DealStatus, DealOwner, DealBankStatement, DealFundingPosition, DealLenderMatch } from '../types/deals';
+import LenderMatchGrid from '../components/Deals/LenderMatchGrid';
+import type { Deal, DealStatus, DealOwner, DealBankStatement, DealFundingPosition } from '../types/deals';
 
 interface DealWithOwners extends Deal {
   broker_name?: string;
   owner_count?: number;
   owners?: DealOwner[];
   statements?: DealBankStatement[];
-  deal_lender_matches?: DealLenderMatch[];
 }
 
 const BROKER_NAMES: Record<string, string> = {
@@ -307,11 +306,10 @@ export default function Deals() {
               <button
                 key={broker}
                 onClick={() => setFilterBroker(isActive ? 'All' : broker)}
-                className={`px-5 py-2.5 rounded-lg text-base font-semibold transition-all ${
-                  isActive
+                className={`px-5 py-2.5 rounded-lg text-base font-semibold transition-all ${isActive
                     ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/25'
                     : 'bg-gray-800/60 text-gray-300 hover:bg-gray-700/60 hover:text-white'
-                }`}
+                  }`}
               >
                 {broker} <span className={`ml-1 ${isActive ? 'text-indigo-200' : 'text-gray-500'}`}>({count})</span>
               </button>
@@ -393,254 +391,255 @@ export default function Deals() {
               key={deal.id}
               className="bg-gray-800/30 backdrop-blur-sm border border-gray-700/30 rounded-lg p-5 hover:border-gray-700/50 transition-all group"
             >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4">
-                    {/* Business Name Column */}
-                    <div className="md:col-span-4">
-                      <p className="text-sm text-gray-400 mb-1">BUSINESS NAME</p>
-                      <h3 className="text-lg font-semibold text-white group-hover:text-indigo-400 transition-colors">
-                        {deal.legal_business_name}
-                      </h3>
-                      {deal.city && deal.state && (
-                        <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
-                          <MapPin className="w-3 h-3" />
-                          {deal.city}, {deal.state}
-                        </p>
-                      )}
-                      {deal.time_in_business_months && (
-                        <p className="text-xs text-gray-400 mt-1">
-                          Time in Business: {`${(deal.time_in_business_months / 12).toFixed(1)} years`}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Owner */}
-                    <div className="md:col-span-3">
-                      <p className="text-sm text-gray-400 mb-1">OWNER</p>
-                      <h3 className="text-lg font-semibold text-white">
-                        {deal.owners && deal.owners.length > 0 ? deal.owners[0].full_name : 'Unknown'}
-                      </h3>
-                      {deal.owners && deal.owners.length > 0 && (
-                        <div className="flex flex-col gap-0.5 mt-1">
-                          {deal.owners[0].phone && (
-                            <p className="text-xs text-gray-400 truncate">
-                              {deal.owners[0].phone}
-                            </p>
-                          )}
-                          {deal.owners[0].email && (
-                            <div className="flex items-center gap-2">
-                              <p
-                                className="text-xs text-indigo-400 truncate hover:text-indigo-300 hover:underline cursor-pointer transition-colors"
-                                onClick={(e) => handleCopyEmail(e, deal.owners![0].email!, deal.id)}
-                                title="Click to copy email"
-                              >
-                                {deal.owners[0].email}
-                              </p>
-                              {copiedEmailId === deal.id && (
-                                <span className="text-[10px] text-green-400 font-medium animate-fade-in">
-                                  Copied!
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Loan Amount & Type */}
-                    <div className="md:col-span-2">
-                      <p className="text-sm text-gray-400 mb-1">LOAN AMOUNT</p>
-                      <h3 className="text-lg font-semibold text-white">
-                        ${(deal.desired_loan_amount || 0).toLocaleString()}
-                      </h3>
-                      <p className="text-sm text-gray-400 mt-1">{deal.loan_type}</p>
-                    </div>
-
-                    {/* Broker */}
-                    <div className="md:col-span-1">
-                      <p className="text-sm text-gray-400 mb-1">BROKER</p>
-                      <h3 className="text-lg font-semibold text-white truncate">
-                        {deal.broker_name || 'Unknown'}
-                      </h3>
-                    </div>
-
-                    {/* Created Date */}
-                    <div className="md:col-span-2">
-                      <p className="text-sm text-gray-400 mb-1">CREATED</p>
-                      <h3 className="text-lg font-semibold text-white">
-                        {new Date(deal.created_at).toLocaleDateString('en-US', {
-                          month: '2-digit',
-                          day: '2-digit',
-                          year: '2-digit'
-                        })}
-                      </h3>
-                    </div>
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4">
+                  {/* Business Name Column */}
+                  <div className="md:col-span-4">
+                    <p className="text-sm text-gray-400 mb-1">BUSINESS NAME</p>
+                    <h3 className="text-lg font-semibold text-white group-hover:text-indigo-400 transition-colors">
+                      {deal.legal_business_name}
+                    </h3>
+                    {deal.city && deal.state && (
+                      <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+                        <MapPin className="w-3 h-3" />
+                        {deal.city}, {deal.state}
+                      </p>
+                    )}
+                    {deal.time_in_business_months && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        Time in Business: {`${(deal.time_in_business_months / 12).toFixed(1)} years`}
+                      </p>
+                    )}
                   </div>
 
-                </div>
-
-                {/* Expanded Details */}
-                {expandedDealId === deal.id && (() => {
-                  // Calculate funding position summaries
-                  let activeMonthlyCommitment = 0;
-                  let unclearTotal = 0;
-                  let newTotal = 0;
-                  let activeCount = 0;
-                  let unclearCount = 0;
-                  let newCount = 0;
-
-                  if (deal.statements && deal.statements.length > 0) {
-                    // Helper function to normalize lender names
-                    const normalizeLenderName = (name: string): string => {
-                      let normalized = name.toLowerCase().trim();
-                      const suffixes = ['payments', 'payment', 'funding', 'capital', 'partners', 'partner', 'inc', 'llc', 'corp', 'corporation', 'select', 'group', 'financial', 'services'];
-                      let changed = true;
-                      while (changed) {
-                        changed = false;
-                        for (const suffix of suffixes) {
-                          const pattern = new RegExp(`\\s+${suffix}$`, 'i');
-                          if (pattern.test(normalized)) {
-                            normalized = normalized.replace(pattern, '').trim();
-                            changed = true;
-                          }
-                        }
-                      }
-                      return normalized;
-                    };
-
-                    // Consolidate positions
-                    const consolidatedPositions = new Map<string, { lender_name: string; amount: number; frequency: string; dates: string[] }>();
-                    deal.statements.forEach((statement: any) => {
-                      statement.deal_funding_positions?.forEach((position: any) => {
-                        const normalizedName = normalizeLenderName(position.lender_name);
-                        const key = `${normalizedName}|${position.amount}`;
-                        if (consolidatedPositions.has(key)) {
-                          const existing = consolidatedPositions.get(key)!;
-                          existing.dates.push(...position.detected_dates);
-                        } else {
-                          consolidatedPositions.set(key, {
-                            lender_name: position.lender_name,
-                            amount: position.amount,
-                            frequency: position.frequency,
-                            dates: [...position.detected_dates],
-                          });
-                        }
-                      });
-                    });
-
-                    // Determine status
-                    const getStatus = (dates: string[]): 'New' | 'Active' | 'Closed' | 'Unclear' => {
-                      const uniqueDates = [...new Set(dates)].sort();
-                      if (uniqueDates.length === 0) return 'Closed';
-                      const statementMonths = new Set<string>();
-                      deal.statements?.forEach((stmt: any) => statementMonths.add(stmt.statement_month));
-                      const sortedMonths = Array.from(statementMonths).sort().reverse();
-                      if (sortedMonths.length === 0) return 'Closed';
-                      const mostRecentMonth = sortedMonths[0];
-                      const secondMostRecentMonth = sortedMonths.length > 1 ? sortedMonths[1] : null;
-                      const hasRecentPayment = uniqueDates.some(dateStr => dateStr.startsWith(mostRecentMonth.substring(0, 7)));
-                      const hasSecondRecentPayment = secondMostRecentMonth ? uniqueDates.some(dateStr => dateStr.startsWith(secondMostRecentMonth.substring(0, 7))) : false;
-                      if (uniqueDates.length === 1 && (hasRecentPayment || hasSecondRecentPayment)) return 'Unclear';
-                      if (hasRecentPayment && !hasSecondRecentPayment && uniqueDates.length >= 2) return 'New';
-                      if (!hasRecentPayment && !hasSecondRecentPayment) return 'Closed';
-                      if (hasRecentPayment && hasSecondRecentPayment) return 'Active';
-                      return 'Closed';
-                    };
-
-                    // Calculate totals
-                    Array.from(consolidatedPositions.values()).forEach(position => {
-                      const status = getStatus(position.dates);
-                      if (status === 'Active') {
-                        activeCount++;
-                        let monthlyAmount = 0;
-                        if (position.frequency.toLowerCase().includes('weekly')) monthlyAmount = position.amount * 4;
-                        else if (position.frequency.toLowerCase().includes('daily')) monthlyAmount = position.amount * 22;
-                        else if (position.frequency.toLowerCase().includes('bi-weekly') || position.frequency.toLowerCase().includes('biweekly')) monthlyAmount = position.amount * 2;
-                        else monthlyAmount = position.amount;
-                        activeMonthlyCommitment += monthlyAmount;
-                      } else if (status === 'Unclear') {
-                        unclearCount++;
-                        unclearTotal += position.amount;
-                      } else if (status === 'New') {
-                        newCount++;
-                        newTotal += position.amount;
-                      }
-                    });
-                  }
-
-                  return (
-                    <div className="mt-4 pt-4 border-t border-gray-700/30">
-                      {/* Info Cards Row */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
-                        <div className="bg-gray-900/40 rounded-lg border border-gray-700/40 p-4">
-                          <p className="text-xs text-gray-500 uppercase">EIN</p>
-                          <p className="text-lg text-white font-semibold mt-2">
-                            {deal.ein || 'N/A'}
+                  {/* Owner */}
+                  <div className="md:col-span-3">
+                    <p className="text-sm text-gray-400 mb-1">OWNER</p>
+                    <h3 className="text-lg font-semibold text-white">
+                      {deal.owners && deal.owners.length > 0 ? deal.owners[0].full_name : 'Unknown'}
+                    </h3>
+                    {deal.owners && deal.owners.length > 0 && (
+                      <div className="flex flex-col gap-0.5 mt-1">
+                        {deal.owners[0].phone && (
+                          <p className="text-xs text-gray-400 truncate">
+                            {deal.owners[0].phone}
                           </p>
-                        </div>
-                        <div className="bg-gray-900/40 rounded-lg border border-gray-700/40 p-4">
-                          <p className="text-xs text-gray-500 uppercase">Monthly Revenue</p>
-                          <p className="text-lg text-white font-semibold mt-2">
-                            {deal.average_monthly_sales ? `$${Number(deal.average_monthly_sales).toLocaleString()}` : '—'}
-                          </p>
-                        </div>
-                        <div className="bg-gray-900/40 rounded-lg border border-gray-700/40 p-4">
-                          <p className="text-xs text-gray-500 uppercase">Card Sales</p>
-                          <p className="text-lg text-white font-semibold mt-2">
-                            {deal.average_monthly_card_sales ? `$${Number(deal.average_monthly_card_sales).toLocaleString()}` : '—'}
-                          </p>
-                        </div>
-                        {activeCount > 0 && (
-                          <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-                            <p className="text-xs text-green-400 uppercase font-semibold mb-2">{activeCount} Active Position{activeCount !== 1 ? 's' : ''}</p>
-                            <div className="flex items-baseline gap-2">
-                              <p className="text-2xl text-green-300 font-bold">
-                                ${Math.round(activeMonthlyCommitment).toLocaleString()}
-                              </p>
-                              <p className="text-xs text-green-400/80">Monthly</p>
-                            </div>
-                          </div>
                         )}
-                        {newCount > 0 && (
-                          <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
-                            <p className="text-xs text-purple-400 uppercase font-semibold mb-2">{newCount} New Position{newCount !== 1 ? 's' : ''}</p>
-                            <div className="flex items-baseline gap-2">
-                              <p className="text-2xl text-purple-300 font-bold">
-                                ${Math.round(newTotal).toLocaleString()}
-                              </p>
-                              <p className="text-xs text-purple-400/80">Total</p>
-                            </div>
-                          </div>
-                        )}
-                        {unclearCount > 0 && (
-                          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
-                            <p className="text-xs text-yellow-400 uppercase font-semibold mb-2">{unclearCount} Unclear Position{unclearCount !== 1 ? 's' : ''}</p>
-                            <div className="flex items-baseline gap-2">
-                              <p className="text-2xl text-yellow-300 font-bold">
-                                ${Math.round(unclearTotal).toLocaleString()}
-                              </p>
-                              <p className="text-xs text-yellow-400/80">Total</p>
-                            </div>
-                          </div>
-                        )}
-                        {deal.application_google_drive_link && (
-                          <div className="bg-gray-900/40 rounded-lg border border-gray-700/40 p-4">
-                            <p className="text-xs text-gray-500 uppercase">Google Drive</p>
-                            <a
-                              href={deal.application_google_drive_link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors mt-2 font-medium"
+                        {deal.owners[0].email && (
+                          <div className="flex items-center gap-2">
+                            <p
+                              className="text-xs text-indigo-400 truncate hover:text-indigo-300 hover:underline cursor-pointer transition-colors"
+                              onClick={(e) => handleCopyEmail(e, deal.owners![0].email!, deal.id)}
+                              title="Click to copy email"
                             >
-                              <FileText className="w-4 h-4" />
-                              Documents
-                            </a>
+                              {deal.owners[0].email}
+                            </p>
+                            {copiedEmailId === deal.id && (
+                              <span className="text-[10px] text-green-400 font-medium animate-fade-in">
+                                Copied!
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>
+                    )}
+                  </div>
 
-                      {/* Two-column layout: Bank Statements & Funding Positions */}
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Loan Amount & Type */}
+                  <div className="md:col-span-2">
+                    <p className="text-sm text-gray-400 mb-1">LOAN AMOUNT</p>
+                    <h3 className="text-lg font-semibold text-white">
+                      ${(deal.desired_loan_amount || 0).toLocaleString()}
+                    </h3>
+                    <p className="text-sm text-gray-400 mt-1">{deal.loan_type}</p>
+                  </div>
+
+                  {/* Broker */}
+                  <div className="md:col-span-1">
+                    <p className="text-sm text-gray-400 mb-1">BROKER</p>
+                    <h3 className="text-lg font-semibold text-white truncate">
+                      {deal.broker_name || 'Unknown'}
+                    </h3>
+                  </div>
+
+                  {/* Created Date */}
+                  <div className="md:col-span-2">
+                    <p className="text-sm text-gray-400 mb-1">CREATED</p>
+                    <h3 className="text-lg font-semibold text-white">
+                      {new Date(deal.created_at).toLocaleDateString('en-US', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        year: '2-digit'
+                      })}
+                    </h3>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Expanded Details */}
+              {expandedDealId === deal.id && (() => {
+                // Calculate funding position summaries
+                let activeMonthlyCommitment = 0;
+                let unclearTotal = 0;
+                let newTotal = 0;
+                let activeCount = 0;
+                let unclearCount = 0;
+                let newCount = 0;
+
+                if (deal.statements && deal.statements.length > 0) {
+                  // Helper function to normalize lender names
+                  const normalizeLenderName = (name: string): string => {
+                    let normalized = name.toLowerCase().trim();
+                    const suffixes = ['payments', 'payment', 'funding', 'capital', 'partners', 'partner', 'inc', 'llc', 'corp', 'corporation', 'select', 'group', 'financial', 'services'];
+                    let changed = true;
+                    while (changed) {
+                      changed = false;
+                      for (const suffix of suffixes) {
+                        const pattern = new RegExp(`\\s+${suffix}$`, 'i');
+                        if (pattern.test(normalized)) {
+                          normalized = normalized.replace(pattern, '').trim();
+                          changed = true;
+                        }
+                      }
+                    }
+                    return normalized;
+                  };
+
+                  // Consolidate positions
+                  const consolidatedPositions = new Map<string, { lender_name: string; amount: number; frequency: string; dates: string[] }>();
+                  deal.statements.forEach((statement: any) => {
+                    statement.deal_funding_positions?.forEach((position: any) => {
+                      const normalizedName = normalizeLenderName(position.lender_name);
+                      const key = `${normalizedName}|${position.amount}`;
+                      if (consolidatedPositions.has(key)) {
+                        const existing = consolidatedPositions.get(key)!;
+                        existing.dates.push(...position.detected_dates);
+                      } else {
+                        consolidatedPositions.set(key, {
+                          lender_name: position.lender_name,
+                          amount: position.amount,
+                          frequency: position.frequency,
+                          dates: [...position.detected_dates],
+                        });
+                      }
+                    });
+                  });
+
+                  // Determine status
+                  const getStatus = (dates: string[]): 'New' | 'Active' | 'Closed' | 'Unclear' => {
+                    const uniqueDates = [...new Set(dates)].sort();
+                    if (uniqueDates.length === 0) return 'Closed';
+                    const statementMonths = new Set<string>();
+                    deal.statements?.forEach((stmt: any) => statementMonths.add(stmt.statement_month));
+                    const sortedMonths = Array.from(statementMonths).sort().reverse();
+                    if (sortedMonths.length === 0) return 'Closed';
+                    const mostRecentMonth = sortedMonths[0];
+                    const secondMostRecentMonth = sortedMonths.length > 1 ? sortedMonths[1] : null;
+                    const hasRecentPayment = uniqueDates.some(dateStr => dateStr.startsWith(mostRecentMonth.substring(0, 7)));
+                    const hasSecondRecentPayment = secondMostRecentMonth ? uniqueDates.some(dateStr => dateStr.startsWith(secondMostRecentMonth.substring(0, 7))) : false;
+                    if (uniqueDates.length === 1 && (hasRecentPayment || hasSecondRecentPayment)) return 'Unclear';
+                    if (hasRecentPayment && !hasSecondRecentPayment && uniqueDates.length >= 2) return 'New';
+                    if (!hasRecentPayment && !hasSecondRecentPayment) return 'Closed';
+                    if (hasRecentPayment && hasSecondRecentPayment) return 'Active';
+                    return 'Closed';
+                  };
+
+                  // Calculate totals
+                  Array.from(consolidatedPositions.values()).forEach(position => {
+                    const status = getStatus(position.dates);
+                    if (status === 'Active') {
+                      activeCount++;
+                      let monthlyAmount = 0;
+                      if (position.frequency.toLowerCase().includes('weekly')) monthlyAmount = position.amount * 4;
+                      else if (position.frequency.toLowerCase().includes('daily')) monthlyAmount = position.amount * 22;
+                      else if (position.frequency.toLowerCase().includes('bi-weekly') || position.frequency.toLowerCase().includes('biweekly')) monthlyAmount = position.amount * 2;
+                      else monthlyAmount = position.amount;
+                      activeMonthlyCommitment += monthlyAmount;
+                    } else if (status === 'Unclear') {
+                      unclearCount++;
+                      unclearTotal += position.amount;
+                    } else if (status === 'New') {
+                      newCount++;
+                      newTotal += position.amount;
+                    }
+                  });
+                }
+
+                return (
+                  <div className="mt-4 pt-4 border-t border-gray-700/30">
+                    {/* Info Cards Row */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
+                      <div className="bg-gray-900/40 rounded-lg border border-gray-700/40 p-4">
+                        <p className="text-xs text-gray-500 uppercase">EIN</p>
+                        <p className="text-lg text-white font-semibold mt-2">
+                          {deal.ein || 'N/A'}
+                        </p>
+                      </div>
+                      <div className="bg-gray-900/40 rounded-lg border border-gray-700/40 p-4">
+                        <p className="text-xs text-gray-500 uppercase">Monthly Revenue</p>
+                        <p className="text-lg text-white font-semibold mt-2">
+                          {deal.average_monthly_sales ? `$${Number(deal.average_monthly_sales).toLocaleString()}` : '—'}
+                        </p>
+                      </div>
+                      <div className="bg-gray-900/40 rounded-lg border border-gray-700/40 p-4">
+                        <p className="text-xs text-gray-500 uppercase">Card Sales</p>
+                        <p className="text-lg text-white font-semibold mt-2">
+                          {deal.average_monthly_card_sales ? `$${Number(deal.average_monthly_card_sales).toLocaleString()}` : '—'}
+                        </p>
+                      </div>
+                      {activeCount > 0 && (
+                        <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                          <p className="text-xs text-green-400 uppercase font-semibold mb-2">{activeCount} Active Position{activeCount !== 1 ? 's' : ''}</p>
+                          <div className="flex items-baseline gap-2">
+                            <p className="text-2xl text-green-300 font-bold">
+                              ${Math.round(activeMonthlyCommitment).toLocaleString()}
+                            </p>
+                            <p className="text-xs text-green-400/80">Monthly</p>
+                          </div>
+                        </div>
+                      )}
+                      {newCount > 0 && (
+                        <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
+                          <p className="text-xs text-purple-400 uppercase font-semibold mb-2">{newCount} New Position{newCount !== 1 ? 's' : ''}</p>
+                          <div className="flex items-baseline gap-2">
+                            <p className="text-2xl text-purple-300 font-bold">
+                              ${Math.round(newTotal).toLocaleString()}
+                            </p>
+                            <p className="text-xs text-purple-400/80">Total</p>
+                          </div>
+                        </div>
+                      )}
+                      {unclearCount > 0 && (
+                        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                          <p className="text-xs text-yellow-400 uppercase font-semibold mb-2">{unclearCount} Unclear Position{unclearCount !== 1 ? 's' : ''}</p>
+                          <div className="flex items-baseline gap-2">
+                            <p className="text-2xl text-yellow-300 font-bold">
+                              ${Math.round(unclearTotal).toLocaleString()}
+                            </p>
+                            <p className="text-xs text-yellow-400/80">Total</p>
+                          </div>
+                        </div>
+                      )}
+                      {deal.application_google_drive_link && (
+                        <div className="bg-gray-900/40 rounded-lg border border-gray-700/40 p-4">
+                          <p className="text-xs text-gray-500 uppercase">Google Drive</p>
+                          <a
+                            href={deal.application_google_drive_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors mt-2 font-medium"
+                          >
+                            <FileText className="w-4 h-4" />
+                            Documents
+                          </a>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Two-column layout: Bank Statements & Funding Positions */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="flex flex-col gap-6">
                         {/* Bank Statements Section */}
                         <section className="bg-gray-800/30 border border-gray-700/30 rounded-xl overflow-hidden">
                           <div className="p-6 border-b border-gray-700/30">
@@ -796,7 +795,7 @@ export default function Deals() {
                         </section>
 
                         {/* Recommended Lenders Section */}
-                        <section className="bg-gray-800/30 border border-gray-700/30 rounded-xl overflow-hidden mt-6">
+                        <section className="bg-gray-800/30 border border-gray-700/30 rounded-xl overflow-hidden">
                           <div className="p-6 border-b border-gray-700/30 flex items-center justify-between">
                             <div className="flex items-center gap-3">
                               <TrendingUp className="w-6 h-6 text-indigo-400" />
@@ -919,7 +918,9 @@ export default function Deals() {
                             </div>
                           )}
                         </section>
+                      </div>
 
+                      <div className="flex flex-col gap-6">
                         {/* Funding Positions Section */}
                         {deal.statements && deal.statements.some((s: any) => s.deal_funding_positions?.length > 0) && (
                           <section className="bg-gray-800/30 border border-gray-700/30 rounded-xl overflow-hidden">
@@ -1104,46 +1105,47 @@ export default function Deals() {
                         )}
                       </div>
                     </div>
-                  );
-                })()}
+                  </div>
+                );
+              })()}
 
-                {/* Action Buttons */}
-                <div className="flex gap-2 pt-4 border-t border-gray-700/30">
-                  <button
-                    onClick={() => setExpandedDealId(expandedDealId === deal.id ? null : deal.id)}
-                    className="flex-1 flex items-center justify-center gap-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 px-3 py-2 rounded-lg transition-all text-sm font-medium"
-                  >
-                    {expandedDealId === deal.id ? (
-                      <>
-                        Hide Details
-                        <ChevronUp className="w-4 h-4" />
-                      </>
-                    ) : (
-                      <>
-                        View Details
-                        <ChevronDown className="w-4 h-4" />
-                      </>
-                    )}
-                  </button>
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-4 border-t border-gray-700/30">
+                <button
+                  onClick={() => setExpandedDealId(expandedDealId === deal.id ? null : deal.id)}
+                  className="flex-1 flex items-center justify-center gap-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 px-3 py-2 rounded-lg transition-all text-sm font-medium"
+                >
+                  {expandedDealId === deal.id ? (
+                    <>
+                      Hide Details
+                      <ChevronUp className="w-4 h-4" />
+                    </>
+                  ) : (
+                    <>
+                      View Details
+                      <ChevronDown className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
 
-                  <button
-                    onClick={() => navigate(`/deals/${deal.id}`)}
-                    className="px-3 py-2 bg-gray-700/20 hover:bg-gray-700/40 text-gray-400 hover:text-gray-300 rounded-lg transition-all text-sm font-medium"
-                  >
-                    Edit
-                  </button>
+                <button
+                  onClick={() => navigate(`/deals/${deal.id}`)}
+                  className="px-3 py-2 bg-gray-700/20 hover:bg-gray-700/40 text-gray-400 hover:text-gray-300 rounded-lg transition-all text-sm font-medium"
+                >
+                  Edit
+                </button>
 
-                  <button
-                    onClick={() => handleDeleteDeal(deal.id)}
-                    className="px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-lg transition-all text-sm font-medium"
-                  >
-                    Delete
-                  </button>
-                </div>
+                <button
+                  onClick={() => handleDeleteDeal(deal.id)}
+                  className="px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-lg transition-all text-sm font-medium"
+                >
+                  Delete
+                </button>
               </div>
-            ))}
-          </div>
-        )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Empty State */}
       {!loading && !error && filteredDeals.length === 0 && (

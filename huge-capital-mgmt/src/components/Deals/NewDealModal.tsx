@@ -10,7 +10,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { X, Loader, AlertCircle, CheckCircle, Info, ChevronRight, Star, Building2, TrendingUp } from 'lucide-react';
+import { X, Loader, AlertCircle, CheckCircle, Info, ChevronRight, Star, Building2, TrendingUp, CreditCard } from 'lucide-react';
 import DocumentUpload, { type DealUploadFileDisplay, type DealUploadStatus } from './DocumentUpload';
 import { supabase } from '../../lib/supabase';
 import type { ExtractedDealData } from '../../types/deals';
@@ -176,6 +176,7 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
   const [lenderRecommendations, setLenderRecommendations] = useState<LenderRecommendation[]>([]);
   const [lenderMatchSummary, setLenderMatchSummary] = useState<LenderMatchSummary | null>(null);
   const [selectedLenders, setSelectedLenders] = useState<Set<string>>(new Set());
+  const [creditScore, setCreditScore] = useState<string>('');
 
   const displayFiles = useMemo<DealUploadFileDisplay[]>(
     () => files.map(({ file, driveFile, ...rest }) => ({ ...rest })),
@@ -195,6 +196,7 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
     setLenderRecommendations([]);
     setLenderMatchSummary(null);
     setSelectedLenders(new Set());
+    setCreditScore('');
     setFiles((prev) => prev.map((file) => ({ ...file, status: 'pending', progress: 0, error: undefined })));
   }, []);
 
@@ -488,6 +490,7 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
         status: 'New',
         application_google_drive_link: folder?.webViewLink || null,
         statements_google_drive_link: folder?.webViewLink || null,
+        credit_score: creditScore ? parseInt(creditScore, 10) : null,
       };
 
       console.log('📝 Attempting to insert deal record:', dealInsertData);
@@ -1019,7 +1022,40 @@ export default function NewDealModal({ isOpen, onClose, onSuccess }: NewDealModa
                 disabled={isWorking}
                 helperText={combinedHelperText}
                 maxFiles={20}
+                rightSlot={
+                  <div className="border-2 border-dashed border-gray-700 bg-gray-800/30 rounded-lg p-4 flex flex-col items-center justify-center w-36">
+                    <CreditCard className="w-8 h-8 text-gray-400 mb-2" />
+                    <h4 className="text-xs font-semibold text-white text-center mb-3">Credit Score</h4>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={creditScore}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        if (val === '') {
+                          setCreditScore('');
+                        } else {
+                          const num = parseInt(val, 10);
+                          if (num <= 900) {
+                            setCreditScore(val);
+                          }
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const val = e.target.value;
+                        if (val && parseInt(val, 10) < 400) {
+                          setCreditScore('400');
+                        }
+                      }}
+                      placeholder="e.g., 680"
+                      disabled={isWorking}
+                      className="w-24 bg-gray-900/50 border border-gray-600 rounded-lg px-2 py-1.5 text-white text-sm text-center placeholder-gray-500 focus:outline-none focus:border-indigo-500 disabled:opacity-50"
+                    />
+                  </div>
+                }
               />
+
               <div className="flex gap-3">
                 <button
                   onClick={handleSubmitDeal}

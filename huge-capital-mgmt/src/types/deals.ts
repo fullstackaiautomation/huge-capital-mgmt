@@ -45,6 +45,7 @@ export interface Deal {
   average_monthly_card_sales: number | null;
   desired_loan_amount: number;
   reason_for_loan: string | null;
+  credit_score: number | null; // Optional broker-submitted credit score (400-900)
 
   // Deal Classification
   loan_type: LoanType;
