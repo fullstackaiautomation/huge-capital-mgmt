@@ -1,6 +1,6 @@
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { LayoutDashboard, Bot, CalendarDays, LogOut, CheckSquare, Building2, Folder, Lightbulb, Key, ClipboardCheck, TrendingUp } from 'lucide-react';
+import { LayoutDashboard, Bot, CalendarDays, LogOut, CheckSquare, Building2, Folder, Lightbulb, Key, ClipboardCheck, TrendingUp, Library } from 'lucide-react';
 import logo from '../assets/logo.webp';
 
 export const Layout = () => {
@@ -24,6 +24,7 @@ export const Layout = () => {
   // Marketing section
   const marketingNavigation = [
     { name: 'Content Planner', href: '/content', icon: CalendarDays },
+    { name: 'Content Library', href: '/library', icon: Library },
   ];
 
   // Full Stack section

@@ -17,18 +17,19 @@ import {
   FileText,
   MapPin,
   ExternalLink,
+  Star,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import NewDealModal from '../components/Deals/NewDealModal';
 import FundingPositionsModal from '../components/Deals/FundingPositionsModal';
-import LenderMatchGrid from '../components/Deals/LenderMatchGrid';
-import type { Deal, DealStatus, DealOwner, DealBankStatement, DealFundingPosition } from '../types/deals';
+import type { Deal, DealStatus, DealOwner, DealBankStatement, DealFundingPosition, DealLenderMatch } from '../types/deals';
 
 interface DealWithOwners extends Deal {
   broker_name?: string;
   owner_count?: number;
   owners?: DealOwner[];
   statements?: DealBankStatement[];
+  deal_lender_matches?: DealLenderMatch[];
 }
 
 const BROKER_NAMES: Record<string, string> = {
@@ -874,7 +875,7 @@ export default function Deals() {
                             </div>
                           ) : (
                             <div className="divide-y divide-gray-700/30">
-                              {deal.deal_lender_matches.slice(0, 5).map((match, index) => (
+                              {deal.deal_lender_matches.slice(0, 5).map((match: DealLenderMatch, index: number) => (
                                 <div key={match.id} className="p-4 hover:bg-gray-700/10 transition-colors">
                                   <div className="flex items-start justify-between gap-4">
                                     <div className="flex-1">

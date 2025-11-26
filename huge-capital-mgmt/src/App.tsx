@@ -6,6 +6,7 @@ import { Layout } from './components/Layout';
 import { FundingDashboard } from './pages/FundingDashboard';
 import { AIAutomationTasks } from './pages/AIAutomationTasks';
 import { ContentManagement } from './pages/ContentManagement';
+import { ContentLibrary } from './pages/ContentLibrary';
 import { TaskTracker } from './pages/TaskTracker';
 import { DillonDaily } from './pages/DillonDaily';
 import { Projects } from './pages/Projects';
@@ -33,6 +34,7 @@ function App() {
             <Route path="tasks" element={<AIAutomationTasks />} />
             <Route path="projects" element={<Projects />} />
             <Route path="content" element={<ContentManagement />} />
+            <Route path="library" element={<ContentLibrary />} />
             <Route path="lenders" element={<Lenders />} />
             <Route path="deals" element={<Deals />} />
             <Route path="deals/:id" element={<DealDetails />} />
