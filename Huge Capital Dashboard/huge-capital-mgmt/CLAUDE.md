@@ -148,7 +148,42 @@ huge-capital-mgmt/
 
 ## Core Features
 
-### 1. Daily Checklist
+### 1. Content Planner (Phase 1 MVP - November 2024)
+The Content Planner is an AI-powered content generation and scheduling system for Huge Capital's social media presence.
+
+**Key Components:**
+- **Content Generator** (`src/pages/ContentManagement.tsx`): Generate batch content for multiple platforms
+- **Content Library** (`src/pages/ContentLibrary.tsx`): Auto-saved repository of all generated content
+- **Content Calendar** (`src/components/ContentPlanner/ContentCalendar.tsx`): Visual calendar with scheduling
+- **Scheduling Modal** (`src/components/ContentPlanner/SchedulingModal.tsx`): AI-suggested posting times
+
+**Personas:**
+- **Zac** (Blue `#3B82F6`): SBA loan specialist, 7+ years experience, professional LinkedIn focus
+- **Luke** (Green `#10B981`): Real estate & business credit, "same team" mentality, myth-buster
+- **Huge Capital** (Orange `#F7931E`): Company brand, financial literacy, 3,000+ businesses funded
+
+**Platforms Supported:**
+- LinkedIn, Instagram, Facebook, Twitter, Blog, Newsletter, Skool, ISO Newsletter
+
+**Services:**
+- `src/services/skillsRunner.ts`: Content generation orchestration with quality gates
+- `src/services/schedulingService.ts`: Optimal posting times based on persona/platform
+- `src/services/contentLibraryService.ts`: localStorage persistence for content library
+- `src/services/claudeApi.ts`: Claude API integration for AI-generated content
+
+**Data Storage (MVP):**
+- Content Library: `localStorage` key `huge-capital-content-library`
+- Scheduled Posts: `localStorage` key `huge-capital-scheduled-posts`
+- Production upgrade: Migrate to Supabase tables
+
+**Winston Skill Architecture:**
+The Content Planner is based on Winston's 26-skill architecture across 8 categories:
+- Core Content (C1-C6): Content generation for all platforms
+- Data Skills (D1-D4): Analytics, calendar, competitor tracking
+- Optimization (O1-O4): Hashtags, images, timing, A/B testing
+- Utility (U1-U4): Publishing, scheduling, editing tools
+
+### 2. Daily Checklist
 - **Collapsible Categories**: Tasks organized and filterable by category (Social & Content, Pipeline & Follow-ups, Referral Outreach, Ops & Reporting)
 - **Weekly Grid Layout**: Visual representation of daily task completion across the week
 - **Auto-Save**: Checkbox states automatically saved to Supabase

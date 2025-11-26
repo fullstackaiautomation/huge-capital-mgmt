@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Calendar as BigCalendar,
   dateFnsLocalizer,
@@ -10,10 +10,11 @@ import {
 } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Calendar, Plus, Filter } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Plus, Filter, RefreshCw } from 'lucide-react';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import type { ContentPost, Person, Platform } from '../../types/content';
 import { PERSON_COLORS } from '../../types/content';
+import { getScheduledPosts, toContentPost } from '../../services/schedulingService';
 
 interface ContentCalendarProps {
   posts: ContentPost[];
@@ -94,15 +95,64 @@ export const ContentCalendar = ({
 }: ContentCalendarProps) => {
   const [view, setView] = useState<View>(Views.MONTH);
   const [date, setDate] = useState(new Date());
+  const [localPosts, setLocalPosts] = useState<ContentPost[]>([]);
+
+  // Load posts from localStorage on mount and when window focuses
+  useEffect(() => {
+    const loadLocalPosts = () => {
+      const scheduledPosts = getScheduledPosts();
+      console.log(`[Calendar] Loading ${scheduledPosts.length} posts from localStorage`);
+
+      // Debug: Show breakdown by persona
+      const byPersona = scheduledPosts.reduce((acc, p) => {
+        acc[p.persona] = (acc[p.persona] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      console.log('[Calendar] Posts by persona:', byPersona);
+
+      const converted = scheduledPosts.map(toContentPost);
+      setLocalPosts(converted);
+    };
+
+    loadLocalPosts();
+
+    // Refresh when window gains focus (in case posts were added in another tab)
+    window.addEventListener('focus', loadLocalPosts);
+    return () => window.removeEventListener('focus', loadLocalPosts);
+  }, []);
+
+  // Merge prop posts with localStorage posts
+  const allPosts = useMemo(() => {
+    // Create a map to dedupe by ID
+    const postMap = new Map<string, ContentPost>();
+
+    // Add prop posts first
+    posts.forEach(post => {
+      if (post.id) postMap.set(post.id, post);
+    });
+
+    // Add local posts (these will override if same ID)
+    localPosts.forEach(post => {
+      if (post.id) postMap.set(post.id, post);
+    });
+
+    return Array.from(postMap.values());
+  }, [posts, localPosts]);
 
   // Convert posts to calendar events
   const events = useMemo(() => {
-    return posts
-      .filter(post => {
-        if (selectedPerson && post.personName !== selectedPerson) return false;
-        if (selectedPlatform && post.platform !== selectedPlatform) return false;
-        return post.scheduledFor;
-      })
+    console.log(`[Calendar] Creating events from ${allPosts.length} posts`);
+    console.log(`[Calendar] Filter: selectedPerson="${selectedPerson || 'ALL'}", selectedPlatform="${selectedPlatform || 'ALL'}"`);
+
+    const filtered = allPosts.filter(post => {
+      if (selectedPerson && post.personName !== selectedPerson) return false;
+      if (selectedPlatform && post.platform !== selectedPlatform) return false;
+      return post.scheduledFor;
+    });
+
+    console.log(`[Calendar] After filtering: ${filtered.length} events`);
+
+    return filtered
       .map(post => {
         const eventDate = new Date(post.scheduledFor!);
 
@@ -129,7 +179,7 @@ export const ContentCalendar = ({
           color: PERSON_COLORS[post.personName],
         };
       });
-  }, [posts, selectedPerson, selectedPlatform]);
+  }, [allPosts, selectedPerson, selectedPlatform]);
 
   // Custom event style
   const eventStyleGetter = (event: any) => {
@@ -192,6 +242,13 @@ export const ContentCalendar = ({
     );
   };
 
+  // Manual refresh function
+  const refreshPosts = () => {
+    const scheduledPosts = getScheduledPosts();
+    const converted = scheduledPosts.map(toContentPost);
+    setLocalPosts(converted);
+  };
+
   return (
     <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-4">
       {/* Filter Bar */}
@@ -199,6 +256,18 @@ export const ContentCalendar = ({
         <div className="flex items-center gap-3">
           <Calendar className="w-5 h-5 text-brand-500" />
           <h3 className="text-lg font-semibold text-gray-100">Content Calendar</h3>
+          {localPosts.length > 0 && (
+            <span className="px-2 py-0.5 bg-brand-500/20 text-brand-500 rounded-full text-xs font-medium">
+              {localPosts.length} scheduled
+            </span>
+          )}
+          <button
+            onClick={refreshPosts}
+            className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+            title="Refresh calendar"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
         </div>
 
         <div className="flex items-center gap-3">

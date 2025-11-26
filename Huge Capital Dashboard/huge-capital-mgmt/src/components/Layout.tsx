@@ -1,6 +1,6 @@
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { LayoutDashboard, Bot, CalendarDays, LogOut, CheckSquare, Users, Building2, Briefcase, Folder, Lightbulb, Key, ClipboardCheck, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Bot, CalendarDays, LogOut, CheckSquare, Users, Building2, Briefcase, Folder, Lightbulb, Key, ClipboardCheck, ChevronRight, Library } from 'lucide-react';
 import { useState } from 'react';
 import logo from '../assets/logo.webp';
 
@@ -21,6 +21,7 @@ export const Layout = () => {
       ]
     },
     { name: 'Content Planner', href: '/content', icon: CalendarDays },
+    { name: 'Content Library', href: '/library', icon: Library },
     { name: 'Lenders', href: '/lenders', icon: Building2 },
   ];
 
